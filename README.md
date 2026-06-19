@@ -20,17 +20,15 @@ Wordle Tile Sandbox lets you model the information you know from a Wordle puzzle
 
 The tool is intentionally visual. It does not try to solve Wordle from a dictionary; it helps you reason about the puzzle by moving tiles around.
 
-## Use it
+## Run it
 
-Open `index.html` in any modern browser.
+Use Wordle Tile Sandbox here:
+
+https://tartuffo.github.io/wordle-tile-sandbox/
+
+You can also open `index.html` directly in any modern browser.
 
 No installation, build step, server, or dependencies are required.
-
-If this repository is published with GitHub Pages, the app will be available at:
-
-```text
-https://YOUR-GITHUB-USERNAME.github.io/wordle-tile-sandbox/
-```
 
 ## Repository structure
 
