@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Wordle Tile Sandbox v14</title>
+  <title>Wordle Tile Sandbox</title>
   <style>
     :root {
       --bg: #111318;
@@ -295,6 +295,7 @@
       box-shadow: 0 8px 20px var(--shadow);
       border: 2px solid rgba(255,255,255,.16);
       cursor: grab;
+      touch-action: none;
     }
 
     .tile:active { cursor: grabbing; }
@@ -363,6 +364,17 @@
 
       button { width: 100%; }
       .tile { font-size: 28px; }
+
+      .ban-grid, .board {
+        grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+        min-width: 0;
+        gap: 6px;
+      }
+
+      .slot {
+        min-height: 80px;
+        padding: 12px 4px 16px;
+      }
     }
   </style>
 </head>
@@ -386,8 +398,8 @@
         </div>
 
         <div class="field-wide">
-          <label for="greenPattern">Fixed green pattern</label>
-          <input id="greenPattern" type="text" value="?????" maxlength="10" spellcheck="false" title="Use ? for unknown positions">
+          <label for="greenPattern">Green pattern <span style="font-weight:400">(? = unknown)</span></label>
+          <input id="greenPattern" type="text" value="?????" maxlength="10" spellcheck="false">
         </div>
 
         <div class="field-wide">
@@ -409,6 +421,7 @@
       <div class="setup-actions">
         <button id="buildBtn">Build board</button>
         <button id="clearBtn" class="secondary">Clear</button>
+        <button id="shareBtn" class="secondary">Copy link</button>
         <span id="setupStatus" class="setup-status"></span>
       </div>
     </section>
@@ -429,7 +442,7 @@
     </section>
   </main>
 
-  <footer class="copyright">Copyright © 2026 Nick Lai. Licensed under the <a href="LICENSE">MIT License</a>. <a href="https://github.com/Tartuffo/wordle-tile-sandbox">View source on GitHub</a>.</footer>
+  <footer class="copyright">Copyright &copy; 2026 Nick Lai. Licensed under the <a href="LICENSE">MIT License</a>. <a href="https://github.com/Tartuffo/wordle-tile-sandbox">View source on GitHub</a>.</footer>
 
   <script>
     const boardEl = document.getElementById('board');
@@ -437,9 +450,65 @@
     const statusEl = document.getElementById('status');
     const setupStatusEl = document.getElementById('setupStatus');
 
+    const STATE_KEY = 'wordle-sandbox-state';
+
     let tiles = [];
     let banned = Array(5).fill('');
     let draggedId = null;
+    let touchOverPos = null;
+
+    // ── Persistence ──────────────────────────────────────────────────────────
+
+    function saveState() {
+      const state = {
+        wordLength: document.getElementById('wordLength').value,
+        greenPattern: document.getElementById('greenPattern').value,
+        yellowLetters: document.getElementById('yellowLetters').value,
+        banned: [...banned]
+      };
+      localStorage.setItem(STATE_KEY, JSON.stringify(state));
+    }
+
+    function applyState(state) {
+      const len = Math.max(3, Math.min(10, Number(state.wordLength) || 5));
+      document.getElementById('wordLength').value = len;
+      document.getElementById('greenPattern').value = state.greenPattern || '?'.repeat(len);
+      document.getElementById('yellowLetters').value = state.yellowLetters || '';
+      banned = Array.isArray(state.banned) ? [...state.banned] : Array(len).fill('');
+      syncBannedLength(len);
+    }
+
+    // Reads URL params, applies them, strips the URL, returns true if params were present.
+    // URL params are written only by the share button, never live — so their presence
+    // means someone intentionally shared this link.
+    function loadFromURL() {
+      const params = new URLSearchParams(location.search);
+      if (!params.has('len') && !params.has('green')) return false;
+
+      const len = Math.max(3, Math.min(10, Number(params.get('len')) || 5));
+      document.getElementById('wordLength').value = len;
+      document.getElementById('greenPattern').value = (params.get('green') || '?'.repeat(len)).slice(0, len);
+      document.getElementById('yellowLetters').value = params.get('yellow') || '';
+      banned = Array.from({ length: len }, (_, i) => params.get(`ban${i}`) || '');
+
+      history.replaceState(null, '', location.pathname);
+      return true;
+    }
+
+    function getShareURL() {
+      const len = getLen();
+      const params = new URLSearchParams();
+      params.set('len', len);
+      params.set('green', document.getElementById('greenPattern').value);
+      const yellow = document.getElementById('yellowLetters').value;
+      if (yellow) params.set('yellow', yellow);
+      banned.slice(0, len).forEach((letters, i) => {
+        if (letters) params.set(`ban${i}`, letters);
+      });
+      return `${location.origin}${location.pathname}?${params.toString()}`;
+    }
+
+    // ── Utilities ─────────────────────────────────────────────────────────────
 
     function uid() {
       return Math.random().toString(36).slice(2, 10);
@@ -557,6 +626,8 @@
       return backtrack(0) ? assignment : null;
     }
 
+    // ── Rendering ─────────────────────────────────────────────────────────────
+
     function renderBans() {
       const len = getLen();
       syncBannedLength(len);
@@ -573,7 +644,7 @@
         const input = document.createElement('input');
         input.type = 'text';
         input.value = banned[pos] || '';
-        input.placeholder = pos === 0 ? 'E.g. M' : (pos === 1 || pos === 3 ? 'E.g. EM' : '');
+        input.placeholder = 'e.g. EM';
         input.spellcheck = false;
         input.dataset.pos = String(pos);
 
@@ -589,6 +660,7 @@
           // Do not rebuild the ruled-out inputs here; that would steal focus.
           const yellowLetters = document.getElementById('yellowLetters').value.toUpperCase().replace(/[^A-Z]/g, '');
           reportYellowLettersMissingFromRuleouts(yellowLetters, 'warning');
+          saveState();
           renderBoard();
         });
 
@@ -612,8 +684,6 @@
       document.documentElement.style.setProperty('--cols', len);
       boardEl.innerHTML = '';
 
-      let hasConflict = false;
-
       for (let pos = 0; pos < len; pos++) {
         const slot = document.createElement('div');
         slot.className = 'slot';
@@ -623,10 +693,7 @@
         const conflict = isConflict(t, pos);
 
         if (t?.locked) slot.classList.add('locked');
-        if (conflict) {
-          slot.classList.add('bad-placement');
-          hasConflict = true;
-        }
+        if (conflict) slot.classList.add('bad-placement');
 
         const n = document.createElement('div');
         n.className = 'slot-num';
@@ -637,7 +704,7 @@
           const ban = document.createElement('div');
           ban.className = 'banned-note';
           if (conflict) ban.classList.add('bad');
-          ban.textContent = `not ${banned[pos]}`;
+          ban.textContent = `not: ${banned[pos]}`;
           slot.appendChild(ban);
         }
 
@@ -691,11 +758,9 @@
 
         boardEl.appendChild(slot);
       }
-
-      if (hasConflict && !statusEl.textContent) {
-        statusEl.textContent = '';
-      }
     }
+
+    // ── Drag logic ────────────────────────────────────────────────────────────
 
     function canDropOn(pos) {
       if (!draggedId) return false;
@@ -706,7 +771,7 @@
       const target = tileAt(pos);
       if (target && target.locked) return false;
 
-      const allowTemporaryConflicts = document.getElementById('allowTemporaryConflicts')?.checked;
+      const allowTemporaryConflicts = document.getElementById('allowTemporaryConflicts').checked;
       if (allowTemporaryConflicts) return true;
 
       if (!isLegalPositionForTile(moving, pos)) return false;
@@ -734,6 +799,64 @@
       statusEl.textContent = '';
       renderBoard();
     }
+
+    // Touch drag — HTML5 drag events don't fire on iOS Safari, so we implement
+    // an equivalent using touch events. touchmove fires on the element where the
+    // touch started, so we use elementFromPoint to find what's under the finger.
+    document.addEventListener('touchstart', e => {
+      const tileEl = e.target.closest('.tile');
+      if (!tileEl) return;
+
+      const id = tileEl.dataset.id;
+      const tile = tiles.find(t => t.id === id);
+      if (!tile || tile.locked) return;
+
+      draggedId = id;
+      tileEl.classList.add('dragging');
+      e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('touchmove', e => {
+      if (!draggedId) return;
+      e.preventDefault();
+
+      const touch = e.touches[0];
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      const slotEl = el?.closest('.slot');
+
+      document.querySelectorAll('.slot').forEach(s => {
+        s.classList.remove('drag-over', 'drag-blocked');
+      });
+
+      if (slotEl) {
+        const pos = Number(slotEl.dataset.pos);
+        touchOverPos = pos;
+        slotEl.classList.add(canDropOn(pos) ? 'drag-over' : 'drag-blocked');
+      } else {
+        touchOverPos = null;
+      }
+    }, { passive: false });
+
+    document.addEventListener('touchend', () => {
+      if (!draggedId) return;
+
+      if (touchOverPos !== null) {
+        dropOn(touchOverPos);
+      }
+
+      draggedId = null;
+      touchOverPos = null;
+      renderBoard();
+    });
+
+    document.addEventListener('touchcancel', () => {
+      if (!draggedId) return;
+      draggedId = null;
+      touchOverPos = null;
+      renderBoard();
+    });
+
+    // ── Board actions ─────────────────────────────────────────────────────────
 
     function buildBoard() {
       statusEl.textContent = '';
@@ -801,6 +924,7 @@
         statusEl.textContent = `Only ${openPositions.length} movable slots are available; extra yellow letters were ignored.`;
       }
 
+      saveState();
       render();
     }
 
@@ -834,12 +958,27 @@
       document.getElementById('greenPattern').value = '?????';
       document.getElementById('yellowLetters').value = '';
       banned = Array(5).fill('');
+      saveState();
       buildBoard();
     }
+
+    // ── Event wiring ──────────────────────────────────────────────────────────
 
     document.getElementById('buildBtn').addEventListener('click', buildBoard);
     document.getElementById('clearBtn').addEventListener('click', clearAll);
     document.getElementById('shuffleBtn').addEventListener('click', shuffleMovable);
+
+    document.getElementById('shareBtn').addEventListener('click', () => {
+      const btn = document.getElementById('shareBtn');
+      navigator.clipboard.writeText(getShareURL()).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy link'; }, 2000);
+      }).catch(() => {
+        btn.textContent = 'Failed';
+        setTimeout(() => { btn.textContent = 'Copy link'; }, 2000);
+      });
+    });
+
     document.getElementById('allowTemporaryConflicts').addEventListener('change', () => {
       statusEl.textContent = '';
       renderBoard();
@@ -850,17 +989,35 @@
       const gp = document.getElementById('greenPattern');
       gp.value = gp.value.padEnd(len, '?').slice(0, len);
       syncBannedLength(len);
+      saveState();
       buildBoard();
     });
 
     document.getElementById('greenPattern').addEventListener('input', e => {
       e.target.value = e.target.value.toUpperCase().replace(/[^A-Z?]/g, '?');
+      saveState();
     });
 
     document.getElementById('yellowLetters').addEventListener('input', e => {
       e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
       reportYellowLettersMissingFromRuleouts(e.target.value, 'warning');
+      saveState();
     });
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+
+    // URL params (written only by the share button) seed state on first open.
+    // Once applied they're stripped from the URL and written to localStorage,
+    // so subsequent refreshes restore the user's own in-progress state instead.
+    const loadedFromURL = loadFromURL();
+    if (loadedFromURL) {
+      saveState();
+    } else {
+      const saved = localStorage.getItem(STATE_KEY);
+      if (saved) {
+        try { applyState(JSON.parse(saved)); } catch {}
+      }
+    }
 
     buildBoard();
   </script>
