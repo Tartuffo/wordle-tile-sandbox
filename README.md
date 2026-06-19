@@ -4,7 +4,7 @@ A simple visual sandbox for experimenting with possible Wordle solutions.
 
 I built this because I used to work through Wordle possibilities on paper, and sometimes with actual Scrabble tiles. That worked, but it was a little clumsy: I wanted an easy WYSIWYG tool where I could drag letters around, keep green tiles fixed, and see possible arrangements without constantly rewriting them.
 
-This project was built interactively with ChatGPT.
+Developed with assistance from ChatGPT and Claude Code.
 
 ## What it does
 
