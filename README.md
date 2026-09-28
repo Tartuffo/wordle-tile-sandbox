@@ -8,17 +8,17 @@ Developed with assistance from ChatGPT and Claude Code.
 
 ## What it does
 
-Wordle Tile Sandbox lets you model the information you know from a Wordle puzzle:
+Wordle Tile Sandbox lets you enter what you know from a Wordle puzzle, slot by slot, and shows every way the yellow tiles can still be arranged:
 
-- **Fixed green tiles** for letters you know are correct and in the right position
-- **Movable yellow tiles** for letters you know are in the word but not yet placed
-- **Inferred unknown tiles** for the remaining unknown positions
-- **Ruled-out letters by position** for letters that cannot go in a given slot
-- **Legal initial board generation** that respects green tiles and ruled-out positions
-- **Shuffle movable tiles** to quickly try other legal arrangements
-- **Allow temporary conflicts** when you want to rearrange tiles freely while thinking
+- **Green row**: type a letter into each slot you know; it fills and moves on, like Wordle itself. Space skips a slot, and pasting a pattern such as `..A.E` fills the row.
+- **Yellow row**: under each slot, type the letters that turned yellow there. The yellow tiles are derived from these, so each letter is entered once.
+- **Double letters**: a yellow letter counts as one tile, or as already placed if it is green elsewhere. Tap its tile to change the count.
+- **Every legal arrangement**, sorted and grouped by where the most constrained letter sits. Tap one to put it on the board.
+- **Where each yellow can go**: a letter-by-slot grid counting the arrangements that put each letter in each slot, with forced placements called out. Tap a cell to pin that letter there and narrow the list.
+- **Drag tiles on the board** to try arrangements by hand; a tile in a slot where it was yellow is flagged.
+- **Copy link** shares the current clues. Clues are saved in the browser for the rest of the day, then cleared for the next puzzle.
 
-The tool is intentionally visual. It does not try to solve Wordle from a dictionary; it helps you reason about the puzzle by moving tiles around.
+Words of 5 to 7 letters are supported. The tool is intentionally visual. It does not try to solve Wordle from a dictionary; it helps you reason about the puzzle by moving tiles around.
 
 ## Run it
 

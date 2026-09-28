@@ -14,12 +14,16 @@
       --border: #3a4353;
       --yellow: #c9b458;
       --green: #6aaa64;
-      --empty: #3a3a3c;
+      --gray: #787c7e;
       --bad: #d65f5f;
       --bad-soft: rgba(214, 95, 95, .15);
       --accent: #7aa2ff;
       --danger: #ff7a7a;
       --shadow: rgba(0,0,0,.3);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --label-w: 52px;
+      --gap: 6px;
+      --cols: 5;
     }
 
     * { box-sizing: border-box; }
@@ -31,280 +35,240 @@
       color: var(--text);
       font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       display: flex;
-      justify-content: center;
-      padding: 28px 14px 52px;
+      flex-direction: column;
+      align-items: center;
+      padding: 22px 14px 14px;
     }
 
-    .app { width: min(1040px, 100%); }
+    .app { width: min(640px, 100%); flex: 1; }
 
     h1 {
       margin: 0 0 6px;
-      font-size: clamp(28px, 4vw, 44px);
+      font-size: clamp(26px, 5vw, 38px);
       letter-spacing: -0.04em;
     }
 
     .subtitle {
       color: var(--muted);
-      margin: 0 0 22px;
+      margin: 0 0 16px;
+      font-size: 15px;
       line-height: 1.45;
     }
 
     .panel {
       background: color-mix(in srgb, var(--panel) 94%, transparent);
       border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 18px;
+      border-radius: 16px;
+      padding: 16px;
       box-shadow: 0 20px 50px var(--shadow);
-      margin-bottom: 18px;
+      margin-bottom: 14px;
     }
 
-    .panel-heading {
-      margin-bottom: 16px;
-    }
+    input, button, select { font: inherit; }
 
-    .panel-heading h2 {
-      margin: 0 0 4px;
-      font-size: 18px;
-      letter-spacing: -0.02em;
-    }
-
-    .panel-heading p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.4;
-    }
-
-    .setup-grid {
-      display: grid;
-      grid-template-columns: repeat(12, minmax(0, 1fr));
-      gap: 14px;
-      align-items: end;
-      margin-bottom: 18px;
-    }
-
-    .ruleout-section {
-      border-top: 1px solid var(--border);
-      padding-top: 16px;
-      margin-top: 2px;
-    }
-
-    .ruleout-header {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px 12px;
-      align-items: baseline;
-      margin-bottom: 8px;
-    }
-
-    .ruleout-header label {
-      margin-bottom: 0;
-    }
-
-    .ruleout-header span {
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .setup-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 16px;
-    }
-
-    .setup-status {
-      font-size: 14px;
-      align-self: center;
-      line-height: 1.35;
-    }
-
-    .setup-status.warning {
-      color: var(--yellow);
-    }
-
-    .setup-status.error {
-      color: color-mix(in srgb, var(--danger) 85%, white);
-      font-weight: 700;
-    }
-
-    label {
-      display: block;
-      font-size: 13px;
-      color: var(--muted);
-      margin-bottom: 6px;
-    }
-
-    input, button { font: inherit; }
-
-    input[type="text"], input[type="number"] {
-      width: 100%;
+    button {
       background: var(--panel-2);
       color: var(--text);
       border: 1px solid var(--border);
       border-radius: 10px;
-      padding: 10px 12px;
-      outline: none;
-    }
-
-    input[type="text"]:focus, input[type="number"]:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
-    }
-
-    .field-small { grid-column: span 2; }
-    .field-wide { grid-column: span 3; }
-    .field-small input {
-      width: 11ch;
-    }
-
-    .field-wide input {
-      width: min(100%, 26ch);
-    }
-
-    #greenPattern {
-      width: min(100%, 24ch);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      letter-spacing: .12em;
-    }
-
-    #yellowLetters {
-      width: min(100%, 20ch);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      letter-spacing: .12em;
-    }
-
-    button {
-      background: var(--accent);
-      color: #0b1020;
-      border: 0;
-      border-radius: 10px;
-      padding: 10px 13px;
+      padding: 7px 12px;
       font-weight: 700;
       cursor: pointer;
       white-space: nowrap;
     }
 
-    button.secondary {
+    button.link {
+      background: none;
+      border: 0;
+      padding: 0;
+      color: var(--accent);
+      font-weight: 600;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    select {
       background: var(--panel-2);
       color: var(--text);
       border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 6px 8px;
     }
 
-    .board-wrap {
-      overflow-x: auto;
-      padding-bottom: 6px;
-    }
-
-    .ban-grid, .board {
+    /* Every per-slot row shares this grid, so inputs, board and summary line up by column. */
+    .row-grid {
       display: grid;
-      grid-template-columns: repeat(var(--cols), minmax(72px, 1fr));
-      gap: 10px;
-      min-width: calc(var(--cols) * 82px);
+      grid-template-columns: var(--label-w) repeat(var(--cols), minmax(0, 1fr));
+      gap: var(--gap);
+      align-items: center;
+      max-width: calc(var(--label-w) + var(--cols) * (72px + var(--gap)));
     }
 
-    .ban-cell {
-      display: grid;
-      gap: 5px;
+    .row-grid + .row-grid { margin-top: var(--gap); }
+
+    .row-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
     }
 
-    .ban-label {
+    .slot-nums div:not(.row-label) {
       text-align: center;
       color: var(--muted);
       font-size: 12px;
       font-weight: 700;
     }
 
-    .ban-cell input {
+    .cell {
+      width: 100%;
+      min-width: 0;
+      background: var(--panel-2);
+      color: var(--text);
+      border: 2px solid var(--border);
+      border-radius: 8px;
       text-align: center;
-      letter-spacing: .10em;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      text-transform: uppercase;
+      outline: none;
+      padding: 0;
     }
+
+    .cell:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+    }
+
+    .green-cell {
+      aspect-ratio: 1 / 1;
+      font-size: clamp(18px, 5.5vw, 28px);
+      font-weight: 900;
+    }
+
+    .green-cell.filled {
+      background: var(--green);
+      border-color: var(--green);
+      color: #fff;
+    }
+
+    .yellow-cell {
+      height: 40px;
+      font-family: var(--mono);
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: .04em;
+    }
+
+    .yellow-cell.filled {
+      background: color-mix(in srgb, var(--yellow) 28%, var(--panel-2));
+      border-color: color-mix(in srgb, var(--yellow) 75%, var(--border));
+    }
+
+    .yellow-cell.bad {
+      border-color: var(--bad);
+      background: color-mix(in srgb, var(--bad-soft) 60%, var(--panel-2));
+    }
+
+    .tile-chips {
+      grid-column: 2 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      min-height: 30px;
+    }
+
+    .tile-chip {
+      min-width: 30px;
+      height: 30px;
+      padding: 0 7px;
+      border-radius: 7px;
+      border: 1px solid transparent;
+      background: var(--yellow);
+      color: #fff;
+      font-weight: 900;
+      cursor: default;
+    }
+
+    .tile-chip.adjustable { cursor: pointer; }
+    .tile-chip .count { font-size: 12px; margin-left: 1px; }
+
+    /* A yellow letter that is already green somewhere: assumed placed, zero movable tiles. */
+    .tile-chip.placed {
+      background: transparent;
+      border: 1px dashed var(--yellow);
+      color: var(--yellow);
+      opacity: .75;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 14px;
+    }
+
+    .toolbar label {
+      color: var(--muted);
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status {
+      margin-top: 10px;
+      font-size: 14px;
+      line-height: 1.35;
+      color: color-mix(in srgb, var(--danger) 85%, white);
+    }
+
+    .status:empty { display: none; }
 
     .slot {
-      min-height: 102px;
+      aspect-ratio: 1 / 1;
       border: 2px dashed var(--border);
-      border-radius: 14px;
-      display: grid;
-      place-items: center;
+      border-radius: 10px;
       background: color-mix(in srgb, var(--panel-2) 65%, transparent);
-      position: relative;
-      padding: 18px 6px 20px;
+      display: grid;
     }
 
-    .slot.locked {
-      border-style: solid;
-      border-color: color-mix(in srgb, var(--green) 70%, var(--border));
-      background: color-mix(in srgb, var(--green) 10%, var(--panel-2));
-    }
-
-    .slot.bad-placement {
-      border-color: var(--bad);
-      background: color-mix(in srgb, var(--bad-soft) 55%, var(--panel-2));
-    }
+    .slot.occupied { border-style: solid; border-color: transparent; background: none; }
 
     .slot.drag-over {
-      border-color: var(--accent);
+      border: 2px solid var(--accent);
       box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
     }
 
-    .slot.drag-blocked {
-      border-color: var(--bad);
+    .slot.drag-conflict {
+      border: 2px solid var(--bad);
       box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--bad) 20%, transparent);
     }
 
-    .slot-num {
-      position: absolute;
-      left: 8px;
-      top: 6px;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .banned-note {
-      position: absolute;
-      bottom: 5px;
-      left: 6px;
-      right: 6px;
-      color: rgba(255, 255, 255, .9);
-      font-size: 11px;
-      line-height: 1.1;
-      text-align: center;
-      letter-spacing: .08em;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .banned-note.bad {
-      color: color-mix(in srgb, var(--danger) 85%, white);
-      font-weight: 800;
-    }
-
     .tile {
-      width: min(68px, 100%);
-      aspect-ratio: 1 / 1;
-      border-radius: 12px;
+      border-radius: 8px;
       display: grid;
       place-items: center;
-      font-size: 34px;
+      font-size: clamp(18px, 6vw, 30px);
       font-weight: 900;
-      text-transform: uppercase;
+      color: #fff;
       user-select: none;
-      box-shadow: 0 8px 20px var(--shadow);
+      -webkit-user-select: none;
+      box-shadow: 0 6px 16px var(--shadow);
       border: 2px solid rgba(255,255,255,.16);
-      cursor: grab;
       touch-action: none;
     }
 
-    .tile:active { cursor: grabbing; }
-    .tile.yellow { background: var(--yellow); color: #fff; }
-    .tile.green { background: var(--green); color: #fff; cursor: not-allowed; }
-    .tile.unknown { background: var(--empty); color: #fff; }
+    .tile.yellow { background: var(--yellow); cursor: grab; }
+    .tile.yellow:active { cursor: grabbing; }
+    .tile.green { background: var(--green); }
 
     .tile.conflict {
-      outline: 4px solid var(--bad);
+      outline: 3px solid var(--bad);
       outline-offset: 2px;
     }
 
@@ -313,42 +277,137 @@
       transform: scale(.96);
     }
 
-    .controls {
+    .results-head {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 14px;
-      align-items: center;
+      gap: 4px 12px;
+      align-items: baseline;
+      margin-top: 16px;
     }
 
-    .soft-checkbox {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
+    .results-head h2 {
+      margin: 0;
+      font-size: 17px;
+      letter-spacing: -0.01em;
+    }
+
+    .results-head h2.muted {
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .forced {
+      margin: 6px 0 0;
       color: var(--muted);
       font-size: 14px;
-      user-select: none;
-      white-space: nowrap;
     }
 
-    .soft-checkbox input {
-      transform: translateY(1px);
-    }
+    .forced:empty { display: none; }
 
-    .status {
-      color: color-mix(in srgb, var(--danger) 80%, white);
-      font-size: 14px;
-    }
-
-    .copyright {
-      position: fixed;
-      left: 50%;
-      bottom: 10px;
-      transform: translateX(-50%);
-      width: min(1040px, calc(100% - 28px));
+    .caption {
       color: var(--muted);
       font-size: 13px;
-      text-align: left;
+      margin: 14px 0 6px;
+    }
+
+    .sum-label {
+      justify-self: start;
+      min-width: 30px;
+      height: 26px;
+      padding: 0 6px;
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      background: var(--yellow);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .sum-label.other {
+      background: none;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 0;
+    }
+
+    .sum-cell {
+      height: 30px;
+      padding: 0;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .sum-cell.none {
+      border-style: dashed;
+      background: none;
+      opacity: .45;
+      cursor: default;
+    }
+
+    .sum-cell.all { background: var(--yellow); border-color: var(--yellow); color: #111; }
+    .sum-cell.all.other-row { background: var(--gray); border-color: var(--gray); color: #fff; }
+
+    .sum-cell.fixed {
+      background: color-mix(in srgb, var(--green) 16%, var(--panel-2));
+      border-color: transparent;
+      color: var(--green);
+      cursor: default;
+    }
+
+    .sum-cell.pinned {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+
+    .arr-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .arr {
+      font-family: var(--mono);
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      padding: 5px 6px 5px 8px;
+      border-radius: 8px;
+    }
+
+    .arr .g { color: var(--green); opacity: .55; }
+    .arr .y { color: var(--yellow); }
+    .arr .u { color: var(--muted); opacity: .6; }
+
+    .arr.current {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
+    }
+
+    .group + .group { margin-top: 12px; }
+
+    button.group-head {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      text-decoration: none;
+    }
+
+    button.group-head b { color: var(--yellow); }
+    button.group-head:hover, button.group-head.pinned { color: var(--accent); }
+
+    .list-more { margin-top: 10px; }
+
+    .copyright {
+      width: min(640px, 100%);
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 6px;
     }
 
     .copyright a {
@@ -357,24 +416,10 @@
       text-underline-offset: 2px;
     }
 
-    @media (max-width: 760px) {
-      .field-small, .field-wide {
-        grid-column: 1 / -1;
-      }
-
-      button { width: 100%; }
-      .tile { font-size: 28px; }
-
-      .ban-grid, .board {
-        grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
-        min-width: 0;
-        gap: 6px;
-      }
-
-      .slot {
-        min-height: 80px;
-        padding: 12px 4px 16px;
-      }
+    @media (max-width: 480px) {
+      :root { --label-w: 44px; --gap: 5px; }
+      .panel { padding: 12px; }
+      .subtitle { font-size: 14px; }
     }
   </style>
 </head>
@@ -382,62 +427,51 @@
   <main class="app">
     <h1>Wordle Tile Sandbox</h1>
     <p class="subtitle">
-      A simple tool for experimenting with possible Wordle solutions given fixed green tiles, movable yellow tiles, unknown tiles, and ruled-out positions.
+      Type your green letters, and under each slot the letters that turned yellow there.
+      Every legal arrangement of the yellow tiles is listed below; tap one to put it on the board, or drag the tiles yourself.
     </p>
 
-    <section class="panel setup-panel">
-      <div class="panel-heading">
-        <h2>Puzzle setup</h2>
-        <p>Enter the clues you know, then build a movable board below.</p>
+    <section class="panel" aria-label="Clues">
+      <div id="slotNums" class="row-grid slot-nums"></div>
+      <div id="greenRow" class="row-grid"></div>
+      <div id="yellowRow" class="row-grid"></div>
+      <div class="row-grid">
+        <div class="row-label">Tiles</div>
+        <div id="tileChips" class="tile-chips"></div>
       </div>
+      <div id="clueStatus" class="status" role="status"></div>
 
-      <div class="setup-grid">
-        <div class="field-small">
-          <label for="wordLength">Word length</label>
-          <input id="wordLength" type="number" min="3" max="10" value="5">
-        </div>
-
-        <div class="field-wide">
-          <label for="greenPattern">Green pattern <span style="font-weight:400">(? = unknown)</span></label>
-          <input id="greenPattern" type="text" value="?????" maxlength="10" spellcheck="false">
-        </div>
-
-        <div class="field-wide">
-          <label for="yellowLetters">Movable yellow letters</label>
-          <input id="yellowLetters" type="text" placeholder="E.g. EEM" spellcheck="false">
-        </div>
-      </div>
-
-      <div class="ruleout-section">
-        <div class="ruleout-header">
-          <label>Letters ruled out by position</label>
-          <span>Put letters that cannot appear in each slot.</span>
-        </div>
-        <div class="board-wrap">
-          <div id="banGrid" class="ban-grid" aria-label="Letters not allowed in each slot"></div>
-        </div>
-      </div>
-
-      <div class="setup-actions">
-        <button id="buildBtn">Build board</button>
-        <button id="clearBtn" class="secondary">Clear</button>
-        <button id="shareBtn" class="secondary">Copy link</button>
-        <span id="setupStatus" class="setup-status"></span>
+      <div class="toolbar">
+        <label>Letters
+          <select id="wordLength">
+            <option>5</option>
+            <option>6</option>
+            <option>7</option>
+          </select>
+        </label>
+        <button id="clearBtn">Clear</button>
+        <button id="shareBtn">Copy link</button>
       </div>
     </section>
 
-    <section class="panel">
-      <div class="board-wrap">
-        <div id="board" class="board" aria-label="Tile board"></div>
+    <section class="panel" aria-label="Arrangements">
+      <div id="board" class="row-grid" aria-label="Tile board"></div>
+      <div id="boardStatus" class="status" role="status"></div>
+
+      <div class="results-head">
+        <h2 id="resultsTitle"></h2>
+        <button id="clearPinsBtn" class="link" hidden>clear pins</button>
+      </div>
+      <p id="forced" class="forced"></p>
+
+      <div id="summaryWrap" hidden>
+        <p class="caption">Where each yellow can go (count of arrangements). Tap a cell to pin it.</p>
+        <div id="summary"></div>
       </div>
 
-      <div class="controls">
-        <button id="shuffleBtn" class="secondary">Shuffle movable tiles</button>
-        <label class="soft-checkbox" title="Lets you temporarily put a letter in a ruled-out slot while rearranging. Green tiles still stay fixed.">
-          <input id="allowTemporaryConflicts" type="checkbox">
-          Allow temporary conflicts
-        </label>
-        <span id="status" class="status"></span>
+      <div id="listWrap" hidden>
+        <p class="caption" id="listCaption"></p>
+        <div id="list"></div>
       </div>
     </section>
   </main>
@@ -445,581 +479,862 @@
   <footer class="copyright">Copyright &copy; 2026 Nick Lai. Licensed under the <a href="LICENSE">MIT License</a>. <a href="https://github.com/Tartuffo/wordle-tile-sandbox">View source on GitHub</a>.</footer>
 
   <script>
-    const boardEl = document.getElementById('board');
-    const banGridEl = document.getElementById('banGrid');
-    const statusEl = document.getElementById('status');
-    const setupStatusEl = document.getElementById('setupStatus');
+    const $ = id => document.getElementById(id);
 
-    const STATE_KEY = 'wordle-sandbox-state';
+    const MIN_LEN = 5;
+    const MAX_LEN = 7;
+    const STATE_KEY = 'wordle-sandbox-v2';
+    const OLD_STATE_KEY = 'wordle-sandbox-state';
+    const FLAT_LIST_MAX = 8;      // at or below this, list without group headers
+    const COLLAPSE_OVER = 24;     // above this, hide the list until asked or narrowed by pins
 
-    let tiles = [];
-    let banned = Array(5).fill('');
-    let draggedId = null;
+    let len = 5;
+    let greens = [];              // per slot: one letter or ''
+    let yellows = [];             // per slot: letters that were yellow in that slot
+    let countOverrides = {};      // letter -> chosen number of movable tiles
+    let tileInfo = [];            // derived: [{ letter, count, min, max, green }]
+    let movable = [];             // derived multiset of movable yellow letters
+    let arrangements = [];        // every legal arrangement, '?' marks an unknown slot
+    let pins = new Map();         // slot -> letter ('?' pins an unknown)
+    let board = '';               // arrangement currently on the board
+    let listExpanded = false;
+    let draggedPos = null;
     let touchOverPos = null;
 
-    // ── Persistence ──────────────────────────────────────────────────────────
+    // ── Utilities ─────────────────────────────────────────────────────────────
 
+    function clampLen(n) {
+      return Math.max(MIN_LEN, Math.min(MAX_LEN, Number(n) || 5));
+    }
+
+    function normalizeLetters(s) {
+      return [...new Set((s || '').toUpperCase().replace(/[^A-Z]/g, ''))].join('');
+    }
+
+    function openSlots() {
+      return greens.map((g, i) => g ? -1 : i).filter(i => i >= 0);
+    }
+
+    function isBanned(letter, pos) {
+      return letter !== '?' && yellows[pos].includes(letter);
+    }
+
+    function localDate() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function setLength(n) {
+      len = clampLen(n);
+      const fit = arr => Array.from({ length: len }, (_, i) => (arr || [])[i] || '');
+      greens = fit(greens);
+      yellows = fit(yellows);
+      $('wordLength').value = String(len);
+      document.documentElement.style.setProperty('--cols', len);
+    }
+
+    // ── Derived state ─────────────────────────────────────────────────────────
+
+    // Every yellow letter shows up in at least one slot's yellow cell, so the tiles are
+    // derived rather than typed. The only thing the cells can't express is multiplicity:
+    // a letter defaults to one tile (zero if it's already green, i.e. the yellow was
+    // resolved), and the user can raise it. k movable copies must have shown as k yellows
+    // in a single guess, hence in k different slots, which caps the count.
+    function deriveTiles() {
+      const cells = new Map();
+      for (const cell of yellows) {
+        for (const letter of cell) cells.set(letter, (cells.get(letter) || 0) + 1);
+      }
+
+      for (const letter of Object.keys(countOverrides)) {
+        if (!cells.has(letter)) delete countOverrides[letter];
+      }
+
+      tileInfo = [...cells.keys()].sort().map(letter => {
+        const green = greens.includes(letter);
+        const min = green ? 0 : 1;
+        const max = cells.get(letter);
+        const wanted = countOverrides[letter] ?? min;
+        return { letter, green, min, max, count: Math.max(min, Math.min(max, wanted)) };
+      });
+
+      movable = tileInfo.flatMap(t => Array(t.count).fill(t.letter));
+    }
+
+    function findClueErrors() {
+      const errors = [];
+      greens.forEach((g, i) => {
+        if (g && yellows[i].includes(g)) {
+          errors.push(`${g} can't be both green and yellow in slot ${i + 1}.`);
+        }
+      });
+      const open = openSlots().length;
+      if (movable.length > open) {
+        errors.push(`${movable.length} yellow tiles but only ${open} open slot${open === 1 ? '' : 's'}.`);
+      }
+      return errors;
+    }
+
+    function enumerate() {
+      const cur = greens.map(g => g || '?');
+      const open = openSlots();
+      const letters = [...movable].sort();
+      const out = new Set();   // duplicate letters produce identical strings
+
+      (function place(k) {
+        if (k === letters.length) {
+          out.add(cur.join(''));
+          return;
+        }
+        for (const pos of open) {
+          if (cur[pos] !== '?' || isBanned(letters[k], pos)) continue;
+          cur[pos] = letters[k];
+          place(k + 1);
+          cur[pos] = '?';
+        }
+      })(0);
+
+      return [...out];
+    }
+
+    function fallbackBoard() {
+      const cur = greens.map(g => g || '?');
+      let k = 0;
+      for (const pos of openSlots()) {
+        if (k < movable.length) cur[pos] = movable[k++];
+      }
+      return cur.join('');
+    }
+
+    function matchesPins(a) {
+      for (const [pos, letter] of pins) {
+        if (a[pos] !== letter) return false;
+      }
+      return true;
+    }
+
+    function prunePins() {
+      const hasUnknowns = openSlots().length > movable.length;
+      for (const [pos, letter] of [...pins]) {
+        const valid = pos < len && !greens[pos] &&
+          (letter === '?' ? hasUnknowns : movable.includes(letter));
+        if (!valid) pins.delete(pos);
+      }
+    }
+
+    function togglePin(letter, positions) {
+      if (positions.every(p => pins.get(p) === letter)) {
+        positions.forEach(p => pins.delete(p));
+      } else {
+        if (letter !== '?') {
+          // Never pin more copies of a letter than there are tiles; drop the oldest pins.
+          const copies = movable.filter(l => l === letter).length;
+          const others = [...pins].filter(([p, l]) => l === letter && !positions.includes(p)).map(([p]) => p);
+          while (others.length && others.length + positions.length > copies) pins.delete(others.shift());
+        }
+        positions.forEach(p => pins.set(p, letter));
+      }
+      refreshResults();
+    }
+
+    // ── Ordering and grouping ─────────────────────────────────────────────────
+
+    // Left to right by slot, unknowns last, so arrangements that start alike sit together.
+    function compareArrangements(a, b) {
+      for (let i = 0; i < a.length; i++) {
+        if (a[i] === b[i]) continue;
+        if (a[i] === '?') return 1;
+        if (b[i] === '?') return -1;
+        return a[i] < b[i] ? -1 : 1;
+      }
+      return 0;
+    }
+
+    function positionsOf(a, letter) {
+      const out = [];
+      for (let i = 0; i < a.length; i++) {
+        if (!greens[i] && a[i] === letter) out.push(i);
+      }
+      return out;
+    }
+
+    // Group by where the most constrained letter sits: fewest groups, each a hypothesis
+    // the user can pin. Letters with only one possible place are skipped (they'd form a
+    // single group); ties break alphabetically so the order is stable while typing.
+    function layoutList(filtered) {
+      const sorted = [...filtered].sort(compareArrangements);
+      if (sorted.length <= FLAT_LIST_MAX) return { flat: sorted, order: sorted };
+
+      let best = null;
+      for (const letter of new Set(movable)) {
+        const keys = new Set(sorted.map(a => positionsOf(a, letter).join()));
+        if (keys.size < 2) continue;
+        if (!best || keys.size < best.size) best = { letter, size: keys.size };
+      }
+      if (!best) return { flat: sorted, order: sorted };
+
+      const groups = new Map();
+      for (const a of sorted) {
+        const positions = positionsOf(a, best.letter);
+        const key = positions.join();
+        if (!groups.has(key)) groups.set(key, { letter: best.letter, positions, items: [] });
+        groups.get(key).items.push(a);
+      }
+
+      const ordered = [...groups.values()].sort((x, y) => {
+        for (let i = 0; i < Math.min(x.positions.length, y.positions.length); i++) {
+          if (x.positions[i] !== y.positions[i]) return x.positions[i] - y.positions[i];
+        }
+        return x.positions.length - y.positions.length;
+      });
+
+      return { groups: ordered, order: ordered.flatMap(g => g.items) };
+    }
+
+    function slotList(positions) {
+      const nums = positions.map(p => p + 1);
+      return nums.length === 1 ? `slot ${nums[0]}` : `slots ${nums.join(' & ')}`;
+    }
+
+    function forcedPlacements() {
+      if (arrangements.length < 2) return [];
+      const forced = [];
+      for (const letter of new Set(movable)) {
+        const keys = new Set(arrangements.map(a => positionsOf(a, letter).join()));
+        if (keys.size === 1) forced.push(`${letter} must go in ${slotList(positionsOf(arrangements[0], letter))}`);
+      }
+      return forced;
+    }
+
+    // ── Rendering: clues ──────────────────────────────────────────────────────
+
+    function focusCell(row, pos) {
+      if (pos < 0 || pos >= len) return;
+      const el = document.querySelector(`.${row}-cell[data-pos="${pos}"]`);
+      el.focus();
+      el.select();
+    }
+
+    function makeCell(row, pos) {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = `cell ${row}-cell`;
+      input.dataset.pos = String(pos);
+      input.autocomplete = 'off';
+      input.spellcheck = false;
+      input.setAttribute('autocapitalize', 'characters');
+      input.setAttribute('autocorrect', 'off');
+      input.setAttribute('enterkeyhint', 'done');
+      input.addEventListener('focus', () => input.select());
+      return input;
+    }
+
+    function renderClueInputs() {
+      const nums = $('slotNums');
+      nums.innerHTML = '<div class="row-label"></div>';
+      for (let pos = 0; pos < len; pos++) {
+        const n = document.createElement('div');
+        n.textContent = String(pos + 1);
+        nums.appendChild(n);
+      }
+
+      const greenRow = $('greenRow');
+      greenRow.innerHTML = '<div class="row-label">Green</div>';
+      for (let pos = 0; pos < len; pos++) {
+        const input = makeCell('green', pos);
+        input.value = greens[pos];
+        input.setAttribute('aria-label', `Green letter, slot ${pos + 1}`);
+        input.addEventListener('input', onGreenInput);
+        input.addEventListener('keydown', onGreenKeydown);
+        input.addEventListener('paste', onGreenPaste);
+        greenRow.appendChild(input);
+      }
+
+      const yellowRow = $('yellowRow');
+      yellowRow.innerHTML = '<div class="row-label">Yellow</div>';
+      for (let pos = 0; pos < len; pos++) {
+        const input = makeCell('yellow', pos);
+        input.value = yellows[pos];
+        input.setAttribute('aria-label', `Letters that were yellow in slot ${pos + 1}`);
+        input.addEventListener('input', onYellowInput);
+        input.addEventListener('keydown', onYellowKeydown);
+        yellowRow.appendChild(input);
+      }
+    }
+
+    function syncCellClasses(errors) {
+      document.querySelectorAll('.green-cell').forEach(el => {
+        el.classList.toggle('filled', !!greens[Number(el.dataset.pos)]);
+      });
+      document.querySelectorAll('.yellow-cell').forEach(el => {
+        const pos = Number(el.dataset.pos);
+        el.classList.toggle('filled', !!yellows[pos]);
+        el.classList.toggle('bad', !!greens[pos] && yellows[pos].includes(greens[pos]));
+      });
+      $('clueStatus').textContent = errors.join(' ');
+    }
+
+    function renderTileChips() {
+      const wrap = $('tileChips');
+      wrap.innerHTML = '';
+
+      if (!tileInfo.length) {
+        wrap.innerHTML = '<span class="hint">Yellow tiles appear here as you type them.</span>';
+        return;
+      }
+
+      for (const t of tileInfo) {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'tile-chip';
+        chip.textContent = t.letter;
+
+        if (t.count === 0) {
+          chip.classList.add('placed');
+          chip.title = `${t.letter} is already green. Tap if the word has another ${t.letter}.`;
+        } else {
+          chip.title = t.max > t.min ? `Tap to change how many ${t.letter} tiles` : `${t.letter} tile`;
+        }
+        if (t.count > 1) {
+          const c = document.createElement('span');
+          c.className = 'count';
+          c.textContent = `×${t.count}`;
+          chip.appendChild(c);
+        }
+
+        if (t.max > t.min) {
+          chip.classList.add('adjustable');
+          chip.addEventListener('click', () => {
+            const fits = movable.length < openSlots().length;
+            countOverrides[t.letter] = t.count < t.max && fits ? t.count + 1 : t.min;
+            update();
+          });
+        }
+        wrap.appendChild(chip);
+      }
+
+      if (tileInfo.some(t => t.max > t.min)) {
+        const hint = document.createElement('span');
+        hint.className = 'hint';
+        hint.textContent = 'tap a tile for a double letter';
+        wrap.appendChild(hint);
+      }
+    }
+
+    // ── Clue input handlers ───────────────────────────────────────────────────
+
+    // Green cells behave like Wordle's row: a letter fills the slot and advances;
+    // space, ? or . skips a slot; backspace on an empty slot clears the previous one.
+    function onGreenInput(e) {
+      const input = e.target;
+      const pos = Number(input.dataset.pos);
+      const data = e.inputType?.startsWith('insert') ? (e.data || '') : null;
+
+      if (data !== null && data && !/[A-Za-z]/.test(data)) {
+        input.value = greens[pos];
+        focusCell('green', pos + 1);
+        return;
+      }
+
+      greens[pos] = (data || input.value).toUpperCase().replace(/[^A-Z]/g, '').slice(-1);
+      input.value = greens[pos];
+      update();
+      if (data && greens[pos]) focusCell('green', pos + 1);
+    }
+
+    function onGreenKeydown(e) {
+      const pos = Number(e.target.dataset.pos);
+      if (e.key === 'Backspace' && !e.target.value) {
+        e.preventDefault();
+        if (pos > 0) {
+          greens[pos - 1] = '';
+          document.querySelector(`.green-cell[data-pos="${pos - 1}"]`).value = '';
+          update();
+          focusCell('green', pos - 1);
+        }
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        focusCell('green', pos - 1);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        focusCell('green', pos + 1);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        focusCell('yellow', pos);
+      } else if (e.key === 'Enter') {
+        e.target.blur();
+      }
+    }
+
+    // Pasting a whole pattern such as "..A.E" or "??A?E" fills the row from this slot on.
+    function onGreenPaste(e) {
+      const text = (e.clipboardData?.getData('text') || '').toUpperCase().trim();
+      if (text.length < 2) return;
+      e.preventDefault();
+      const start = Number(e.target.dataset.pos);
+      [...text].slice(0, len - start).forEach((ch, i) => {
+        greens[start + i] = /[A-Z]/.test(ch) ? ch : '';
+      });
+      document.querySelectorAll('.green-cell').forEach(el => { el.value = greens[Number(el.dataset.pos)]; });
+      update();
+    }
+
+    function onYellowInput(e) {
+      const input = e.target;
+      const pos = Number(input.dataset.pos);
+      const advance = e.inputType === 'insertText' && e.data === ' ';
+      const cursor = input.selectionStart;
+
+      yellows[pos] = normalizeLetters(input.value);
+      input.value = yellows[pos];
+      const newCursor = Math.min(cursor, input.value.length);
+      input.setSelectionRange(newCursor, newCursor);
+
+      update();
+      if (advance) focusCell('yellow', pos + 1);
+    }
+
+    function onYellowKeydown(e) {
+      const input = e.target;
+      const pos = Number(input.dataset.pos);
+      const atStart = input.selectionStart === 0 && input.selectionEnd === 0;
+      const atEnd = input.selectionStart === input.value.length;
+
+      if (e.key === 'Backspace' && !input.value) {
+        e.preventDefault();
+        focusCell('yellow', pos - 1);
+      } else if (e.key === 'ArrowLeft' && atStart) {
+        e.preventDefault();
+        focusCell('yellow', pos - 1);
+      } else if (e.key === 'ArrowRight' && atEnd) {
+        e.preventDefault();
+        focusCell('yellow', pos + 1);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        focusCell('green', pos);
+      } else if (e.key === 'Enter') {
+        input.blur();
+      }
+    }
+
+    // ── Rendering: board ──────────────────────────────────────────────────────
+
+    function boardConflicts() {
+      const out = [];
+      for (let pos = 0; pos < len; pos++) {
+        if (!greens[pos] && isBanned(board[pos], pos)) out.push(pos);
+      }
+      return out;
+    }
+
+    function renderBoard() {
+      const el = $('board');
+      el.innerHTML = '<div class="row-label">Board</div>';
+      const conflicts = boardConflicts();
+
+      for (let pos = 0; pos < len; pos++) {
+        const slot = document.createElement('div');
+        slot.className = 'slot';
+        slot.dataset.pos = String(pos);
+        const letter = board[pos];
+
+        if (letter && letter !== '?') {
+          slot.classList.add('occupied');
+          const tile = document.createElement('div');
+          tile.className = `tile ${greens[pos] ? 'green' : 'yellow'}`;
+          tile.textContent = letter;
+          tile.dataset.pos = String(pos);
+
+          if (greens[pos]) {
+            tile.title = 'Green tile (fixed)';
+          } else {
+            if (conflicts.includes(pos)) tile.classList.add('conflict');
+            tile.title = 'Drag to move or swap';
+            tile.draggable = true;
+            tile.addEventListener('dragstart', e => {
+              draggedPos = pos;
+              tile.classList.add('dragging');
+              e.dataTransfer.effectAllowed = 'move';
+              e.dataTransfer.setData('text/plain', String(pos));
+            });
+            tile.addEventListener('dragend', () => {
+              draggedPos = null;
+              renderBoard();
+            });
+          }
+          slot.appendChild(tile);
+        }
+
+        slot.addEventListener('dragover', e => {
+          if (draggedPos === null || greens[pos]) return;
+          e.preventDefault();
+          markDropTarget(slot, pos);
+        });
+        slot.addEventListener('dragleave', () => slot.classList.remove('drag-over', 'drag-conflict'));
+        slot.addEventListener('drop', e => {
+          e.preventDefault();
+          moveTile(draggedPos, pos);
+        });
+
+        el.appendChild(slot);
+      }
+
+      $('boardStatus').textContent = conflicts
+        .map(pos => `${board[pos]} can't go in slot ${pos + 1}; it was yellow there.`)
+        .join(' ');
+    }
+
+    // Drops are never blocked (it's a sandbox), but an illegal target shows red.
+    function markDropTarget(slotEl, pos) {
+      const from = draggedPos;
+      const legal = !isBanned(board[from], pos) && !isBanned(board[pos], from);
+      slotEl.classList.add(legal ? 'drag-over' : 'drag-conflict');
+    }
+
+    function moveTile(from, to) {
+      if (from === null || from === to || greens[to]) return;
+      const cur = [...board];
+      [cur[from], cur[to]] = [cur[to], cur[from]];
+      board = cur.join('');
+      draggedPos = null;
+      refreshResults({ keepBoard: true });
+    }
+
+    // Touch drag: HTML5 drag events don't fire on iOS Safari, so mirror them with touch
+    // events. touchmove fires on the element where the touch started, so elementFromPoint
+    // finds what's under the finger.
+    document.addEventListener('touchstart', e => {
+      const tileEl = e.target.closest('.tile.yellow');
+      if (!tileEl) return;
+      draggedPos = Number(tileEl.dataset.pos);
+      tileEl.classList.add('dragging');
+      e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('touchmove', e => {
+      if (draggedPos === null) return;
+      e.preventDefault();
+
+      const touch = e.touches[0];
+      const slotEl = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('#board .slot');
+      document.querySelectorAll('#board .slot').forEach(s => s.classList.remove('drag-over', 'drag-conflict'));
+
+      touchOverPos = null;
+      if (slotEl) {
+        const pos = Number(slotEl.dataset.pos);
+        if (!greens[pos]) {
+          touchOverPos = pos;
+          markDropTarget(slotEl, pos);
+        }
+      }
+    }, { passive: false });
+
+    document.addEventListener('touchend', () => {
+      if (draggedPos === null) return;
+      const from = draggedPos;
+      const to = touchOverPos;
+      draggedPos = null;
+      touchOverPos = null;
+      if (to !== null) moveTile(from, to);
+      else renderBoard();
+    });
+
+    document.addEventListener('touchcancel', () => {
+      if (draggedPos === null) return;
+      draggedPos = null;
+      touchOverPos = null;
+      renderBoard();
+    });
+
+    // ── Rendering: results ────────────────────────────────────────────────────
+
+    function arrangementButton(a) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'arr';
+      if (a === board) btn.classList.add('current');
+      for (let i = 0; i < a.length; i++) {
+        const s = document.createElement('span');
+        s.className = greens[i] ? 'g' : a[i] === '?' ? 'u' : 'y';
+        s.textContent = a[i] === '?' ? '·' : a[i];
+        btn.appendChild(s);
+      }
+      btn.title = 'Put this arrangement on the board';
+      btn.addEventListener('click', () => {
+        board = a;
+        refreshResults({ keepBoard: true });
+      });
+      return btn;
+    }
+
+    function renderSummary(filtered) {
+      const wrap = $('summary');
+      wrap.innerHTML = '';
+      const n = filtered.length;
+      const rows = [...new Set(movable)];
+      if (openSlots().length > movable.length) rows.push('?');
+
+      for (const letter of rows) {
+        const row = document.createElement('div');
+        row.className = 'row-grid';
+
+        const label = document.createElement('div');
+        label.className = 'sum-label';
+        if (letter === '?') {
+          label.classList.add('other');
+          label.textContent = 'other';
+          label.title = 'A letter that is not one of the yellows';
+        } else {
+          const copies = movable.filter(l => l === letter).length;
+          label.textContent = copies > 1 ? `${letter}×${copies}` : letter;
+        }
+        row.appendChild(label);
+
+        for (let pos = 0; pos < len; pos++) {
+          const cell = document.createElement('button');
+          cell.type = 'button';
+          cell.className = 'sum-cell';
+
+          if (greens[pos]) {
+            cell.classList.add('fixed');
+            cell.textContent = greens[pos];
+            cell.disabled = true;
+          } else {
+            const count = filtered.filter(a => a[pos] === letter).length;
+            const pinned = pins.get(pos) === letter;
+            if (letter === '?') cell.classList.add('other-row');
+            if (pinned) cell.classList.add('pinned');
+
+            if (count === 0 && !pinned) {
+              cell.classList.add('none');
+              cell.disabled = true;
+            } else {
+              cell.textContent = String(count);
+              if (n && count === n) {
+                cell.classList.add('all');
+              } else {
+                const tint = letter === '?' ? 'var(--gray)' : 'var(--yellow)';
+                cell.style.background = `color-mix(in srgb, ${tint} ${Math.round(10 + 45 * count / n)}%, var(--panel-2))`;
+              }
+              const what = letter === '?' ? 'an unknown letter' : letter;
+              cell.title = pinned ? 'Unpin' : `Pin ${what} to slot ${pos + 1}`;
+              cell.addEventListener('click', () => togglePin(letter, [pos]));
+            }
+          }
+          row.appendChild(cell);
+        }
+        wrap.appendChild(row);
+      }
+    }
+
+    function renderList(layout, total) {
+      const list = $('list');
+      list.innerHTML = '';
+
+      if (total > COLLAPSE_OVER && !listExpanded) {
+        $('listCaption').textContent = 'Pin a cell above to narrow these down, or show them all.';
+        const more = document.createElement('button');
+        more.type = 'button';
+        more.textContent = `Show all ${total}`;
+        more.addEventListener('click', () => {
+          listExpanded = true;
+          refreshResults({ keepBoard: true });
+        });
+        list.appendChild(more);
+        return;
+      }
+
+      $('listCaption').textContent = 'Tap one to put it on the board.';
+
+      if (layout.flat) {
+        const wrap = document.createElement('div');
+        wrap.className = 'arr-list';
+        layout.flat.forEach(a => wrap.appendChild(arrangementButton(a)));
+        list.appendChild(wrap);
+        return;
+      }
+
+      for (const g of layout.groups) {
+        const group = document.createElement('div');
+        group.className = 'group';
+
+        const head = document.createElement('button');
+        head.type = 'button';
+        head.className = 'link group-head';
+        const pinned = g.positions.every(p => pins.get(p) === g.letter);
+        if (pinned) head.classList.add('pinned');
+        head.innerHTML = `<b>${g.letter}</b> in ${slotList(g.positions)} · ${g.items.length}`;
+        head.title = pinned ? 'Unpin' : `Pin ${g.letter} to ${slotList(g.positions)}`;
+        head.addEventListener('click', () => togglePin(g.letter, g.positions));
+        group.appendChild(head);
+
+        const wrap = document.createElement('div');
+        wrap.className = 'arr-list';
+        g.items.forEach(a => wrap.appendChild(arrangementButton(a)));
+        group.appendChild(wrap);
+        list.appendChild(group);
+      }
+    }
+
+    function refreshResults({ keepBoard = false } = {}) {
+      const filtered = arrangements.filter(matchesPins);
+      const layout = layoutList(filtered);
+
+      if (!keepBoard && !filtered.includes(board)) {
+        board = layout.order[0] ?? fallbackBoard();
+      }
+      renderBoard();
+
+      const total = arrangements.length;
+      let title;
+      if (!tileInfo.length) {
+        title = 'Add the yellow letters you’ve seen to see where they can go.';
+      } else if (!movable.length) {
+        title = 'Every yellow letter is already placed.';
+      } else if (!total) {
+        title = 'No legal arrangement fits these clues.';
+      } else if (pins.size) {
+        title = `${filtered.length} of ${total} arrangement${total === 1 ? '' : 's'} match your pins`;
+      } else {
+        title = `${total} legal arrangement${total === 1 ? '' : 's'}`;
+      }
+      $('resultsTitle').textContent = title;
+      $('resultsTitle').classList.toggle('muted', !movable.length);
+      $('clearPinsBtn').hidden = !pins.size;
+
+      const forced = movable.length ? forcedPlacements() : [];
+      $('forced').textContent = forced.length ? `${forced.join('; ')}.` : '';
+
+      const showResults = movable.length > 0 && total > 0;
+      $('summaryWrap').hidden = !showResults;
+      $('listWrap').hidden = !showResults || !filtered.length;
+      if (showResults) {
+        renderSummary(filtered);
+        renderList(layout, filtered.length);
+      }
+    }
+
+    // ── Update pipeline ───────────────────────────────────────────────────────
+
+    function update() {
+      deriveTiles();
+      const errors = findClueErrors();
+      arrangements = errors.length ? [] : enumerate();
+      prunePins();
+      syncCellClasses(errors);
+      renderTileChips();
+      refreshResults();
+      saveState();
+    }
+
+    // ── Persistence ───────────────────────────────────────────────────────────
+
+    // Saved clues are dated: Wordle changes daily, so yesterday's entries would only
+    // need erasing. Storage can be unavailable (private mode), hence the try/catch.
     function saveState() {
-      const state = {
-        wordLength: document.getElementById('wordLength').value,
-        greenPattern: document.getElementById('greenPattern').value,
-        yellowLetters: document.getElementById('yellowLetters').value,
-        banned: [...banned]
-      };
-      localStorage.setItem(STATE_KEY, JSON.stringify(state));
+      try {
+        localStorage.setItem(STATE_KEY, JSON.stringify({ date: localDate(), len, greens, yellows, countOverrides }));
+      } catch {}
     }
 
-    function applyState(state) {
-      const len = Math.max(3, Math.min(10, Number(state.wordLength) || 5));
-      document.getElementById('wordLength').value = len;
-      document.getElementById('greenPattern').value = state.greenPattern || '?'.repeat(len);
-      document.getElementById('yellowLetters').value = state.yellowLetters || '';
-      banned = Array.isArray(state.banned) ? [...state.banned] : Array(len).fill('');
-      syncBannedLength(len);
+    function loadSavedState() {
+      try {
+        localStorage.removeItem(OLD_STATE_KEY);
+        const s = JSON.parse(localStorage.getItem(STATE_KEY) || 'null');
+        if (!s || s.date !== localDate()) return false;
+        greens = (s.greens || []).map(g => normalizeLetters(g).slice(0, 1));
+        yellows = (s.yellows || []).map(normalizeLetters);
+        countOverrides = s.countOverrides && typeof s.countOverrides === 'object' ? s.countOverrides : {};
+        setLength(s.len);
+        return true;
+      } catch {
+        return false;
+      }
     }
 
-    // Reads URL params, applies them, strips the URL, returns true if params were present.
-    // URL params are written only by the share button, never live — so their presence
-    // means someone intentionally shared this link.
+    // URL params are written only by the share button, so their presence means someone
+    // intentionally shared this link. Parameter names are kept from the first version so
+    // older links still open: green is the ?-pattern, ban<i> the yellows seen in slot i,
+    // and yellow the movable tiles (it carries duplicate counts).
     function loadFromURL() {
       const params = new URLSearchParams(location.search);
       if (!params.has('len') && !params.has('green')) return false;
 
-      const len = Math.max(3, Math.min(10, Number(params.get('len')) || 5));
-      document.getElementById('wordLength').value = len;
-      document.getElementById('greenPattern').value = (params.get('green') || '?'.repeat(len)).slice(0, len);
-      document.getElementById('yellowLetters').value = params.get('yellow') || '';
-      banned = Array.from({ length: len }, (_, i) => params.get(`ban${i}`) || '');
+      const green = (params.get('green') || '').toUpperCase();
+      setLength(params.get('len'));
+      greens = greens.map((_, i) => /[A-Z]/.test(green[i] || '') ? green[i] : '');
+      yellows = yellows.map((_, i) => normalizeLetters(params.get(`ban${i}`)));
+
+      countOverrides = {};
+      if (params.has('yellow')) {
+        const tiles = (params.get('yellow') || '').toUpperCase();
+        for (const letter of new Set(yellows.join(''))) {
+          countOverrides[letter] = tiles.split(letter).length - 1;
+        }
+      }
 
       history.replaceState(null, '', location.pathname);
       return true;
     }
 
     function getShareURL() {
-      const len = getLen();
       const params = new URLSearchParams();
       params.set('len', len);
-      params.set('green', document.getElementById('greenPattern').value);
-      const yellow = document.getElementById('yellowLetters').value;
-      if (yellow) params.set('yellow', yellow);
-      banned.slice(0, len).forEach((letters, i) => {
+      params.set('green', greens.map(g => g || '?').join(''));
+      if (movable.length) params.set('yellow', movable.join(''));
+      yellows.forEach((letters, i) => {
         if (letters) params.set(`ban${i}`, letters);
       });
       return `${location.origin}${location.pathname}?${params.toString()}`;
     }
 
-    // ── Utilities ─────────────────────────────────────────────────────────────
-
-    function uid() {
-      return Math.random().toString(36).slice(2, 10);
-    }
-
-    function getLen() {
-      const v = Number(document.getElementById('wordLength').value || 5);
-      return Math.max(3, Math.min(10, v));
-    }
-
-    function syncBannedLength(len) {
-      while (banned.length < len) banned.push('');
-      banned = banned.slice(0, len);
-    }
-
-    function normalizeLetters(s) {
-      return [...new Set((s || '').toUpperCase().replace(/[^A-Z]/g, '').split(''))].join('');
-    }
-
-    function reportYellowLettersMissingFromRuleouts(yellowLetters, severity = 'warning') {
-      const neededCounts = new Map();
-
-      for (const letter of (yellowLetters || '').split('').sort()) {
-        neededCounts.set(letter, (neededCounts.get(letter) || 0) + 1);
-      }
-
-      const placedCounts = new Map();
-
-      // Count a letter once per ruled-out slot. This matters for duplicate yellow
-      // letters: EEM needs E ruled out in two different positions.
-      for (const slotLetters of banned) {
-        for (const letter of new Set((slotLetters || '').split(''))) {
-          placedCounts.set(letter, (placedCounts.get(letter) || 0) + 1);
-        }
-      }
-
-      const remaining = [];
-
-      for (const [letter, neededCount] of [...neededCounts.entries()].sort()) {
-        const placedCount = placedCounts.get(letter) || 0;
-        const missingCount = Math.max(0, neededCount - placedCount);
-
-        for (let i = 0; i < missingCount; i++) {
-          remaining.push(letter);
-        }
-      }
-
-      setupStatusEl.classList.remove('warning', 'error');
-
-      if (remaining.length) {
-        setupStatusEl.textContent = `Letters remaining to be put into ruled-out slots: ${remaining.join('')}`;
-        setupStatusEl.classList.add(severity === 'error' ? 'error' : 'warning');
-      } else {
-        setupStatusEl.textContent = '';
-      }
-
-      return remaining;
-    }
-
-    function tileAt(pos) {
-      return tiles.find(t => t.pos === pos);
-    }
-
-    function isConflict(tile, pos) {
-      if (!tile || tile.letter === '?' || tile.locked) return false;
-      return banned[pos]?.includes(tile.letter);
-    }
-
-    function isLegalPositionForTile(tile, pos) {
-      if (!tile || tile.locked) return false;
-      if (tile.letter === '?') return true;
-      return !banned[pos]?.includes(tile.letter);
-    }
-
-    function shuffledArray(arr) {
-      const a = [...arr];
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-      }
-      return a;
-    }
-
-    function findLegalAssignment(movable, availablePositions) {
-      const items = movable.map(tile => ({
-        tile,
-        candidates: shuffledArray(availablePositions.filter(pos => isLegalPositionForTile(tile, pos)))
-      }));
-
-      // Most constrained first, so letters with fewer legal slots get placed before ? tiles.
-      items.sort((a, b) => a.candidates.length - b.candidates.length);
-
-      const used = new Set();
-      const assignment = new Map();
-
-      function backtrack(idx) {
-        if (idx === items.length) return true;
-
-        const item = items[idx];
-        for (const pos of item.candidates) {
-          if (used.has(pos)) continue;
-
-          used.add(pos);
-          assignment.set(item.tile.id, pos);
-
-          if (backtrack(idx + 1)) return true;
-
-          assignment.delete(item.tile.id);
-          used.delete(pos);
-        }
-
-        return false;
-      }
-
-      return backtrack(0) ? assignment : null;
-    }
-
-    // ── Rendering ─────────────────────────────────────────────────────────────
-
-    function renderBans() {
-      const len = getLen();
-      syncBannedLength(len);
-      banGridEl.innerHTML = '';
-
-      for (let pos = 0; pos < len; pos++) {
-        const cell = document.createElement('div');
-        cell.className = 'ban-cell';
-
-        const label = document.createElement('div');
-        label.className = 'ban-label';
-        label.textContent = `Slot ${pos + 1}`;
-
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = banned[pos] || '';
-        input.placeholder = 'e.g. EM';
-        input.spellcheck = false;
-        input.dataset.pos = String(pos);
-
-        input.addEventListener('input', e => {
-          const p = Number(e.target.dataset.pos);
-          const cursor = e.target.selectionStart;
-          banned[p] = normalizeLetters(e.target.value);
-          e.target.value = banned[p];
-
-          const newCursor = Math.min(cursor, e.target.value.length);
-          e.target.setSelectionRange(newCursor, newCursor);
-
-          // Do not rebuild the ruled-out inputs here; that would steal focus.
-          const yellowLetters = document.getElementById('yellowLetters').value.toUpperCase().replace(/[^A-Z]/g, '');
-          reportYellowLettersMissingFromRuleouts(yellowLetters, 'warning');
-          saveState();
-          renderBoard();
-        });
-
-        cell.appendChild(label);
-        cell.appendChild(input);
-        banGridEl.appendChild(cell);
-      }
-    }
-
-    function render() {
-      const len = getLen();
-      syncBannedLength(len);
-      document.documentElement.style.setProperty('--cols', len);
-      renderBans();
-      renderBoard();
-    }
-
-    function renderBoard() {
-      const len = getLen();
-      syncBannedLength(len);
-      document.documentElement.style.setProperty('--cols', len);
-      boardEl.innerHTML = '';
-
-      for (let pos = 0; pos < len; pos++) {
-        const slot = document.createElement('div');
-        slot.className = 'slot';
-        slot.dataset.pos = String(pos);
-
-        const t = tileAt(pos);
-        const conflict = isConflict(t, pos);
-
-        if (t?.locked) slot.classList.add('locked');
-        if (conflict) slot.classList.add('bad-placement');
-
-        const n = document.createElement('div');
-        n.className = 'slot-num';
-        n.textContent = String(pos + 1);
-        slot.appendChild(n);
-
-        if (banned[pos]) {
-          const ban = document.createElement('div');
-          ban.className = 'banned-note';
-          if (conflict) ban.classList.add('bad');
-          ban.textContent = `not: ${banned[pos]}`;
-          slot.appendChild(ban);
-        }
-
-        slot.addEventListener('dragover', e => {
-          if (!draggedId) return;
-          if (canDropOn(pos)) {
-            e.preventDefault();
-            slot.classList.add('drag-over');
-          } else {
-            slot.classList.add('drag-blocked');
-          }
-        });
-
-        slot.addEventListener('dragleave', () => {
-          slot.classList.remove('drag-over', 'drag-blocked');
-        });
-
-        slot.addEventListener('drop', e => {
-          e.preventDefault();
-          slot.classList.remove('drag-over', 'drag-blocked');
-          dropOn(pos);
-        });
-
-        if (t) {
-          const tile = document.createElement('div');
-          tile.className = `tile ${t.type}`;
-          if (conflict) tile.classList.add('conflict');
-          tile.textContent = t.letter;
-          tile.draggable = !t.locked;
-          tile.dataset.id = t.id;
-          tile.title = t.locked ? 'Fixed green tile' : 'Drag to move or swap';
-
-          tile.addEventListener('dragstart', e => {
-            if (t.locked) {
-              e.preventDefault();
-              return;
-            }
-            draggedId = t.id;
-            tile.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', t.id);
-          });
-
-          tile.addEventListener('dragend', () => {
-            draggedId = null;
-            renderBoard();
-          });
-
-          slot.appendChild(tile);
-        }
-
-        boardEl.appendChild(slot);
-      }
-    }
-
-    // ── Drag logic ────────────────────────────────────────────────────────────
-
-    function canDropOn(pos) {
-      if (!draggedId) return false;
-
-      const moving = tiles.find(t => t.id === draggedId);
-      if (!moving || moving.locked) return false;
-
-      const target = tileAt(pos);
-      if (target && target.locked) return false;
-
-      const allowTemporaryConflicts = document.getElementById('allowTemporaryConflicts').checked;
-      if (allowTemporaryConflicts) return true;
-
-      if (!isLegalPositionForTile(moving, pos)) return false;
-
-      // If swapping, the target must also be legal in the moving tile's old slot.
-      if (target && !isLegalPositionForTile(target, moving.pos)) return false;
-
-      return true;
-    }
-
-    function dropOn(pos) {
-      if (!canDropOn(pos)) return;
-
-      const moving = tiles.find(t => t.id === draggedId);
-      const target = tileAt(pos);
-
-      if (target && target.id !== moving.id) {
-        const oldPos = moving.pos;
-        moving.pos = target.pos;
-        target.pos = oldPos;
-      } else {
-        moving.pos = pos;
-      }
-
-      statusEl.textContent = '';
-      renderBoard();
-    }
-
-    // Touch drag — HTML5 drag events don't fire on iOS Safari, so we implement
-    // an equivalent using touch events. touchmove fires on the element where the
-    // touch started, so we use elementFromPoint to find what's under the finger.
-    document.addEventListener('touchstart', e => {
-      const tileEl = e.target.closest('.tile');
-      if (!tileEl) return;
-
-      const id = tileEl.dataset.id;
-      const tile = tiles.find(t => t.id === id);
-      if (!tile || tile.locked) return;
-
-      draggedId = id;
-      tileEl.classList.add('dragging');
-      e.preventDefault();
-    }, { passive: false });
-
-    document.addEventListener('touchmove', e => {
-      if (!draggedId) return;
-      e.preventDefault();
-
-      const touch = e.touches[0];
-      const el = document.elementFromPoint(touch.clientX, touch.clientY);
-      const slotEl = el?.closest('.slot');
-
-      document.querySelectorAll('.slot').forEach(s => {
-        s.classList.remove('drag-over', 'drag-blocked');
-      });
-
-      if (slotEl) {
-        const pos = Number(slotEl.dataset.pos);
-        touchOverPos = pos;
-        slotEl.classList.add(canDropOn(pos) ? 'drag-over' : 'drag-blocked');
-      } else {
-        touchOverPos = null;
-      }
-    }, { passive: false });
-
-    document.addEventListener('touchend', () => {
-      if (!draggedId) return;
-
-      if (touchOverPos !== null) {
-        dropOn(touchOverPos);
-      }
-
-      draggedId = null;
-      touchOverPos = null;
-      renderBoard();
-    });
-
-    document.addEventListener('touchcancel', () => {
-      if (!draggedId) return;
-      draggedId = null;
-      touchOverPos = null;
-      renderBoard();
-    });
-
-    // ── Board actions ─────────────────────────────────────────────────────────
-
-    function buildBoard() {
-      statusEl.textContent = '';
-
-      const len = getLen();
-      syncBannedLength(len);
-      document.documentElement.style.setProperty('--cols', len);
-      document.getElementById('greenPattern').maxLength = len;
-
-      let greenPattern = document.getElementById('greenPattern').value.toUpperCase().replace(/[^A-Z?]/g, '?');
-      greenPattern = greenPattern.padEnd(len, '?').slice(0, len);
-      document.getElementById('greenPattern').value = greenPattern;
-
-      const yellowLetters = document.getElementById('yellowLetters').value.toUpperCase().replace(/[^A-Z]/g, '');
-      document.getElementById('yellowLetters').value = yellowLetters;
-      reportYellowLettersMissingFromRuleouts(yellowLetters, 'error');
-
-      tiles = [];
-
-      for (let pos = 0; pos < len; pos++) {
-        const ch = greenPattern[pos];
-        if (/^[A-Z]$/.test(ch)) {
-          tiles.push({ id: uid(), letter: ch, type: 'green', pos, locked: true });
-        }
-      }
-
-      const openPositions = [];
-      for (let pos = 0; pos < len; pos++) {
-        if (!tileAt(pos)) openPositions.push(pos);
-      }
-
-      const yellowTiles = yellowLetters
-        .split('')
-        .slice(0, openPositions.length)
-        .map(letter => ({ id: uid(), letter, type: 'yellow', locked: false }));
-
-      const inferredQuestionCount = Math.max(0, openPositions.length - yellowTiles.length);
-
-      const movable = [
-        ...yellowTiles,
-        ...Array.from({ length: inferredQuestionCount }, () => ({
-          id: uid(),
-          letter: '?',
-          type: 'unknown',
-          locked: false
-        }))
-      ];
-
-      const assignment = findLegalAssignment(movable, openPositions);
-
-      if (assignment) {
-        movable.forEach(t => {
-          tiles.push({ ...t, pos: assignment.get(t.id) });
-        });
-      } else {
-        movable.forEach((t, idx) => {
-          tiles.push({ ...t, pos: openPositions[idx] });
-        });
-        if (movable.length) {
-          statusEl.textContent = 'No legal initial layout exists with the current greens and ruled-out letters.';
-        }
-      }
-
-      if (yellowLetters.length > openPositions.length) {
-        statusEl.textContent = `Only ${openPositions.length} movable slots are available; extra yellow letters were ignored.`;
-      }
-
-      saveState();
-      render();
-    }
-
-    function shuffleMovable() {
-      statusEl.textContent = '';
-
-      const movable = tiles.filter(t => !t.locked);
-      const len = getLen();
-
-      const availablePositions = [];
-      for (let pos = 0; pos < len; pos++) {
-        const t = tileAt(pos);
-        if (!t || !t.locked) availablePositions.push(pos);
-      }
-
-      const assignment = findLegalAssignment(movable, availablePositions);
-
-      if (!assignment) {
-        statusEl.textContent = 'No legal shuffle exists with the current greens and ruled-out letters.';
-        return;
-      }
-
-      movable.forEach(t => t.pos = assignment.get(t.id));
-      renderBoard();
-    }
-
-    function clearAll() {
-      statusEl.textContent = '';
-      setupStatusEl.textContent = '';
-      document.getElementById('wordLength').value = 5;
-      document.getElementById('greenPattern').value = '?????';
-      document.getElementById('yellowLetters').value = '';
-      banned = Array(5).fill('');
-      saveState();
-      buildBoard();
-    }
-
     // ── Event wiring ──────────────────────────────────────────────────────────
 
-    document.getElementById('buildBtn').addEventListener('click', buildBoard);
-    document.getElementById('clearBtn').addEventListener('click', clearAll);
-    document.getElementById('shuffleBtn').addEventListener('click', shuffleMovable);
+    $('wordLength').addEventListener('change', e => {
+      setLength(e.target.value);
+      pins.clear();
+      listExpanded = false;
+      renderClueInputs();
+      update();
+    });
 
-    document.getElementById('shareBtn').addEventListener('click', () => {
-      const btn = document.getElementById('shareBtn');
+    $('clearBtn').addEventListener('click', () => {
+      greens = Array(len).fill('');
+      yellows = Array(len).fill('');
+      countOverrides = {};
+      pins.clear();
+      listExpanded = false;
+      renderClueInputs();
+      update();
+      focusCell('green', 0);
+    });
+
+    $('clearPinsBtn').addEventListener('click', () => {
+      pins.clear();
+      refreshResults();
+    });
+
+    $('shareBtn').addEventListener('click', () => {
+      const btn = $('shareBtn');
       navigator.clipboard.writeText(getShareURL()).then(() => {
         btn.textContent = 'Copied!';
-        setTimeout(() => { btn.textContent = 'Copy link'; }, 2000);
       }).catch(() => {
         btn.textContent = 'Failed';
+      }).finally(() => {
         setTimeout(() => { btn.textContent = 'Copy link'; }, 2000);
       });
-    });
-
-    document.getElementById('allowTemporaryConflicts').addEventListener('change', () => {
-      statusEl.textContent = '';
-      renderBoard();
-    });
-
-    document.getElementById('wordLength').addEventListener('change', () => {
-      const len = getLen();
-      const gp = document.getElementById('greenPattern');
-      gp.value = gp.value.padEnd(len, '?').slice(0, len);
-      syncBannedLength(len);
-      saveState();
-      buildBoard();
-    });
-
-    document.getElementById('greenPattern').addEventListener('input', e => {
-      e.target.value = e.target.value.toUpperCase().replace(/[^A-Z?]/g, '?');
-      saveState();
-    });
-
-    document.getElementById('yellowLetters').addEventListener('input', e => {
-      e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
-      reportYellowLettersMissingFromRuleouts(e.target.value, 'warning');
-      saveState();
     });
 
     // ── Init ──────────────────────────────────────────────────────────────────
 
-    // URL params (written only by the share button) seed state on first open.
-    // Once applied they're stripped from the URL and written to localStorage,
-    // so subsequent refreshes restore the user's own in-progress state instead.
-    const loadedFromURL = loadFromURL();
-    if (loadedFromURL) {
+    setLength(5);
+    if (loadFromURL()) {
       saveState();
     } else {
-      const saved = localStorage.getItem(STATE_KEY);
-      if (saved) {
-        try { applyState(JSON.parse(saved)); } catch {}
-      }
+      loadSavedState();
     }
-
-    buildBoard();
+    renderClueInputs();
+    update();
   </script>
 </body>
 </html>
