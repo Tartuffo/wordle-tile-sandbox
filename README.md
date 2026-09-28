@@ -10,6 +10,7 @@ Developed with assistance from ChatGPT and Claude Code.
 
 Wordle Tile Sandbox lets you enter what you know from a Wordle puzzle, slot by slot, and shows every way the yellow tiles can still be arranged:
 
+- **Import a screenshot** of your Wordle game (or paste one): the grid and letters are read in the browser, you check them, and the green and yellow rows fill in, including double letters. A solved row is left out.
 - **Green row**: type a letter into each slot you know; it fills and moves on, like Wordle itself. Space skips a slot, and pasting a pattern such as `..A.E` fills the row.
 - **Yellow row**: under each slot, type the letters that turned yellow there. The yellow tiles are derived from these, so each letter is entered once.
 - **Double letters**: a yellow letter counts as one tile, or as already placed if it is green elsewhere. Tap its tile to change the count.

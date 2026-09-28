@@ -403,6 +403,45 @@
 
     .list-more { margin-top: 10px; }
 
+    .import-rows { display: grid; gap: var(--gap); margin: 10px 0; }
+
+    .import-row {
+      display: grid;
+      grid-template-columns: repeat(var(--n), minmax(0, 52px));
+      gap: var(--gap);
+    }
+
+    .import-tile {
+      aspect-ratio: 1 / 1;
+      width: 100%;
+      min-width: 0;
+      padding: 0;
+      border: 2px solid transparent;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 22px;
+      font-weight: 900;
+      text-align: center;
+      text-transform: uppercase;
+      outline: none;
+    }
+
+    .import-tile.green { background: var(--green); }
+    .import-tile.yellow { background: var(--yellow); }
+    .import-tile.gray { background: var(--gray); }
+    .import-tile.unsure { border-color: var(--danger); }
+    .import-tile:focus { border-color: var(--accent); }
+
+    .import-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #0b1020;
+    }
+
+    button:disabled { opacity: .5; cursor: default; }
+
     .copyright {
       width: min(640px, 100%);
       color: var(--muted);
@@ -427,9 +466,18 @@
   <main class="app">
     <h1>Wordle Tile Sandbox</h1>
     <p class="subtitle">
-      Type your green letters, and under each slot the letters that turned yellow there.
+      Type your green letters, and under each slot the letters that turned yellow there, or import a screenshot of your game.
       Every legal arrangement of the yellow tiles is listed below; tap one to put it on the board, or drag the tiles yourself.
     </p>
+
+    <section id="importPanel" class="panel" aria-label="Import screenshot" hidden>
+      <p id="importNote" class="hint" role="status"></p>
+      <div id="importRows" class="import-rows"></div>
+      <div class="import-actions">
+        <button id="importUseBtn" class="primary">Use these clues</button>
+        <button id="importCancelBtn">Cancel</button>
+      </div>
+    </section>
 
     <section class="panel" aria-label="Clues">
       <div id="slotNums" class="row-grid slot-nums"></div>
@@ -442,6 +490,10 @@
       <div id="clueStatus" class="status" role="status"></div>
 
       <div class="toolbar">
+        <button id="importBtn" title="Read your clues from a Wordle screenshot (you can also paste one)">Import screenshot</button>
+        <input id="importFile" type="file" accept="image/*" hidden>
+        <button id="clearBtn">Clear</button>
+        <button id="shareBtn">Copy link</button>
         <label>Letters
           <select id="wordLength">
             <option>5</option>
@@ -449,8 +501,6 @@
             <option>7</option>
           </select>
         </label>
-        <button id="clearBtn">Clear</button>
-        <button id="shareBtn">Copy link</button>
       </div>
     </section>
 
@@ -1214,6 +1264,321 @@
       }
     }
 
+    // ── Screenshot import ─────────────────────────────────────────────────────
+
+    // Everything runs in the browser: tiles are found by their fixed Wordle colors,
+    // and letters are matched against glyph templates rendered from Libre Franklin
+    // (an open-source Franklin Gothic, close to the tile font), 20x20, 4-bit hex.
+    const TILE_COLORS = [
+      [106, 170, 100, 'green'], [83, 141, 78, 'green'], [245, 121, 58, 'green'],     // light, dark, high contrast
+      [201, 180, 88, 'yellow'], [181, 159, 59, 'yellow'], [133, 192, 249, 'yellow'],
+      [120, 124, 126, 'gray'], [58, 58, 60, 'gray'],
+    ];
+    const GLYPH_SIZE = 20;
+    const LOW_CONFIDENCE = 0.02;   // best-vs-runner-up match margin below which a letter is flagged
+    const GLYPHS = {
+      A: '0000002eeeeed20000000000008ffffff7000000000000dffffffc000000000003ffffffff200000000009ffffffff80000000000efffdffffe0000000005fffe2fffff400000000afffa0bffff900000001efff505ffffe00000005fffe000effff4000000bfff90009ffffa000001ffff95559ffffe100006ffffffffffffff50000bffffffffffffffa0002ffffffffffffffff1007ffffbaaaaabfffff600dfffe0000000dffffc04ffff800000008fffff3bffff300000003fffffbefffc000000000dffffe',
+      B: '0beeeeeeeeedb95000000efffffffffffffd30000effffffffffffffe3000efffffaaabefffffa000effffc00002dffffd000effffc000006ffffe000effffc000007ffffc000effffd00015effff5000efffffffffffffe60000effffffffffffc200000efffffffffffffb30000efffffbbbbefffff6000effffd00001bffffe200effffc000003fffffc00effffc000003ffffff00effffd00001bfffffd00efffffbbbbeffffff400efffffffffffffff8000efffffffffffffe70000cfffffffffeda610000',
+      C: '00000039ceedb610000000002bffffffffe700000002efffffffffff9000001cfffffdbdfffff600008fffff60006ffffe1001effff800000cffff8006fffff3000007fecb700afffff00000000000000dffffd00000000000000effffd00000000000000dffffd00000000000000cffffd000000000000009fffff000000014100004fffff40000009ffda000dffffa000003ffffc0005fffff91016efffe30000affffffeffffff6000001cfffffffffff8000000019ffffffffe6000000000028cefeb6100000',
+      D: '0deeeeeedcb8410000000ffffffffffffe6000000ffffffffffffffb10000fffffecdfffffffc0000fffff70016dfffff7000fffff700002effffe100fffff7000007fffff600fffff7000001fffffa00fffff7000000effffd00fffff7000000dffffe00fffff7000000dffffe00fffff7000000effffd00fffff7000002fffffa00fffff7000008fffff500fffff700004fffffd000fffff70038efffff6000fffffeeffffffffb0000ffffffffffffffa10000ffffffffffffe6000000dfffffffeca51000000',
+      E: '00deeeeeeeeeeeeee80000effffffffffffff90000effffffffffffff90000effffffffffffff70000effffd00000000000000effffc00000000000000effffc00000000000000effffd00000000000000effffffffffe00000000effffffffffe00000000effffffffffe00000000efffffdddddc00000000effffc00000000000000effffc00000000000000effffc00000000000000effffd11111111110000efffffffffffffff0000efffffffffffffff0000efffffffffffffff0000dffffffffffffffe00',
+      F: '00ceeeeeeeeeeeeeec0000efffffffffffffff0000efffffffffffffff0000effffffffffffffb0000efffff10000000000000effffe00000000000000effffe00000000000000effffe00000000000000efffffcccccc30000000efffffffffff50000000efffffffffff50000000efffffffffff40000000efffff11111100000000effffe00000000000000effffe00000000000000effffe00000000000000effffe00000000000000effffe00000000000000effffe00000000000000cffffd000000000000',
+      G: '00000038bdedb710000000002affffffffe700000002dfffffffffff9000000cfffffcbdfffff700008ffffe30007fffff3001effff600000bffff9006fffff1000006fdb9500affffd00000000000000dffffb00000000000000effffb00023333333100effffb000bffffffff00dffffc000bffffffff00bffffd000affffffff007fffff2000004fffff001fffff7000008fffff0009ffffe50005ffffff0001dfffffdcefffffff00002effffffffffbfff000002bffffffff80bff00000004adffda3002aa0',
+      H: '0ceeeeb000000ceeeed00effffc000000efffff00effffc000000efffff00effffc000000efffff00effffc000000efffff00effffc000000efffff00effffc000000efffff00effffe766667ffffff00efffffffffffffffff00efffffffffffffffff00efffffffffffffffff00efffffbbbbbbffffff00effffc000000efffff00effffc000000efffff00effffc000000efffff00effffc000000efffff00effffc000000efffff00effffc000000efffff00effffc000000efffff00dffffb000000cffffd0',
+      I: '0000000deeeec00000000000000fffffe00000000000000fffffe00000000000000fffffe00000000000000fffffe00000000000000fffffe00000000000000fffffe00000000000000fffffe00000000000000fffffe00000000000000fffffe00000000000000fffffe00000000000000fffffe00000000000000fffffe00000000000000fffffe00000000000000fffffe00000000000000fffffe00000000000000fffffe00000000000000fffffe00000000000000fffffe00000000000000effffc0000000',
+      J: '0000000005eeeee000000000000006fffff000000000000006fffff000000000000006fffff000000000000006fffff000000000000006fffff000000000000006fffff000000000000006fffff000000000000006fffff000000000000006fffff000000000000006fffff000000000000006fffff000000000000006fffff000000000000007fffff00000000000000bfffff0000000000797bffffff0000000000cffffffffb0000000000effffffff40000000000ffffffff8000000000007beffda40000000',
+      K: '0deeee5000007eeee8000fffff600004ffffd1000fffff60002efffe30000fffff6000bffff400000fffff6008ffff7000000fffff605ffffa0000000fffff63efffd00000000fffff6cffffe10000000fffffeffffff70000000ffffffffffffe1000000fffffffffffff7000000fffffffccffffe100000ffffffd14fffff700000ffffff300cffffe10000fffff70005fffff70000fffff60000dffffe1000fffff600005fffff8000fffff600000dffffe100fffff6000006fffff900effff4000001dffffe0',
+      L: '00ceeeee10000000000000efffff10000000000000efffff10000000000000efffff10000000000000efffff10000000000000efffff10000000000000efffff10000000000000efffff10000000000000efffff10000000000000efffff10000000000000efffff10000000000000efffff10000000000000efffff10000000000000efffff10000000000000efffff10000000000000efffff21111111100000effffffffffffffe0000efffffffffffffff0000efffffffffffffff0000cffffffffffffffc00',
+      M: '00000000000000000000deeeeeb000000deeeeedfffffff200004ffffffefffffff70000affffffefffffffd0001effffffeffffffff3004fffffffeffffffff8009fffffffefffddfffc00effbdfffefffc8ffff34fff6dfffefffc3ffff89fff1dfffefffc0dfffeeffb0dfffefffc08fffffff60dfffefffc03fffffff20dfffefffc00dfffffb00dfffefffc008fffff600dfffefffc003fffff100dfffefffc000dfffb000dfffefffc0008fff6000dfffeeffc0003fff2000cfffd00000000000000000000',
+      N: '0deeee80000000beeed00efffff5000000cffff00efffffe100000cffff00effffffb00000cffff00efffffff80000cffff00effffffff4000cffff00effffffffd100cffff00efffffffffa00cffff00efffdefffff50cffff00efffc4fffffe1cffff00efffc09fffffbdffff00efffc01dffffffffff00efffc002efffffffff00efffc0005fffffffff00efffc00009ffffffff00efffc00001dfffffff00efffc000003fffffff00efffc0000007ffffff00efffc0000000bfffff00dfffb00000002efffd0',
+      O: '0000005adeeda500000000005effffffffd500000006ffffffffffff5000004fffffebbeffffe30001effffb1001bffffd1006fffff100002fffff500bffffb000000cffffa01fffff80000009ffffe07fffff60000007fffff6bfffff50000007fffffcbfffff50000007fffffd7fffff60000007fffff61fffff70000009ffffe00bffffa000000cffffa007ffffe100002fffff6001effffb1001bffffd10005ffffffccffffff4000007ffffffffffff600000005dffffffffd500000000005beffda5000000',
+      P: '0ceeeeeeeeeec94000000efffffffffffffc20000effffffffffffffd2000efffffeeeeffffffb000effffe00003cfffff600effffe000004fffffd00effffe000003fffffe00effffe000007fffffb00efffff55558ffffff300efffffffffffffff8000effffffffffffffc0000effffffffffffe810000efffff99999851000000effffe00000000000000effffe00000000000000effffe00000000000000effffe00000000000000effffe00000000000000effffe00000000000000dffffd0000000000000',
+      Q: '00000049ceec9300000000001bffffffffa100000001cffffffffffc1000000affff9349ffff9000003ffff90000affff200008ffff300004ffff80000bffff000001ffffc0000dfffe000000efffe0000efffd000000effff0000efffd000000efffe0000cfffe000000ffffd00009ffff200003ffff900004ffff700008ffff400000cffff5005ffffb0000003fffffeeffffe200000004efffffffff800000000028dffffffff9500000000002332cfffff000000000000001affff00000000000000005bec00',
+      R: '0ceeeeeeeeeeca7200000effffffffffffff60000efffffffffffffff7000efffff999adfffffe200effffc00000afffffc00effffc000002ffffff00effffc000003fffffd00effffd00001bfffff500efffffccccefffffa000effffffffffffffd1000efffffffffffffa10000efffffcceffffd000000effffc001fffff400000effffc000affffa00000effffc0004fffff20000effffc0000dffff90000effffc00008fffff2000effffc00003fffff8000effffc00000cffffe100dffffb000006fffff60',
+      S: '0000005aceeda720000000004dfffffffffa10000004ffffffffffffd100001dffffebbcffffe200006ffffa00002bfb1000009ffff6000001500000009ffffd400000000000006ffffffea620000000001efffffffffd8100000006fffffffffffe400000005effffffffffe3000000017cfffffffffb0000000000159dffffff600000100000005ffffff00005e90000000effffd0039fffa100006ffffe1008ffffffcbcefffff700005fffffffffffffb0000003bffffffffff910000000038beffec8200000',
+      T: '0ceeeeeeeeeeeeeeeed00efffffffffffffffff00efffffffffffffffff00ceeeeeffffffeeeeed00000000bffffb00000000000000bffffb00000000000000bffffb00000000000000bffffb00000000000000bffffb00000000000000bffffb00000000000000bffffb00000000000000bffffb00000000000000bffffb00000000000000bffffb00000000000000bffffb00000000000000bffffb00000000000000bffffb00000000000000bffffb00000000000000bffffb00000000000000affffa0000000',
+      U: '09eeeee1000003eeeec00cfffff2000004fffff00cfffff2000004fffff00cfffff2000004fffff00cfffff2000004fffff00cfffff2000004fffff00cfffff2000004fffff00cfffff2000004fffff00cfffff2000004fffff00cfffff2000004fffff00cfffff2000004fffff00cfffff2000004fffff00bfffff2000004fffff005fffff4000006ffffd000effff800000afffe1000afffff60018ffffb00005ffffffedefffff500000affffffffffffa00000009ffffffffff900000000038ceffec8200000',
+      V: 'ceeeee500000007eeee83effffa0000000dfffd00affffe0000002ffff7004fffff4000007ffff2000effff900000bfffc00009ffffe00001ffff700004fffff40005ffff200000effff8000afffc0000009ffffd000efff60000004fffff204ffff10000000effff708fffb000000009ffffc0cfff7000000004fffff4ffff2000000000effffdfffc00000000009ffffffff600000000004ffffffff100000000000dffffffb0000000000009ffffff60000000000004ffffff10000000000000dffffa0000000',
+      W: '00000000000000000000000000000000000000009cc700002cca00000bc8effe00008fff30004ffdbfff4000cfff70008ff97fff8001ffffb000cff52fffd005fffff101ffe10dfff209fffff505ffb008fff60dfffff909ff6003fffa3ffbbffe0dff1000effe7ff77fff5ffc0000afffeff23fffdff800005fffffd00efffff300001fffff8009ffffe000000cffff4005ffff90000007fffe0001ffff50000002fffa0000bffe10000000bff400005ff900000000000000000000000000000000000000000000',
+      X: '5eeeeea000000beeee2009fffff500006ffffa0001dffffe1001efffe100005fffff8009ffff5000000affffe23ffffa00000001effffccfffe2000000006fffffffff60000000000bfffffffb000000000002efffffe20000000000007fffffd00000000000009ffffff7000000000004fffffffe20000000001dffffffffc0000000008ffffbfffff600000003ffffa0cffffe2000001dffff203fffffb000008ffff80009fffff60003ffffd10001effffe101cffff5000005fffffa0cffffb0000000bfffffa',
+      Y: '9eeeee800000009eeee81dfffff3000003ffffb004fffffb00000bfffe2000afffff50004ffff700002effffd000cfffd0000007fffff706ffff30000000cffffe2dfff9000000004fffffefffe10000000009ffffffff600000000001effffffb0000000000007ffffff30000000000000dffffc00000000000000bffffb00000000000000bffffb00000000000000bffffb00000000000000bffffb00000000000000bffffb00000000000000bffffb00000000000000bffffb00000000000000affff90000000',
+      Z: '00aeeeeeeeeeeeeeeec000bfffffffffffffffe000bffffffffffffffe6000bffffffffffffff70000011111118fffffc0000000000003fffffe2000000000001dfffff60000000000009fffffa0000000000004fffffd1000000000001efffff40000000000009fffffa0000000000004fffffd1000000000001efffff4000000000000afffff80000000000005fffffc0000000000002efffff3111111110000bfffffffffffffff800affffffffffffffff900fffffffffffffffff900dffffffffffffffff70',
+    };
+    let glyphTemplates = null;
+    let importRows = [];           // [[{ letter, color, unsure }]]
+
+    function tileColorAt(r, g, b) {
+      let best = null;
+      let bestDist = 38 * 38;
+      for (const [pr, pg, pb, role] of TILE_COLORS) {
+        const d = (r - pr) ** 2 + (g - pg) ** 2 + (b - pb) ** 2;
+        if (d < bestDist) {
+          bestDist = d;
+          best = role;
+        }
+      }
+      return best;
+    }
+
+    // Finds the guess rows: solid, square blobs of a tile color, of one dominant size,
+    // grouped into rows of 5-7. Keyboard keys aren't square and empty tiles are hollow,
+    // so both drop out. Returns full-resolution boxes, rows top to bottom.
+    function findTileRows(img) {
+      const { width: W, height: H, data } = img;
+      const step = Math.max(1, Math.round(W / 400));
+      const gw = Math.floor(W / step);
+      const gh = Math.floor(H / step);
+      const names = ['', 'green', 'yellow', 'gray'];
+      const roles = new Uint8Array(gw * gh);
+      for (let y = 0; y < gh; y++) {
+        for (let x = 0; x < gw; x++) {
+          const i = (y * step * W + x * step) * 4;
+          roles[y * gw + x] = names.indexOf(tileColorAt(data[i], data[i + 1], data[i + 2]) || '');
+        }
+      }
+
+      const seen = new Uint8Array(gw * gh);
+      const blobs = [];
+      for (let start = 0; start < roles.length; start++) {
+        if (roles[start] <= 0 || seen[start]) continue;
+        const role = roles[start];
+        let x0 = gw, y0 = gh, x1 = 0, y1 = 0, count = 0;
+        const stack = [start];
+        seen[start] = 1;
+        while (stack.length) {
+          const p = stack.pop();
+          const px = p % gw;
+          const py = (p - px) / gw;
+          count++;
+          x0 = Math.min(x0, px); x1 = Math.max(x1, px);
+          y0 = Math.min(y0, py); y1 = Math.max(y1, py);
+          const next = [px > 0 ? p - 1 : -1, px < gw - 1 ? p + 1 : -1, p - gw, p + gw];
+          for (const q of next) {
+            if (q < 0 || q >= roles.length || seen[q] || roles[q] !== role) continue;
+            seen[q] = 1;
+            stack.push(q);
+          }
+        }
+        const w = x1 - x0 + 1;
+        const h = y1 - y0 + 1;
+        if (w >= gw * 0.05 && w / h > 0.85 && w / h < 1.18 && count / (w * h) > 0.5) {
+          blobs.push({ x: x0 * step, y: y0 * step, w: w * step, h: h * step, color: names[role] });
+        }
+      }
+      if (!blobs.length) return [];
+
+      const widths = blobs.map(t => t.w).sort((a, b) => a - b);
+      const median = widths[Math.floor(widths.length / 2)];
+      const rows = [];
+      for (const t of blobs.filter(t => Math.abs(t.w - median) < median * 0.2).sort((a, b) => a.y - b.y)) {
+        const row = rows.find(r => Math.abs(r[0].y - t.y) < median * 0.5);
+        if (row) row.push(t);
+        else rows.push([t]);
+      }
+      rows.forEach(r => r.sort((a, b) => a.x - b.x));
+
+      const sizes = rows.map(r => r.length).filter(n => n >= MIN_LEN && n <= MAX_LEN);
+      if (!sizes.length) return [];
+      const tally = n => sizes.filter(v => v === n).length;
+      const wordLen = sizes.reduce((best, n) => tally(n) > tally(best) ? n : best);
+      return rows.filter(r => r.length === wordLen);
+    }
+
+    // The letter's shape on a GLYPH_SIZE grid, fitted to its bounding box with the
+    // aspect ratio kept (so a thin I stays thin). ink(x, y) is 0..1 letter intensity.
+    function glyphVector(ink, w, h) {
+      let x0 = w, y0 = h, x1 = -1, y1 = -1;
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          if (ink(x, y) > 0.5) {
+            x0 = Math.min(x0, x); x1 = Math.max(x1, x);
+            y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+          }
+        }
+      }
+      const n = GLYPH_SIZE;
+      const out = new Float32Array(n * n);
+      if (x1 < 0) return out;
+
+      const bw = x1 - x0 + 1;
+      const bh = y1 - y0 + 1;
+      const scale = n / Math.max(bw, bh);
+      const ox = (n - bw * scale) / 2;
+      const oy = (n - bh * scale) / 2;
+      const count = new Float32Array(n * n);
+      for (let y = y0; y <= y1; y++) {
+        for (let x = x0; x <= x1; x++) {
+          const gx = Math.min(n - 1, Math.floor((x - x0) * scale + ox));
+          const gy = Math.min(n - 1, Math.floor((y - y0) * scale + oy));
+          out[gy * n + gx] += ink(x, y);
+          count[gy * n + gx]++;
+        }
+      }
+      for (let i = 0; i < out.length; i++) out[i] = count[i] ? out[i] / count[i] : 0;
+      return out;
+    }
+
+    // Letters are white on a tile that is darker in every channel, so the darkest
+    // channel measures ink independently of the tile's color.
+    function readTileLetter(img, tile) {
+      const inset = Math.round(tile.w * 0.08);
+      const X = tile.x + inset;
+      const Y = tile.y + inset;
+      const w = tile.w - 2 * inset;
+      const h = tile.h - 2 * inset;
+      const { width: W, data } = img;
+      const darkest = (x, y) => {
+        const i = ((Y + y) * W + X + x) * 4;
+        return Math.min(data[i], data[i + 1], data[i + 2]);
+      };
+      const bg = Math.min(darkest(0, 0), darkest(w - 1, 0), darkest(0, h - 1), darkest(w - 1, h - 1));
+      const vec = glyphVector((x, y) => Math.max(0, Math.min(1, (darkest(x, y) - bg) / (255 - bg))), w, h);
+
+      glyphTemplates ??= Object.fromEntries(Object.entries(GLYPHS)
+        .map(([letter, hex]) => [letter, Float32Array.from(hex, ch => parseInt(ch, 16) / 15)]));
+
+      let best = '';
+      let bestDist = Infinity;
+      let runnerUp = Infinity;
+      for (const [letter, tpl] of Object.entries(glyphTemplates)) {
+        let d = 0;
+        for (let i = 0; i < vec.length; i++) d += Math.abs(vec[i] - tpl[i]);
+        if (d < bestDist) {
+          runnerUp = bestDist;
+          bestDist = d;
+          best = letter;
+        } else if (d < runnerUp) {
+          runnerUp = d;
+        }
+      }
+      return { letter: best, unsure: (runnerUp - bestDist) / vec.length < LOW_CONFIDENCE };
+    }
+
+    async function readScreenshot(file) {
+      const bitmap = await createImageBitmap(file);
+      const canvas = document.createElement('canvas');
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(bitmap, 0, 0);
+      const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      return findTileRows(img).map(row => row.map(tile => ({ color: tile.color, ...readTileLetter(img, tile) })));
+    }
+
+    async function importScreenshot(file) {
+      if (!file || !file.type.startsWith('image/')) return;
+      showImportPanel();
+      $('importRows').innerHTML = '';
+      $('importNote').textContent = 'Reading screenshot…';
+      $('importUseBtn').disabled = true;
+
+      let rows;
+      try {
+        rows = await readScreenshot(file);
+      } catch {
+        rows = [];
+      }
+
+      // A solved row adds nothing to plan with, so keep only the guesses before it.
+      const solvedAt = rows.findIndex(r => r.every(t => t.color === 'green'));
+      const solved = solvedAt >= 0;
+      if (solved) rows = rows.slice(0, solvedAt);
+      importRows = rows;
+
+      if (!rows.length) {
+        $('importNote').textContent = solved
+          ? 'That puzzle was solved on the first guess; there is nothing to import.'
+          : 'Couldn’t find a Wordle grid in that image. Try a full, uncropped screenshot.';
+        return;
+      }
+
+      renderImportRows();
+      const unsure = rows.flat().some(t => t.unsure);
+      $('importNote').textContent = [
+        'Check the letters against your game; tap a tile to fix one.',
+        unsure ? 'Outlined tiles were hard to read.' : '',
+        solved ? 'The solved row was left out.' : '',
+      ].filter(Boolean).join(' ');
+      $('importUseBtn').disabled = false;
+    }
+
+    function showImportPanel() {
+      $('importPanel').hidden = false;
+      $('importPanel').scrollIntoView({ block: 'nearest' });
+    }
+
+    function renderImportRows() {
+      const wrap = $('importRows');
+      wrap.innerHTML = '';
+      importRows.forEach((row, r) => {
+        const rowEl = document.createElement('div');
+        rowEl.className = 'import-row';
+        rowEl.style.setProperty('--n', row.length);
+        row.forEach((tile, i) => {
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.className = `import-tile ${tile.color}`;
+          if (tile.unsure) input.classList.add('unsure');
+          input.value = tile.letter;
+          input.autocomplete = 'off';
+          input.spellcheck = false;
+          input.setAttribute('autocapitalize', 'characters');
+          input.setAttribute('aria-label', `Guess ${r + 1}, letter ${i + 1}`);
+          input.addEventListener('focus', () => input.select());
+          input.addEventListener('input', e => {
+            const letter = (e.data || input.value).toUpperCase().replace(/[^A-Z]/g, '').slice(-1);
+            tile.letter = letter;
+            tile.unsure = false;
+            input.value = letter;
+            input.classList.remove('unsure');
+            $('importUseBtn').disabled = importRows.flat().some(t => !t.letter);
+          });
+          rowEl.appendChild(input);
+        });
+        wrap.appendChild(rowEl);
+      });
+    }
+
+    // Guesses -> per-slot clues. Greens and yellows map directly. The screenshot also
+    // gives exact double-letter counts: the most copies of a letter colored in any one
+    // guess is the minimum in the word, less the copies already green.
+    function applyImportedGuesses() {
+      const n = importRows[0].length;
+      const newGreens = Array(n).fill('');
+      const newYellows = Array.from({ length: n }, () => new Set());
+      const minCount = {};
+
+      for (const row of importRows) {
+        const colored = {};
+        row.forEach((t, i) => {
+          if (t.color === 'green') newGreens[i] = t.letter;
+          if (t.color === 'yellow') newYellows[i].add(t.letter);
+          if (t.color !== 'gray') colored[t.letter] = (colored[t.letter] || 0) + 1;
+        });
+        for (const [letter, c] of Object.entries(colored)) minCount[letter] = Math.max(minCount[letter] || 0, c);
+      }
+
+      greens = newGreens;
+      yellows = newYellows.map(s => [...s].join(''));
+      countOverrides = {};
+      for (const letter of new Set(yellows.join(''))) {
+        countOverrides[letter] = Math.max(0, minCount[letter] - newGreens.filter(g => g === letter).length);
+      }
+
+      setLength(n);
+      pins.clear();
+      listExpanded = false;
+      renderClueInputs();
+      update();
+      closeImport();
+    }
+
+    function closeImport() {
+      $('importPanel').hidden = true;
+      $('importFile').value = '';
+      importRows = [];
+    }
+
     // ── Update pipeline ───────────────────────────────────────────────────────
 
     function update() {
@@ -1323,6 +1688,19 @@
       }).finally(() => {
         setTimeout(() => { btn.textContent = 'Copy link'; }, 2000);
       });
+    });
+
+    $('importBtn').addEventListener('click', () => $('importFile').click());
+    $('importFile').addEventListener('change', e => importScreenshot(e.target.files[0]));
+    $('importUseBtn').addEventListener('click', applyImportedGuesses);
+    $('importCancelBtn').addEventListener('click', closeImport);
+
+    // A pasted image (e.g. a screenshot copied on desktop) imports directly.
+    document.addEventListener('paste', e => {
+      const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith('image/'));
+      if (!item) return;
+      e.preventDefault();
+      importScreenshot(item.getAsFile());
     });
 
     // ── Init ──────────────────────────────────────────────────────────────────
