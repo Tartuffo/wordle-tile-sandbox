@@ -167,6 +167,22 @@
       background: color-mix(in srgb, var(--bad-soft) 60%, var(--panel-2));
     }
 
+    .gray-cell {
+      grid-column: 2 / -1;
+      height: 40px;
+      padding: 0 12px;
+      text-align: left;
+      font-family: var(--mono);
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: .12em;
+    }
+
+    .gray-cell.filled {
+      background: color-mix(in srgb, var(--gray) 30%, var(--panel-2));
+      border-color: color-mix(in srgb, var(--gray) 80%, var(--border));
+    }
+
     .tile-chips {
       grid-column: 2 / -1;
       display: flex;
@@ -383,6 +399,9 @@
     .arr .y { color: var(--yellow); }
     .arr .u { color: var(--muted); opacity: .6; }
 
+    /* No word in the dictionary fits: kept visible but dimmed, since the list can miss words. */
+    .arr.noword { opacity: .4; text-decoration: line-through; }
+
     .arr.current {
       border-color: var(--accent);
       box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
@@ -484,6 +503,11 @@
       <div id="greenRow" class="row-grid"></div>
       <div id="yellowRow" class="row-grid"></div>
       <div class="row-grid">
+        <div class="row-label">Gray</div>
+        <input id="grayInput" type="text" class="cell gray-cell" autocomplete="off" spellcheck="false"
+               autocapitalize="characters" autocorrect="off" enterkeyhint="done" aria-label="Gray letters: not in the word">
+      </div>
+      <div class="row-grid">
         <div class="row-label">Tiles</div>
         <div id="tileChips" class="tile-chips"></div>
       </div>
@@ -513,6 +537,10 @@
         <button id="clearPinsBtn" class="link" hidden>clear pins</button>
       </div>
       <p id="forced" class="forced"></p>
+      <p id="wordNote" class="forced" hidden>
+        <span id="wordNoteText"></span>
+        <button id="wordToggleBtn" class="link"></button>
+      </p>
 
       <div id="summaryWrap" hidden>
         <p class="caption">Where each yellow can go (count of arrangements). Tap a cell to pin it.</p>
@@ -535,12 +563,14 @@
     const MAX_LEN = 7;
     const STATE_KEY = 'wordle-sandbox-v2';
     const OLD_STATE_KEY = 'wordle-sandbox-state';
+    const HIDE_KEY = 'wordle-sandbox-hide-nonwords';
     const FLAT_LIST_MAX = 8;      // at or below this, list without group headers
     const COLLAPSE_OVER = 24;     // above this, hide the list until asked or narrowed by pins
 
     let len = 5;
     let greens = [];              // per slot: one letter or ''
     let yellows = [];             // per slot: letters that were yellow in that slot
+    let grays = '';               // letters shown gray and so not in the word
     let countOverrides = {};      // letter -> chosen number of movable tiles
     let tileInfo = [];            // derived: [{ letter, count, min, max, green }]
     let movable = [];             // derived multiset of movable yellow letters
@@ -550,6 +580,9 @@
     let listExpanded = false;
     let draggedPos = null;
     let touchOverPos = null;
+    const wordLists = new Map();  // length -> { words, byPos } once loaded, or 'loading' / 'failed'
+    let noWord = new Set();       // arrangements that no dictionary word fits
+    let hideNonWords = false;
 
     // ── Utilities ─────────────────────────────────────────────────────────────
 
@@ -746,14 +779,83 @@
       return nums.length === 1 ? `slot ${nums[0]}` : `slots ${nums.join(' & ')}`;
     }
 
-    function forcedPlacements() {
-      if (arrangements.length < 2) return [];
+    function forcedPlacements(base) {
+      if (base.length < 2) return [];
       const forced = [];
       for (const letter of new Set(movable)) {
-        const keys = new Set(arrangements.map(a => positionsOf(a, letter).join()));
-        if (keys.size === 1) forced.push(`${letter} must go in ${slotList(positionsOf(arrangements[0], letter))}`);
+        const keys = new Set(base.map(a => positionsOf(a, letter).join()));
+        if (keys.size === 1) forced.push(`${letter} must go in ${slotList(positionsOf(base[0], letter))}`);
       }
       return forced;
+    }
+
+    // ── Word check ────────────────────────────────────────────────────────────
+
+    // words/<n>.txt is ENABLE plus SCOWL size 80 (see words/README.md). It loads only
+    // when the page is served over http(s); opened as a file, the check stays off.
+    function loadWords(n) {
+      if (wordLists.has(n)) return;
+      if (location.protocol === 'file:') {
+        wordLists.set(n, 'failed');
+        return;
+      }
+      wordLists.set(n, 'loading');
+      fetch(`words/${n}.txt`)
+        .then(r => r.ok ? r.text() : Promise.reject())
+        .then(text => {
+          const words = text.split('\n').filter(w => w.length === n);
+          // Index by (slot, letter) so a lookup only scans words sharing its rarest known letter.
+          const byPos = Array.from({ length: n }, () => new Map());
+          words.forEach((w, wi) => {
+            for (let i = 0; i < n; i++) {
+              if (!byPos[i].has(w[i])) byPos[i].set(w[i], []);
+              byPos[i].get(w[i]).push(wi);
+            }
+          });
+          wordLists.set(n, { words, byPos });
+          if (n === len) update();
+        })
+        .catch(() => wordLists.set(n, 'failed'));
+    }
+
+    // Letters ruled out everywhere: gray, unless also green or yellow (a gray duplicate
+    // only caps the count).
+    function grayLetters() {
+      const seen = greens.join('') + yellows.join('');
+      return new Set([...grays].filter(l => !seen.includes(l)));
+    }
+
+    function findNonWords() {
+      const list = wordLists.get(len);
+      if (!list?.words) return new Set();
+      const ruledOut = grayLetters();
+
+      // An unknown slot can hold any letter that isn't gray and wasn't yellow there.
+      const fits = (w, a) => {
+        for (let i = 0; i < len; i++) {
+          if (a[i] !== '?' ? w[i] !== a[i] : ruledOut.has(w[i]) || yellows[i].includes(w[i])) return false;
+        }
+        return true;
+      };
+
+      const out = new Set();
+      for (const a of arrangements) {
+        let candidates = null;
+        for (let i = 0; i < len; i++) {
+          if (a[i] === '?') continue;
+          const bucket = list.byPos[i].get(a[i]) || [];
+          if (!candidates || bucket.length < candidates.length) candidates = bucket;
+        }
+        const found = candidates
+          ? candidates.some(wi => fits(list.words[wi], a))
+          : list.words.some(w => fits(w, a));
+        if (!found) out.add(a);
+      }
+      return out;
+    }
+
+    function visibleArrangements() {
+      return hideNonWords ? arrangements.filter(a => !noWord.has(a)) : arrangements;
     }
 
     // ── Rendering: clues ──────────────────────────────────────────────────────
@@ -780,6 +882,7 @@
     }
 
     function renderClueInputs() {
+      $('grayInput').value = grays;
       const nums = $('slotNums');
       nums.innerHTML = '<div class="row-label"></div>';
       for (let pos = 0; pos < len; pos++) {
@@ -813,6 +916,7 @@
     }
 
     function syncCellClasses(errors) {
+      $('grayInput').classList.toggle('filled', !!grays);
       document.querySelectorAll('.green-cell').forEach(el => {
         el.classList.toggle('filled', !!greens[Number(el.dataset.pos)]);
       });
@@ -1110,6 +1214,10 @@
         btn.appendChild(s);
       }
       btn.title = 'Put this arrangement on the board';
+      if (noWord.has(a)) {
+        btn.classList.add('noword');
+        btn.title = 'No word in the dictionary fits this. Tap to put it on the board anyway.';
+      }
       btn.addEventListener('click', () => {
         board = a;
         refreshResults({ keepBoard: true });
@@ -1227,20 +1335,24 @@
     }
 
     function refreshResults({ keepBoard = false } = {}) {
-      const filtered = arrangements.filter(matchesPins);
+      const base = visibleArrangements();
+      const filtered = base.filter(matchesPins);
       const layout = layoutList(filtered);
 
-      if (!keepBoard && !filtered.includes(board)) {
-        board = layout.order[0] ?? fallbackBoard();
+      if (!keepBoard && (!filtered.includes(board) || noWord.has(board))) {
+        board = layout.order.find(a => !noWord.has(a)) ?? layout.order[0] ?? fallbackBoard();
       }
       renderBoard();
 
-      const total = arrangements.length;
+      const total = base.length;
+      const hiddenAll = hideNonWords && !total && arrangements.length > 0;
       let title;
       if (!tileInfo.length) {
         title = 'Add the yellow letters you’ve seen to see where they can go.';
       } else if (!movable.length) {
         title = 'Every yellow letter is already placed.';
+      } else if (hiddenAll) {
+        title = 'None of the legal arrangements fits a known word.';
       } else if (!total) {
         title = 'No legal arrangement fits these clues.';
       } else if (pins.size) {
@@ -1252,8 +1364,18 @@
       $('resultsTitle').classList.toggle('muted', !movable.length);
       $('clearPinsBtn').hidden = !pins.size;
 
-      const forced = movable.length ? forcedPlacements() : [];
+      const forced = movable.length ? forcedPlacements(base) : [];
       $('forced').textContent = forced.length ? `${forced.join('; ')}.` : '';
+
+      const nonWords = movable.length ? noWord.size : 0;
+      $('wordNote').hidden = !nonWords;
+      if (nonWords) {
+        const n = `${nonWords} arrangement${nonWords === 1 ? '' : 's'}`;
+        $('wordNoteText').textContent = hideNonWords
+          ? `${n} that no known word fits ${nonWords === 1 ? 'is' : 'are'} hidden.`
+          : `${n} (struck through) ${nonWords === 1 ? 'fits' : 'fit'} no known word.`;
+        $('wordToggleBtn').textContent = hideNonWords ? 'show' : 'hide';
+      }
 
       const showResults = movable.length > 0 && total > 0;
       $('summaryWrap').hidden = !showResults;
@@ -1560,6 +1682,8 @@
 
       greens = newGreens;
       yellows = newYellows.map(s => [...s].join(''));
+      const colored = new Set(Object.keys(minCount));
+      grays = [...new Set(importRows.flat().filter(t => t.color === 'gray' && !colored.has(t.letter)).map(t => t.letter))].sort().join('');
       countOverrides = {};
       for (const letter of new Set(yellows.join(''))) {
         countOverrides[letter] = Math.max(0, minCount[letter] - newGreens.filter(g => g === letter).length);
@@ -1569,6 +1693,7 @@
       pins.clear();
       listExpanded = false;
       renderClueInputs();
+      loadWords(len);
       update();
       closeImport();
     }
@@ -1585,6 +1710,7 @@
       deriveTiles();
       const errors = findClueErrors();
       arrangements = errors.length ? [] : enumerate();
+      noWord = findNonWords();
       prunePins();
       syncCellClasses(errors);
       renderTileChips();
@@ -1598,7 +1724,7 @@
     // need erasing. Storage can be unavailable (private mode), hence the try/catch.
     function saveState() {
       try {
-        localStorage.setItem(STATE_KEY, JSON.stringify({ date: localDate(), len, greens, yellows, countOverrides }));
+        localStorage.setItem(STATE_KEY, JSON.stringify({ date: localDate(), len, greens, yellows, grays, countOverrides }));
       } catch {}
     }
 
@@ -1609,6 +1735,7 @@
         if (!s || s.date !== localDate()) return false;
         greens = (s.greens || []).map(g => normalizeLetters(g).slice(0, 1));
         yellows = (s.yellows || []).map(normalizeLetters);
+        grays = normalizeLetters(s.grays);
         countOverrides = s.countOverrides && typeof s.countOverrides === 'object' ? s.countOverrides : {};
         setLength(s.len);
         return true;
@@ -1629,6 +1756,7 @@
       setLength(params.get('len'));
       greens = greens.map((_, i) => /[A-Z]/.test(green[i] || '') ? green[i] : '');
       yellows = yellows.map((_, i) => normalizeLetters(params.get(`ban${i}`)));
+      grays = normalizeLetters(params.get('gray'));
 
       countOverrides = {};
       if (params.has('yellow')) {
@@ -1647,6 +1775,7 @@
       params.set('len', len);
       params.set('green', greens.map(g => g || '?').join(''));
       if (movable.length) params.set('yellow', movable.join(''));
+      if (grays) params.set('gray', grays);
       yellows.forEach((letters, i) => {
         if (letters) params.set(`ban${i}`, letters);
       });
@@ -1660,18 +1789,37 @@
       pins.clear();
       listExpanded = false;
       renderClueInputs();
+      loadWords(len);
       update();
     });
 
     $('clearBtn').addEventListener('click', () => {
       greens = Array(len).fill('');
       yellows = Array(len).fill('');
+      grays = '';
       countOverrides = {};
       pins.clear();
       listExpanded = false;
       renderClueInputs();
       update();
       focusCell('green', 0);
+    });
+
+    $('grayInput').addEventListener('input', e => {
+      const cursor = e.target.selectionStart;
+      grays = normalizeLetters(e.target.value);
+      e.target.value = grays;
+      e.target.setSelectionRange(Math.min(cursor, grays.length), Math.min(cursor, grays.length));
+      update();
+    });
+    $('grayInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') e.target.blur();
+    });
+
+    $('wordToggleBtn').addEventListener('click', () => {
+      hideNonWords = !hideNonWords;
+      try { localStorage.setItem(HIDE_KEY, hideNonWords ? '1' : ''); } catch {}
+      refreshResults();
     });
 
     $('clearPinsBtn').addEventListener('click', () => {
@@ -1711,7 +1859,9 @@
     } else {
       loadSavedState();
     }
+    try { hideNonWords = !!localStorage.getItem(HIDE_KEY); } catch {}
     renderClueInputs();
+    loadWords(len);
     update();
   </script>
 </body>
