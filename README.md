@@ -17,7 +17,7 @@ Wordle Tile Sandbox lets you enter what you know from a Wordle puzzle, slot by s
 - **Double letters**: a yellow letter counts as one tile, or as already placed if it is green elsewhere. Tap its tile to change the count.
 - **Every legal arrangement**, sorted and grouped by where the most constrained letter sits. Tap one to put it on the board.
 - **Where each yellow can go**: a letter-by-slot grid counting the arrangements that put each letter in each slot, with forced placements called out. Tap a cell to pin that letter there and narrow the list.
-- **Word check**: arrangements that no English word fits are struck through, and a button hides them. Unknown slots may hold any letter that is not gray and was not yellow in that slot. The word lists are in [`words/`](words/README.md).
+- **Word check**: arrangements that no English word fits are dimmed and struck through by default; a Dim / Hide / Off switch can instead hide them or show them normally. Unknown slots may hold any letter that is not gray and was not yellow in that slot. The word lists are in [`words/`](words/README.md).
 - **Drag tiles on the board** to try arrangements by hand; a tile in a slot where it was yellow is flagged.
 - **Copy link** shares the current clues. Clues are saved in the browser for the rest of the day, then cleared for the next puzzle.
 
