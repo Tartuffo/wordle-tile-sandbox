@@ -68,3 +68,45 @@ This project is licensed under the [MIT License](LICENSE).
 ## Disclaimer
 
 This is an independent fan-made helper tool. It is not affiliated with Wordle, The New York Times, Hasbro, or Scrabble.
+
+### Browser regression tests
+
+The app still has no runtime dependencies or build step. Development tests use
+Node.js 22+ and Playwright Chromium:
+
+```bash
+npm ci
+npx playwright install chromium
+npm test
+```
+
+The test runner starts its own small static server on port 4173. On Linux,
+`npx playwright install --with-deps chromium` also installs browser system
+dependencies. For an existing Chromium installation, set
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to its executable path.
+
+`npm run test:ui` opens the interactive runner; `npm run test:report` opens the
+last HTML report. Failed tests retain a trace and screenshot. GitHub Actions
+runs the suite for pull requests and pushes to main, and uploads reports and
+failure artifacts for 14 days.
+
+Coverage includes clue entry, duplicate yellow counts, lengths 5–7, arrangements
+and pins, contradictory clues, daily persistence, share links, dictionary modes,
+gray letters, letters-left taps/holds/drags, real dictionary lookup, PNG import,
+guess stepping, cancel/retry, and manual edits after import. Clipboard writes
+are captured at the browser API boundary; dictionary filtering uses a tiny
+controlled word list while a separate test loads the real bundled dictionary.
+The checked-in PNGs are synthetic, contain no personal data, and exercise real
+image decoding, tile detection and OCR. See `tests/fixtures/generate.py` for
+optional regeneration (Pillow and Liberation Sans Bold required only then).
+
+One test is explicitly marked as an **expected failure**: importing BEEFY's
+feedback against BERRY loses the maximum count of one E, so the dictionary
+filter can still admit BEERY. It asserts the desired filtering behavior and
+does not bless the bug or change the app. If the assertion starts passing,
+Playwright fails the run as an unexpected pass; remove the expected-failure
+marker when fixing the underlying count handling. Fixture/import setup runs
+before that marker so unrelated setup failures still fail CI.
+
+This is a focused desktop Chromium suite, not exhaustive browser, touch-device,
+accessibility, or OCR coverage.

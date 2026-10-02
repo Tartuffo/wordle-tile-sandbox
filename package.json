@@ -1,0 +1,15 @@
+{
+  "name": "wordle-tile-sandbox",
+  "private": true,
+  "version": "1.0.0",
+  "description": "A simple visual sandbox for experimenting with possible Wordle solutions.",
+  "license": "MIT",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}
