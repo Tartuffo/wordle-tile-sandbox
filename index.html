@@ -256,6 +256,103 @@
       font-variant-numeric: tabular-nums;
     }
 
+    .letters { margin-bottom: 12px; }
+
+    .letters-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 10px;
+      margin-bottom: 8px;
+    }
+
+    .letters-title {
+      margin-right: auto;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .letters-title b { color: var(--text); }
+    .letters-hint { margin: 8px 0 0; font-size: 12px; }
+    .letters-hint[hidden], #lettersBody[hidden] { display: none; }
+
+    .kb { display: grid; gap: 5px; }
+
+    .kb-row {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .vc {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 6px 10px;
+      align-items: center;
+    }
+
+    .vc-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .vc-keys {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px;
+      color: var(--muted);
+    }
+
+    .vc-sep {
+      width: 1px;
+      height: 26px;
+      margin: 0 3px;
+      background: var(--border);
+    }
+
+    .key {
+      flex: 1 1 0;
+      min-width: 0;
+      max-width: 34px;
+      height: 38px;
+      padding: 0;
+      border: 0;
+      border-radius: 5px;
+      background: #4a5263;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .vc .key { flex: 0 0 30px; }
+    .key.green { background: var(--green); }
+    .key.yellow { background: var(--yellow); }
+
+    .key.out {
+      background: none;
+      border: 1px dashed #343b48;
+      color: #4b5262;
+      opacity: 1;
+    }
+
+    .key.shake { animation: shake .3s; }
+
+    @keyframes shake {
+      25% { transform: translateX(-4px); }
+      75% { transform: translateX(4px); }
+    }
+
+    .board-word {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .board-word:empty { display: none; }
+    .board-word.known { color: var(--green); font-weight: 700; }
+
     .status {
       margin-top: 10px;
       font-size: 14px;
@@ -300,6 +397,14 @@
     }
 
     .tile.yellow { background: var(--yellow); cursor: grab; }
+
+    /* A letter being tried, styled like a typed but unsubmitted Wordle tile. */
+    .tile.trial {
+      background: #1d2129;
+      border-color: #8a93a3;
+      cursor: grab;
+      box-shadow: none;
+    }
     .tile.yellow:active { cursor: grabbing; }
     .tile.green { background: var(--green); }
 
@@ -370,6 +475,7 @@
     }
 
     .seg button + button { border-left: 1px solid var(--border); }
+    .seg button { -webkit-tap-highlight-color: transparent; }
 
     .seg button[aria-pressed="true"] {
       background: var(--panel-2);
@@ -618,7 +724,20 @@
     </section>
 
     <section class="panel" aria-label="Arrangements">
+      <div class="letters" aria-label="Letters still possible">
+        <div class="letters-head">
+          <span id="lettersTitle" class="letters-title"></span>
+          <span id="lettersSeg" class="seg" role="group" aria-label="Letters view">
+            <button data-view="hide" title="Hide the letters">Hide</button>
+            <button data-view="keyboard" title="Keyboard layout">Keyboard</button>
+            <button data-view="vc" title="Vowels and consonants">V/C</button>
+          </span>
+        </div>
+        <div id="lettersBody"></div>
+        <p id="lettersHint" class="hint letters-hint">Tap a letter to try it; hold a tried one to remove it.</p>
+      </div>
       <div id="board" class="row-grid" aria-label="Tile board"></div>
+      <p id="boardWord" class="board-word" role="status"></p>
       <div id="boardStatus" class="status" role="status"></div>
 
       <div class="results-head">
@@ -665,6 +784,7 @@
     const OLD_STATE_KEY = 'wordle-sandbox-state';
     const HIDE_KEY = 'wordle-sandbox-hide-nonwords';   // earlier on/off setting, read once
     const WORD_MODE_KEY = 'wordle-sandbox-nonword-mode';
+    const LETTERS_VIEW_KEY = 'wordle-sandbox-letters-view';
     const FLAT_LIST_MAX = 8;      // at or below this, list without group headers
     const COLLAPSE_OVER = 24;     // above this, hide the list until asked or narrowed by pins
 
@@ -678,6 +798,8 @@
     let arrangements = [];        // every legal arrangement, '?' marks an unknown slot
     let pins = new Map();         // slot -> letter ('?' pins an unknown)
     let board = '';               // arrangement currently on the board
+    let trials = [];              // per slot: a letter being tried in a blank board slot
+    let lettersView = 'vc';       // letters panel: 'vc', 'keyboard' or 'hide'
     let listExpanded = false;
     let draggedPos = null;
     let touchOverPos = null;
@@ -700,7 +822,7 @@
     }
 
     function isBanned(letter, pos) {
-      return letter !== '?' && yellows[pos].includes(letter);
+      return !!letter && letter !== '?' && yellows[pos].includes(letter);
     }
 
     function localDate() {
@@ -713,6 +835,7 @@
       const fit = arr => Array.from({ length: len }, (_, i) => (arr || [])[i] || '');
       greens = fit(greens);
       yellows = fit(yellows);
+      trials = Array(len).fill('');
       $('wordLength').value = String(len);
       document.documentElement.style.setProperty('--cols', len);
     }
@@ -1174,15 +1297,27 @@
 
     // ── Rendering: board ──────────────────────────────────────────────────────
 
+    // A slot's letter for rule checks: the yellow tile on the board, or a letter
+    // the user is trying there from the letters panel.
+    function slotLetter(pos) {
+      return board[pos] !== '?' ? board[pos] : trials[pos] || '';
+    }
+
     function boardConflicts() {
+      const ruledOut = grayLetters();
       const out = [];
       for (let pos = 0; pos < len; pos++) {
-        if (!greens[pos] && isBanned(board[pos], pos)) out.push(pos);
+        if (greens[pos]) continue;
+        const letter = slotLetter(pos);
+        if (isBanned(letter, pos) || (trials[pos] && ruledOut.has(letter))) out.push(pos);
       }
       return out;
     }
 
     function renderBoard() {
+      // Tried letters only live in blank slots; one displaced by a tile is dropped.
+      trials = trials.map((t, pos) => t && !greens[pos] && board[pos] === '?' ? t : '');
+
       const el = $('board');
       el.innerHTML = '<div class="row-label">Board</div>';
       const conflicts = boardConflicts();
@@ -1191,22 +1326,24 @@
         const slot = document.createElement('div');
         slot.className = 'slot';
         slot.dataset.pos = String(pos);
-        const letter = board[pos];
+        const letter = slotLetter(pos);
 
-        if (letter && letter !== '?') {
+        if (letter) {
           slot.classList.add('occupied');
+          const kind = greens[pos] ? 'green' : board[pos] !== '?' ? 'yellow' : 'trial';
           const tile = document.createElement('div');
-          tile.className = `tile ${greens[pos] ? 'green' : 'yellow'}`;
+          tile.className = `tile ${kind}`;
           tile.textContent = letter;
           tile.dataset.pos = String(pos);
 
-          if (greens[pos]) {
+          if (kind === 'green') {
             tile.title = 'Green tile (fixed)';
           } else {
             if (conflicts.includes(pos)) tile.classList.add('conflict');
-            tile.title = 'Drag to move or swap';
+            tile.title = kind === 'trial' ? 'Your letter: drag to move, hold to remove' : 'Drag to move or swap';
             tile.draggable = true;
             tile.addEventListener('dragstart', e => {
+              cancelHold();
               draggedPos = pos;
               tile.classList.add('dragging');
               e.dataTransfer.effectAllowed = 'move';
@@ -1216,6 +1353,9 @@
               draggedPos = null;
               renderBoard();
             });
+            if (kind === 'trial') {
+              tile.addEventListener('mousedown', e => startHold(pos, e.clientX, e.clientY));
+            }
           }
           slot.appendChild(tile);
         }
@@ -1235,34 +1375,94 @@
       }
 
       $('boardStatus').textContent = conflicts
-        .map(pos => `${board[pos]} can't go in slot ${pos + 1}; it was yellow there.`)
+        .map(pos => trials[pos] && grayLetters().has(trials[pos])
+          ? `${trials[pos]} is gray.`
+          : `${slotLetter(pos)} can't go in slot ${pos + 1}; it was yellow there.`)
         .join(' ');
+      renderBoardWord();
+    }
+
+    // Once every slot holds a letter, say whether the word is in the list.
+    function renderBoardWord() {
+      const el = $('boardWord');
+      const word = Array.from({ length: len }, (_, pos) => slotLetter(pos)).join('');
+      const list = wordLists.get(len);
+      if (word.length < len || !list?.words) {
+        el.textContent = '';
+        return;
+      }
+      list.set ??= new Set(list.words);
+      const known = list.set.has(word);
+      el.textContent = known ? `${word} ✓ is in the word list` : `${word} is not in the word list`;
+      el.classList.toggle('known', known);
     }
 
     // Drops are never blocked (it's a sandbox), but an illegal target shows red.
     function markDropTarget(slotEl, pos) {
       const from = draggedPos;
-      const legal = !isBanned(board[from], pos) && !isBanned(board[pos], from);
+      const legal = !isBanned(slotLetter(from), pos) && !isBanned(slotLetter(pos), from);
       slotEl.classList.add(legal ? 'drag-over' : 'drag-conflict');
     }
 
+    // Swaps whatever two slots hold: a yellow tile, a tried letter, or nothing.
     function moveTile(from, to) {
-      if (from === null || from === to || greens[to]) return;
+      draggedPos = null;
+      if (from === null || from === to || greens[to]) {
+        renderBoard();
+        return;
+      }
       const cur = [...board];
       [cur[from], cur[to]] = [cur[to], cur[from]];
+      [trials[from], trials[to]] = [trials[to], trials[from]];
       board = cur.join('');
-      draggedPos = null;
       refreshResults({ keepBoard: true });
     }
 
+    // Holding a tried letter still for HOLD_MS removes it; moving more than MOVE_PX
+    // first makes it a drag instead, and a quick tap does nothing.
+    const HOLD_MS = 500;
+    const MOVE_PX = 8;
+    let hold = null;              // { pos, x, y, timer } while a press may become a hold
+
+    function startHold(pos, x, y) {
+      cancelHold();
+      hold = {
+        pos, x, y,
+        timer: setTimeout(() => {
+          const p = hold.pos;
+          hold = null;
+          draggedPos = null;
+          touchOverPos = null;
+          trials[p] = '';
+          navigator.vibrate?.(15);
+          renderBoard();
+        }, HOLD_MS),
+      };
+    }
+
+    function cancelHold() {
+      if (!hold) return;
+      clearTimeout(hold.timer);
+      hold = null;
+    }
+
+    document.addEventListener('mousemove', e => {
+      if (hold && Math.hypot(e.clientX - hold.x, e.clientY - hold.y) > MOVE_PX) cancelHold();
+    });
+    document.addEventListener('mouseup', cancelHold);
+
     // Touch drag: HTML5 drag events don't fire on iOS Safari, so mirror them with touch
     // events. touchmove fires on the element where the touch started, so elementFromPoint
-    // finds what's under the finger.
+    // finds what's under the finger. A touch only becomes a drag after moving MOVE_PX.
+    let touchStart = null;        // { x, y, dragging }
+
     document.addEventListener('touchstart', e => {
-      const tileEl = e.target.closest('.tile.yellow');
+      const tileEl = e.target.closest('#board .tile.yellow, #board .tile.trial');
       if (!tileEl) return;
+      const touch = e.touches[0];
       draggedPos = Number(tileEl.dataset.pos);
-      tileEl.classList.add('dragging');
+      touchStart = { x: touch.clientX, y: touch.clientY, dragging: false };
+      if (tileEl.classList.contains('trial')) startHold(draggedPos, touch.clientX, touch.clientY);
       e.preventDefault();
     }, { passive: false });
 
@@ -1271,6 +1471,13 @@
       e.preventDefault();
 
       const touch = e.touches[0];
+      if (!touchStart.dragging) {
+        if (Math.hypot(touch.clientX - touchStart.x, touch.clientY - touchStart.y) <= MOVE_PX) return;
+        touchStart.dragging = true;
+        cancelHold();
+        document.querySelector(`#board .tile[data-pos="${draggedPos}"]`)?.classList.add('dragging');
+      }
+
       const slotEl = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('#board .slot');
       document.querySelectorAll('#board .slot').forEach(s => s.classList.remove('drag-over', 'drag-conflict'));
 
@@ -1285,21 +1492,117 @@
     }, { passive: false });
 
     document.addEventListener('touchend', () => {
+      cancelHold();
       if (draggedPos === null) return;
       const from = draggedPos;
       const to = touchOverPos;
+      const dragged = touchStart?.dragging;
       draggedPos = null;
       touchOverPos = null;
-      if (to !== null) moveTile(from, to);
+      touchStart = null;
+      if (dragged && to !== null) moveTile(from, to);
       else renderBoard();
     });
 
     document.addEventListener('touchcancel', () => {
+      cancelHold();
       if (draggedPos === null) return;
       draggedPos = null;
       touchOverPos = null;
+      touchStart = null;
       renderBoard();
     });
+
+    // ── Letters panel ─────────────────────────────────────────────────────────
+
+    // The letters still possible, so a phone user needn't switch back to the game's
+    // keyboard. Tapping one tries it in the first blank board slot that allows it.
+    const KEY_ROWS = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
+    const VOWELS = 'AEIOU';
+
+    function letterStatus(letter, ruledOut) {
+      if (greens.includes(letter)) return 'green';
+      if (yellows.some(cell => cell.includes(letter))) return 'yellow';
+      if (ruledOut.has(letter)) return 'out';
+      return '';
+    }
+
+    function addTrial(letter, keyEl) {
+      const pos = [...Array(len).keys()].find(p =>
+        !greens[p] && board[p] === '?' && !trials[p] && !yellows[p].includes(letter));
+      if (pos === undefined) {
+        keyEl.classList.remove('shake');
+        void keyEl.offsetWidth;    // restart the animation
+        keyEl.classList.add('shake');
+        return;
+      }
+      trials[pos] = letter;
+      renderBoard();
+    }
+
+    function renderLetters() {
+      const ruledOut = grayLetters();
+      document.querySelectorAll('#lettersSeg button').forEach(btn => {
+        btn.setAttribute('aria-pressed', String(btn.dataset.view === lettersView));
+      });
+      $('lettersTitle').innerHTML = ruledOut.size
+        ? `<b>${26 - ruledOut.size}</b> letters left`
+        : 'Letters <span class="hint">(add gray letters to narrow these)</span>';
+
+      const body = $('lettersBody');
+      body.innerHTML = '';
+      body.hidden = lettersView === 'hide';
+      $('lettersHint').hidden = lettersView === 'hide';
+      if (lettersView === 'hide') return;
+
+      const key = letter => {
+        const status = letterStatus(letter, ruledOut);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `key ${status}`;
+        btn.textContent = letter;
+        if (status === 'out') {
+          btn.disabled = true;
+          btn.title = `${letter} is gray`;
+        } else {
+          btn.title = `Try ${letter} in the first blank slot`;
+          btn.addEventListener('click', () => addTrial(letter, btn));
+        }
+        return btn;
+      };
+      const group = (label, letters, extra = '') => {
+        const lab = document.createElement('span');
+        lab.className = 'vc-label';
+        lab.textContent = label;
+        const keys = document.createElement('span');
+        keys.className = 'vc-keys';
+        [...letters].forEach(l => keys.appendChild(key(l)));
+        if (extra) {
+          keys.appendChild(Object.assign(document.createElement('span'), { className: 'vc-sep' }));
+          keys.appendChild(key(extra));
+        }
+        if (!letters && !extra) keys.textContent = '—';
+        body.append(lab, keys);
+      };
+
+      if (lettersView === 'keyboard') {
+        body.className = 'kb';
+        for (const row of KEY_ROWS) {
+          const rowEl = document.createElement('div');
+          rowEl.className = 'kb-row';
+          [...row].forEach(l => rowEl.appendChild(key(l)));
+          body.appendChild(rowEl);
+        }
+      } else {
+        // Gray letters are dropped here, so this lists exactly what is left.
+        // Y sits after the vowels: in five-letter words it mostly acts as one.
+        body.className = 'vc';
+        const left = l => !ruledOut.has(l);
+        const consonants = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].filter(l => !VOWELS.includes(l) && l !== 'Y');
+        group('Vowels', [...VOWELS].filter(left).join(''), left('Y') ? 'Y' : '');
+        group('Consonants', consonants.filter(left).join(''));
+      }
+    }
 
     // ── Rendering: results ────────────────────────────────────────────────────
 
@@ -1476,7 +1779,7 @@
       if (nonWords) {
         const verb = nonWords === 1 ? 'fits' : 'fit';
         $('wordNoteText').textContent = `${nonWords} of ${arrangements.length} ${verb} no known word:`;
-        document.querySelectorAll('.seg button').forEach(btn => {
+        document.querySelectorAll('#wordNote .seg button').forEach(btn => {
           btn.setAttribute('aria-pressed', String(btn.dataset.mode === wordMode));
         });
       }
@@ -1853,6 +2156,7 @@
       prunePins();
       syncCellClasses(errors);
       renderTileChips();
+      renderLetters();
       refreshResults();
       saveState();
     }
@@ -1936,6 +2240,7 @@
       greens = Array(len).fill('');
       yellows = Array(len).fill('');
       grays = '';
+      trials = Array(len).fill('');
       countOverrides = {};
       pins.clear();
       listExpanded = false;
@@ -1955,11 +2260,19 @@
       if (e.key === 'Enter') e.target.blur();
     });
 
-    document.querySelectorAll('.seg button').forEach(btn => {
+    document.querySelectorAll('#wordNote .seg button').forEach(btn => {
       btn.addEventListener('click', () => {
         wordMode = btn.dataset.mode;
         try { localStorage.setItem(WORD_MODE_KEY, wordMode); } catch {}
         refreshResults();
+      });
+    });
+
+    document.querySelectorAll('#lettersSeg button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        lettersView = btn.dataset.view;
+        try { localStorage.setItem(LETTERS_VIEW_KEY, lettersView); } catch {}
+        renderLetters();
       });
     });
 
@@ -2007,6 +2320,8 @@
       if (['dim', 'hide', 'off'].includes(saved)) wordMode = saved;
       localStorage.setItem(WORD_MODE_KEY, wordMode);
       localStorage.removeItem(HIDE_KEY);
+      const view = localStorage.getItem(LETTERS_VIEW_KEY);
+      if (['vc', 'keyboard', 'hide'].includes(view)) lettersView = view;
     } catch {}
     renderClueInputs();
     loadWords(len);
