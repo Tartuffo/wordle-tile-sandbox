@@ -810,7 +810,8 @@
       <div id="clueStatus" class="status" role="status"></div>
 
       <div class="toolbar">
-        <button id="importBtn" title="Read your clues from a Wordle screenshot (you can also paste one)">Import screenshot</button>
+        <button id="pasteBtn" title="Read your clues from a screenshot on the clipboard">Paste screenshot</button>
+        <button id="importBtn" title="Read your clues from a saved Wordle screenshot">Import file</button>
         <input id="importFile" type="file" accept="image/*" hidden>
         <span id="guessNav" class="guess-nav" hidden>
           <button id="guessPrevBtn" aria-label="Previous guess" title="Show the clues one guess earlier">‹</button>
@@ -2101,6 +2102,35 @@
       return findTileRows(img).map(row => row.map(tile => ({ color: tile.color, ...readTileLetter(img, tile) })));
     }
 
+    function showImportMessage(text) {
+      showImportPanel();
+      $('importRows').innerHTML = '';
+      $('importNote').textContent = text;
+      $('importUseBtn').disabled = true;
+    }
+
+    // Reads a screenshot straight from the clipboard, so it never has to be saved to
+    // Photos. On iPhone: take the screenshot, tap its thumbnail, Done, Copy and Delete.
+    // Safari then asks for a tap on "Paste" before handing the image over.
+    async function pasteScreenshot() {
+      const howTo = 'On iPhone: take a screenshot, tap its thumbnail, tap Done, then Copy and Delete.';
+      let items;
+      try {
+        items = await navigator.clipboard.read();
+      } catch {
+        showImportMessage(`Couldn\u2019t read the clipboard. ${howTo} You can also paste with Ctrl/\u2318+V on a computer.`);
+        return;
+      }
+      for (const item of items) {
+        const type = item.types.find(t => t.startsWith('image/'));
+        if (type) {
+          importScreenshot(new File([await item.getType(type)], 'clipboard', { type }));
+          return;
+        }
+      }
+      showImportMessage(`There\u2019s no image on the clipboard. ${howTo}`);
+    }
+
     async function importScreenshot(file) {
       if (!file || !file.type.startsWith('image/')) return;
       showImportPanel();
@@ -2399,6 +2429,8 @@
     });
 
     $('importBtn').addEventListener('click', () => $('importFile').click());
+    $('pasteBtn').addEventListener('click', pasteScreenshot);
+    $('pasteBtn').hidden = !navigator.clipboard?.read;
     $('importFile').addEventListener('change', e => importScreenshot(e.target.files[0]));
     $('importUseBtn').addEventListener('click', applyImportedGuesses);
     $('importCancelBtn').addEventListener('click', closeImport);

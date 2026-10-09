@@ -235,3 +235,36 @@ test('theme defaults to light, switches to dark and is remembered', async ({ pag
   await open(page);
   expect(await theme()).toBe('light');
 });
+
+async function putOnClipboard(page, { image, text }) {
+  const bytes = image ? [...require('node:fs').readFileSync(fixture(image))] : null;
+  await page.evaluate(async ({ bytes, text }) => {
+    const item = bytes
+      ? new ClipboardItem({ 'image/png': new Blob([new Uint8Array(bytes)], { type: 'image/png' }) })
+      : new ClipboardItem({ 'text/plain': new Blob([text], { type: 'text/plain' }) });
+    await navigator.clipboard.write([item]);
+  }, { bytes, text });
+}
+
+test('Paste screenshot reads an image from the clipboard and explains when there is none', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await open(page);
+  await putOnClipboard(page, { text: 'hello' });
+  await page.getByRole('button', { name: 'Paste screenshot' }).click();
+  await expect(page.locator('#importNote')).toContainText('no image on the clipboard');
+  await expect(page.getByRole('button', { name: 'Use these clues' })).toBeDisabled();
+  await putOnClipboard(page, { image: 'guesses.png' });
+  await page.getByRole('button', { name: 'Paste screenshot' }).click();
+  await expect(page.getByRole('button', { name: 'Use these clues' })).toBeEnabled();
+  expect(await values(page.locator('#importRows input'))).toEqual([...'CRANEBEEFY']);
+});
+
+test('keyboard paste of an image imports it', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await open(page);
+  await putOnClipboard(page, { image: 'guesses.png' });
+  await page.locator('body').click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press('ControlOrMeta+V');
+  await expect(page.getByRole('button', { name: 'Use these clues' })).toBeEnabled();
+  expect(await values(page.locator('#importRows input'))).toEqual([...'CRANEBEEFY']);
+});
