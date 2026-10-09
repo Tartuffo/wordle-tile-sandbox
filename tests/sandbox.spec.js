@@ -113,6 +113,7 @@ test('gray letters and Dim / Hide / Off use deterministic dictionary results', a
   await page.locator('#wordNote').getByRole('button', { name: 'Dim', exact: true }).click();
   await page.locator('#grayInput').fill('AM');
   await expect(page.locator('#list .arr.noword')).toHaveCount(4);
+  await page.locator('#lettersSeg [data-view="vc"]').click();
   await expect(letter(page, 'A')).toHaveCount(0);
   await page.locator('#lettersSeg [data-view="keyboard"]').click();
   await expect(letter(page, 'A')).toBeDisabled();
@@ -267,4 +268,15 @@ test('keyboard paste of an image imports it', async ({ page, context }) => {
   await page.keyboard.press('ControlOrMeta+V');
   await expect(page.getByRole('button', { name: 'Use these clues' })).toBeEnabled();
   expect(await values(page.locator('#importRows input'))).toEqual([...'CRANEBEEFY']);
+});
+
+test('letters panel defaults to the keyboard view and remembers a change', async ({ page }) => {
+  await open(page);
+  const pressed = page.locator('#lettersSeg [aria-pressed="true"]');
+  await expect(pressed).toHaveText('Keyboard');
+  await expect(page.locator('#lettersBody .kb-row')).toHaveCount(3);
+  await page.locator('#lettersSeg').getByRole('button', { name: 'V/C', exact: true }).click();
+  await expect(page.locator('#lettersBody .vc-label')).toHaveCount(2);
+  await open(page);
+  await expect(pressed).toHaveText('V/C');
 });
