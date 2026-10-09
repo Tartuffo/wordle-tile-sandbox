@@ -4,26 +4,73 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Wordle Tile Sandbox</title>
+  <meta name="theme-color" content="#ffffff" />
+  <script>
+    // Set the saved theme before the page paints, so dark mode never flashes light.
+    try {
+      if (localStorage.getItem('wordle-sandbox-theme') === 'dark') document.documentElement.dataset.theme = 'dark';
+    } catch {}
+  </script>
   <style>
+    /* Light is the default, matching Wordle; [data-theme="dark"] swaps the palette. */
     :root {
+      color-scheme: light;
+      --bg: #ffffff;
+      --bg-glow: #ffffff;
+      --panel: #f6f7f8;
+      --panel-2: #ffffff;
+      --text: #1a1a1b;
+      --muted: #5f6368;
+      --border: #d3d6da;
+      --yellow: #c9b458;
+      --green: #6aaa64;
+      --gray: #787c7e;
+      --yellow-ink: #8a7419;      /* yellow and green as text, readable on the background */
+      --green-ink: #3d7c37;
+      --bad: #d65f5f;
+      --bad-soft: rgba(214, 95, 95, .12);
+      --accent: #2f6fde;
+      --on-accent: #ffffff;
+      --danger: #c23b3b;
+      --danger-text: #c23b3b;
+      --shadow: rgba(0,0,0,.08);
+      --key-bg: #d3d6da;
+      --key-text: #1a1a1b;
+      --key-out-border: #d3d6da;
+      --key-out-text: #c3c7cc;
+      --trial-bg: #ffffff;
+      --trial-border: #878a8c;
+      --trial-text: #1a1a1b;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --label-w: 52px;
+      --gap: 6px;
+      --cols: 5;
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
       --bg: #111318;
+      --bg-glow: #1b2230;
       --panel: #1b1f27;
       --panel-2: #232936;
       --text: #f2f4f8;
       --muted: #aab2c0;
       --border: #3a4353;
-      --yellow: #c9b458;
-      --green: #6aaa64;
-      --gray: #787c7e;
-      --bad: #d65f5f;
+      --yellow-ink: #c9b458;
+      --green-ink: #6aaa64;
       --bad-soft: rgba(214, 95, 95, .15);
       --accent: #7aa2ff;
+      --on-accent: #0b1020;
       --danger: #ff7a7a;
+      --danger-text: #ff9393;
       --shadow: rgba(0,0,0,.3);
-      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      --label-w: 52px;
-      --gap: 6px;
-      --cols: 5;
+      --key-bg: #4a5263;
+      --key-text: #ffffff;
+      --key-out-border: #343b48;
+      --key-out-text: #4b5262;
+      --trial-bg: #1d2129;
+      --trial-border: #8a93a3;
+      --trial-text: #ffffff;
     }
 
     * { box-sizing: border-box; }
@@ -31,7 +78,7 @@
     body {
       margin: 0;
       min-height: 100vh;
-      background: radial-gradient(circle at top, #1b2230 0, var(--bg) 55%);
+      background: radial-gradient(circle at top, var(--bg-glow) 0, var(--bg) 55%);
       color: var(--text);
       font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       display: flex;
@@ -41,6 +88,55 @@
     }
 
     .app { width: min(640px, 100%); flex: 1; }
+
+    .app-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .theme-switch {
+      position: relative;
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 58px;
+      height: 30px;
+      margin-top: 6px;
+      padding: 0 8px;
+      border-radius: 15px;
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 13px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .theme-switch .knob {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--accent);
+      transition: transform .15s;
+    }
+
+    .theme-switch[aria-checked="true"] .knob { transform: translateX(28px); }
+
+    /* The knob carries the current theme's icon; the other icon shows beside it. */
+    .theme-switch .knob::after {
+      content: '☀';
+      display: grid;
+      place-items: center;
+      height: 100%;
+      color: var(--on-accent);
+      font-size: 13px;
+    }
+
+    .theme-switch[aria-checked="true"] .knob::after { content: '☾'; }
 
     h1 {
       margin: 0 0 6px;
@@ -211,7 +307,7 @@
     .tile-chip.placed {
       background: transparent;
       border: 1px dashed var(--yellow);
-      color: var(--yellow);
+      color: var(--yellow-ink);
       opacity: .75;
     }
 
@@ -320,23 +416,25 @@
       padding: 0;
       border: 0;
       border-radius: 5px;
-      background: #4a5263;
-      color: #fff;
+      background: var(--key-bg);
+      color: var(--key-text);
       font-size: 15px;
       font-weight: 800;
     }
 
     .vc .key { flex: 0 0 30px; }
-    .key.green { background: var(--green); }
-    .key.yellow { background: var(--yellow); }
+    .key.green { background: var(--green); color: #fff; }
+    .key.yellow { background: var(--yellow); color: #fff; }
 
     .key.out {
       background: none;
-      border: 1px dashed #343b48;
-      color: #4b5262;
+      border: 1px dashed var(--key-out-border);
+      color: var(--key-out-text);
       opacity: 1;
     }
 
+    .key { -webkit-tap-highlight-color: transparent; }
+    .key:active:not(:disabled) { filter: brightness(.88); }
     .key.shake { animation: shake .3s; }
 
     @keyframes shake {
@@ -351,13 +449,13 @@
     }
 
     .board-word:empty { display: none; }
-    .board-word.known { color: var(--green); font-weight: 700; }
+    .board-word.known { color: var(--green-ink); font-weight: 700; }
 
     .status {
       margin-top: 10px;
       font-size: 14px;
       line-height: 1.35;
-      color: color-mix(in srgb, var(--danger) 85%, white);
+      color: var(--danger-text);
     }
 
     .status:empty { display: none; }
@@ -400,8 +498,9 @@
 
     /* A letter being tried, styled like a typed but unsubmitted Wordle tile. */
     .tile.trial {
-      background: #1d2129;
-      border-color: #8a93a3;
+      background: var(--trial-bg);
+      border-color: var(--trial-border);
+      color: var(--trial-text);
       cursor: grab;
       box-shadow: none;
     }
@@ -533,7 +632,7 @@
     .sum-cell.fixed {
       background: color-mix(in srgb, var(--green) 16%, var(--panel-2));
       border-color: transparent;
-      color: var(--green);
+      color: var(--green-ink);
       cursor: default;
     }
 
@@ -585,8 +684,8 @@
       border-radius: 8px;
     }
 
-    .arr .g { color: var(--green); opacity: .55; }
-    .arr .y { color: var(--yellow); }
+    .arr .g { color: var(--green-ink); opacity: .6; }
+    .arr .y { color: var(--yellow-ink); }
     .arr .u { color: var(--muted); opacity: .6; }
 
     /* No word in the dictionary fits: kept visible but dimmed, since the list can miss words. */
@@ -607,7 +706,7 @@
       text-decoration: none;
     }
 
-    button.group-head b { color: var(--yellow); }
+    button.group-head b { color: var(--yellow-ink); }
     button.group-head:hover, button.group-head.pinned { color: var(--accent); }
 
     .list-more { margin-top: 10px; }
@@ -646,7 +745,7 @@
     button.primary {
       background: var(--accent);
       border-color: var(--accent);
-      color: #0b1020;
+      color: var(--on-accent);
     }
 
     button:disabled { opacity: .5; cursor: default; }
@@ -673,7 +772,14 @@
 </head>
 <body>
   <main class="app">
-    <h1>Wordle Tile Sandbox</h1>
+    <header class="app-head">
+      <h1>Wordle Tile Sandbox</h1>
+      <button id="themeBtn" class="theme-switch" role="switch" aria-checked="false" aria-label="Dark mode" title="Switch between light and dark">
+        <span aria-hidden="true">☀</span>
+        <span class="knob" aria-hidden="true"></span>
+        <span aria-hidden="true">☾</span>
+      </button>
+    </header>
     <p class="subtitle">
       Type your green letters, and under each slot the letters that turned yellow there, or import a screenshot of your game.
       Every legal arrangement of the yellow tiles is listed below; tap one to put it on the board, or drag the tiles yourself.
@@ -2306,6 +2412,20 @@
       e.preventDefault();
       importScreenshot(item.getAsFile());
     });
+
+    function applyTheme(dark) {
+      if (dark) document.documentElement.dataset.theme = 'dark';
+      else delete document.documentElement.dataset.theme;
+      $('themeBtn').setAttribute('aria-checked', String(dark));
+      document.querySelector('meta[name="theme-color"]').content = dark ? '#111318' : '#ffffff';
+    }
+
+    $('themeBtn').addEventListener('click', () => {
+      const dark = document.documentElement.dataset.theme !== 'dark';
+      applyTheme(dark);
+      try { localStorage.setItem('wordle-sandbox-theme', dark ? 'dark' : 'light'); } catch {}
+    });
+    applyTheme(document.documentElement.dataset.theme === 'dark');
 
     // ── Init ──────────────────────────────────────────────────────────────────
 

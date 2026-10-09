@@ -20,6 +20,7 @@ Wordle Tile Sandbox lets you enter what you know from a Wordle puzzle, slot by s
 - **Word check**: arrangements that no English word fits are dimmed and struck through by default; a Dim / Hide / Off switch can instead hide them or show them normally. Unknown slots may hold any letter that is not gray and was not yellow in that slot. The word lists are in [`words/`](words/README.md).
 - **Letters left**: above the board, the letters that aren't gray, as vowels and consonants (default) or a keyboard, so you needn't switch back to the game to check them. Tap one to try it in the first blank board slot that allows it; hold a tried letter to remove it, or drag it. Once every slot is filled, the board says whether the word is in the word list.
 - **Drag tiles on the board** to try arrangements by hand; a tile in a slot where it was yellow is flagged.
+- **Light and dark themes**: light by default, like Wordle; the sun/moon switch by the title changes it, and the choice is remembered in the browser.
 - **Copy link** shares the current clues. Clues are saved in the browser for the rest of the day, then cleared for the next puzzle.
 
 Words of 5 to 7 letters are supported. The tool is intentionally visual. It uses a dictionary only to flag arrangements no word fits, never to suggest words; it helps you reason about the puzzle by moving tiles around.

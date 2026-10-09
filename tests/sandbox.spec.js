@@ -218,3 +218,20 @@ test('known bug: gray duplicate excludes BEERY after importing BEEFY against BER
   test.fail(true, 'Import stores minimum counts only; the gray duplicate maximum is lost.');
   await expect(page.locator('#resultsTitle')).toHaveText('None of the legal arrangements fits a known word.');
 });
+
+test('theme defaults to light, switches to dark and is remembered', async ({ page }) => {
+  await open(page);
+  const theme = () => page.evaluate(() => document.documentElement.dataset.theme || 'light');
+  const toggle = page.getByRole('switch', { name: 'Dark mode' });
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+  expect(await theme()).toBe('light');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-checked', 'true');
+  expect(await theme()).toBe('dark');
+  await open(page);
+  expect(await theme()).toBe('dark');
+  await expect(page.getByRole('switch', { name: 'Dark mode' })).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('switch', { name: 'Dark mode' }).click();
+  await open(page);
+  expect(await theme()).toBe('light');
+});
