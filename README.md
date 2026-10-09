@@ -10,7 +10,7 @@ Developed with assistance from ChatGPT and Claude Code.
 
 Wordle Tile Sandbox lets you enter what you know from a Wordle puzzle, slot by slot, and shows every way the yellow tiles can still be arranged:
 
-- **Import a screenshot** of your Wordle game (or paste one): the grid and letters are read in the browser, you check them, and the green, yellow and gray rows fill in, including double letters. A solved row is left out. After importing, ‹ and › step back and forward through the guesses, so one screenshot gives you the clues as they stood after each guess.
+- **Paste or import a screenshot** of your Wordle game. **Paste screenshot** reads it from the clipboard, so it never has to be saved to Photos (on iPhone: take the screenshot, tap its thumbnail, tap Done, then Copy and Delete); **Import file** picks a saved one, and Ctrl/⌘+V works on a computer. Either way the grid and letters are read in the browser, you check them, and the green, yellow and gray rows fill in, including double letters. A solved row is left out. After importing, ‹ and › step back and forward through the guesses, so one screenshot gives you the clues as they stood after each guess.
 - **Green row**: type a letter into each slot you know; it fills and moves on, like Wordle itself. Space skips a slot, and pasting a pattern such as `..A.E` fills the row.
 - **Yellow row**: under each slot, type the letters that turned yellow there. The yellow tiles are derived from these, so each letter is entered once.
 - **Gray row**: letters that are not in the word. They sharpen the word check below.
@@ -18,8 +18,9 @@ Wordle Tile Sandbox lets you enter what you know from a Wordle puzzle, slot by s
 - **Every legal arrangement**, sorted and grouped by where the most constrained letter sits. Tap one to put it on the board.
 - **Where each yellow can go**: a letter-by-slot grid counting the arrangements that put each letter in each slot, with forced placements called out and a legend for the cell styles. An "unknown" row covers the letter that isn't one of your yellows. Tap a number to pin that letter there and narrow the list.
 - **Word check**: arrangements that no English word fits are dimmed and struck through by default; a Dim / Hide / Off switch can instead hide them or show them normally. Unknown slots may hold any letter that is not gray and was not yellow in that slot. The word lists are in [`words/`](words/README.md).
-- **Letters left**: above the board, the letters that aren't gray, as vowels and consonants (default) or a keyboard, so you needn't switch back to the game to check them. Tap one to try it in the first blank board slot that allows it; hold a tried letter to remove it, or drag it. Once every slot is filled, the board says whether the word is in the word list.
+- **Letters left**: above the board, the letters that aren't gray, as a keyboard (default) or as vowels and consonants, so you needn't switch back to the game to check them. Tap one to try it in the first blank board slot that allows it; hold a tried letter to remove it, or drag it. Once every slot is filled, the board says whether the word is in the word list.
 - **Drag tiles on the board** to try arrangements by hand; a tile in a slot where it was yellow is flagged.
+- **Light and dark themes**: light by default, like Wordle; the sun/moon switch by the title changes it, and the choice is remembered in the browser.
 - **Copy link** shares the current clues. Clues are saved in the browser for the rest of the day, then cleared for the next puzzle.
 
 Words of 5 to 7 letters are supported. The tool is intentionally visual. It uses a dictionary only to flag arrangements no word fits, never to suggest words; it helps you reason about the puzzle by moving tiles around.

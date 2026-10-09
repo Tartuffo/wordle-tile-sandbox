@@ -113,6 +113,7 @@ test('gray letters and Dim / Hide / Off use deterministic dictionary results', a
   await page.locator('#wordNote').getByRole('button', { name: 'Dim', exact: true }).click();
   await page.locator('#grayInput').fill('AM');
   await expect(page.locator('#list .arr.noword')).toHaveCount(4);
+  await page.locator('#lettersSeg [data-view="vc"]').click();
   await expect(letter(page, 'A')).toHaveCount(0);
   await page.locator('#lettersSeg [data-view="keyboard"]').click();
   await expect(letter(page, 'A')).toBeDisabled();
@@ -217,4 +218,65 @@ test('known bug: gray duplicate excludes BEERY after importing BEEFY against BER
   // Setup errors remain real failures. Only the missing semantic constraint is expected.
   test.fail(true, 'Import stores minimum counts only; the gray duplicate maximum is lost.');
   await expect(page.locator('#resultsTitle')).toHaveText('None of the legal arrangements fits a known word.');
+});
+
+test('theme defaults to light, switches to dark and is remembered', async ({ page }) => {
+  await open(page);
+  const theme = () => page.evaluate(() => document.documentElement.dataset.theme || 'light');
+  const toggle = page.getByRole('switch', { name: 'Dark mode' });
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+  expect(await theme()).toBe('light');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-checked', 'true');
+  expect(await theme()).toBe('dark');
+  await open(page);
+  expect(await theme()).toBe('dark');
+  await expect(page.getByRole('switch', { name: 'Dark mode' })).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('switch', { name: 'Dark mode' }).click();
+  await open(page);
+  expect(await theme()).toBe('light');
+});
+
+async function putOnClipboard(page, { image, text }) {
+  const bytes = image ? [...require('node:fs').readFileSync(fixture(image))] : null;
+  await page.evaluate(async ({ bytes, text }) => {
+    const item = bytes
+      ? new ClipboardItem({ 'image/png': new Blob([new Uint8Array(bytes)], { type: 'image/png' }) })
+      : new ClipboardItem({ 'text/plain': new Blob([text], { type: 'text/plain' }) });
+    await navigator.clipboard.write([item]);
+  }, { bytes, text });
+}
+
+test('Paste screenshot reads an image from the clipboard and explains when there is none', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await open(page);
+  await putOnClipboard(page, { text: 'hello' });
+  await page.getByRole('button', { name: 'Paste screenshot' }).click();
+  await expect(page.locator('#importNote')).toContainText('no image on the clipboard');
+  await expect(page.getByRole('button', { name: 'Use these clues' })).toBeDisabled();
+  await putOnClipboard(page, { image: 'guesses.png' });
+  await page.getByRole('button', { name: 'Paste screenshot' }).click();
+  await expect(page.getByRole('button', { name: 'Use these clues' })).toBeEnabled();
+  expect(await values(page.locator('#importRows input'))).toEqual([...'CRANEBEEFY']);
+});
+
+test('keyboard paste of an image imports it', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await open(page);
+  await putOnClipboard(page, { image: 'guesses.png' });
+  await page.locator('body').click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press('ControlOrMeta+V');
+  await expect(page.getByRole('button', { name: 'Use these clues' })).toBeEnabled();
+  expect(await values(page.locator('#importRows input'))).toEqual([...'CRANEBEEFY']);
+});
+
+test('letters panel defaults to the keyboard view and remembers a change', async ({ page }) => {
+  await open(page);
+  const pressed = page.locator('#lettersSeg [aria-pressed="true"]');
+  await expect(pressed).toHaveText('Keyboard');
+  await expect(page.locator('#lettersBody .kb-row')).toHaveCount(3);
+  await page.locator('#lettersSeg').getByRole('button', { name: 'V/C', exact: true }).click();
+  await expect(page.locator('#lettersBody .vc-label')).toHaveCount(2);
+  await open(page);
+  await expect(pressed).toHaveText('V/C');
 });
