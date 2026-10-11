@@ -42,7 +42,7 @@ Words of 5 to 7 letters are supported. The tool is intentionally visual. It uses
 | % of answers | 45 | 39 | 36 | 29 | 29 | 28 | 28 | 27 | 24 | 20 | 19 | 18 |
 | Etaoin shrdlu | E | T | A | O | I | N | S | H | R | D | L | U |
 
-So the top twelve are **EAROTI LSNUCY**: R and L rise, H and D drop out, Y comes in. O, T, I and L are within 1.4 points of each other, so their order among themselves is close to a tie. The list is the union of the original Wordle answers and every answer NYT has used (2,381 words through 2026-10-10; see [`words/README.md`](words/README.md)). The app computes the ranking from the current list, under **More analysis**; `node scripts/analyze-answers.mjs` prints it with the vowel tables.
+So the top twelve are **EAROTI LSNUCY**: R and L rise, H and D drop out, Y comes in. O, T, I and L are within 1.4 points of each other, so their order among themselves is close to a tie. The list is the union of the original Wordle answers and every answer NYT has used (see [`words/README.md`](words/README.md)); the table is from October 2026. The list is refreshed weekly, and [`words/answers-sources.json`](words/answers-sources.json) has its current word count and last date. The app computes the ranking from the current list, under **More analysis**; `node scripts/analyze-answers.mjs` prints it with the vowel tables.
 
 ## Run it
 
@@ -62,6 +62,9 @@ wordle-tile-sandbox/
 ├── LICENSE
 ├── README.md
 ├── package.json, playwright.config.js     development tests only
+├── .github/workflows/
+│   ├── browser-tests.yml      runs the tests on pull requests and pushes to main
+│   └── refresh-answers.yml    weekly answer-list refresh
 ├── tests/
 │   ├── sandbox.spec.js        Playwright browser tests
 │   ├── server.cjs             static server the tests start
@@ -80,7 +83,7 @@ wordle-tile-sandbox/
 
 This is a single-file static web app. To modify it, edit `index.html` directly and reload the browser.
 
-To add Wordle answers used since the last refresh, run `node scripts/refresh-answers.mjs` (Node 18+). It fetches only new dates, through yesterday by default and never past today; see [`words/README.md`](words/README.md).
+To add Wordle answers used since the last refresh, run `node scripts/refresh-answers.mjs` (Node 18+). It fetches only new dates, through yesterday by default and never past today; see [`words/README.md`](words/README.md). A GitHub Actions workflow, `refresh-answers.yml`, does this every Monday: it fetches through the last date whose puzzle is over in every time zone, runs the tests, and commits any new answers to main. Run it by hand from the repository's Actions tab.
 
 Suggested local workflow:
 

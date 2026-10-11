@@ -33,4 +33,4 @@ node scripts/refresh-answers.mjs                     # fetches new dates through
 node scripts/refresh-answers.mjs --through YYYY-MM-DD  # never later than today
 ```
 
-Only dates missing from `nyt-archive.csv` are fetched. Yesterday is the default end, since today's puzzle may still be in play in your time zone. `--offline` rebuilds `answers.csv` from the cached files. `node scripts/analyze-answers.mjs` prints the letter ranking and vowel tables.
+The `refresh-answers.yml` workflow runs this every Monday and commits any new answers. Only dates missing from `nyt-archive.csv` are fetched. Yesterday is the default end, since today's puzzle may still be in play in your time zone. `--offline` rebuilds `answers.csv` from the cached files. `node scripts/analyze-answers.mjs` prints the letter ranking and vowel tables.
