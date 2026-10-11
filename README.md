@@ -18,12 +18,25 @@ Wordle Tile Sandbox lets you enter what you know from a Wordle puzzle, slot by s
 - **Every legal arrangement**, sorted and grouped by where the most constrained letter sits. Tap one to put it on the board.
 - **Where each yellow can go**: a letter-by-slot grid counting the arrangements that put each letter in each slot, with forced placements called out and a legend for the cell styles. An "unknown" row covers the letter that isn't one of your yellows. Tap a number to pin that letter there and narrow the list.
 - **Word check**: arrangements that no English word fits are dimmed and struck through by default; a Dim / Hide / Off switch can instead hide them or show them normally. Unknown slots may hold any letter that is not gray and was not yellow in that slot. The word lists are in [`words/`](words/README.md).
-- **Letters left**: above the board, the letters that aren't gray, as a keyboard (default) or as vowels and consonants, so you needn't switch back to the game to check them. Tap one to try it in the first blank board slot that allows it; hold a tried letter to remove it, or drag it. Once every slot is filled, the board says whether the word is in the word list.
+- **Letters left**: above the board, the letters that aren't gray, as a keyboard (default), as vowels and consonants, or by **Rank**: most common in Wordle answers first, so you needn't switch back to the game to check them. Tap one to try it in the first blank board slot that allows it; hold a tried letter to remove it, or drag it. Once every slot is filled, the board says whether the word is in the word list.
+- **Vowel odds**: for each vowel (A E I O U Y) still unknown, the chance it is in the answer, and the chance that no other vowel is, which tells you when to stop hunting vowels. The vowels start from your clues; tap one to cycle it through unknown, yellow and gray, and **reset to clues** undoes that. Below, a table gives every case of one yellow and one gray vowel. Odds are counted over Wordle's answer words, ignoring position, for 5-letter words only.
 - **Drag tiles on the board** to try arrangements by hand; a tile in a slot where it was yellow is flagged.
 - **Light and dark themes**: light by default, like Wordle; the sun/moon switch by the title changes it, and the choice is remembered in the browser.
 - **Copy link** shares the current clues. Clues are saved in the browser for the rest of the day, then cleared for the next puzzle.
 
-Words of 5 to 7 letters are supported. The tool is intentionally visual. It uses a dictionary only to flag arrangements no word fits, never to suggest words; it helps you reason about the puzzle by moving tiles around.
+Words of 5 to 7 letters are supported. The tool is intentionally visual. It uses a dictionary only to flag arrangements no word fits, and the answer list only for letter and vowel odds, never to suggest words; it helps you reason about the puzzle by moving tiles around.
+
+## Letters in Wordle answers
+
+"Etaoin shrdlu" ranks letters by how often they occur in running English text. Ranked instead by the share of Wordle answers that contain each letter (each word counted once, so double letters don't inflate a count), the order is:
+
+| | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Answers | E | A | R | O | T | I | L | S | N | U | C | Y |
+| % of answers | 45 | 39 | 36 | 29 | 29 | 28 | 28 | 27 | 24 | 20 | 19 | 18 |
+| Etaoin shrdlu | E | T | A | O | I | N | S | H | R | D | L | U |
+
+So the top twelve are **EAROTI LSNUCY**: R and L rise, H and D drop out, Y comes in. O, T, I and L are within 1.4 points of each other, so their order among themselves is close to a tie. The list is the union of the original Wordle answers and every answer NYT has used (2,381 words through 2026-10-10; see [`words/README.md`](words/README.md)). `node scripts/analyze-answers.mjs` prints the full ranking and vowel tables.
 
 ## Run it
 
@@ -42,8 +55,12 @@ wordle-tile-sandbox/
 ├── index.html
 ├── LICENSE
 ├── README.md
+├── scripts/
+│   ├── refresh-answers.mjs   adds newly used answers to words/answers.csv
+│   └── analyze-answers.mjs   prints the letter ranking and vowel tables
 └── words/
     ├── 5.txt, 6.txt, 7.txt
+    ├── answers.csv, answers-sources.json, nyt-archive.csv, original-answers.txt
     ├── README.md
     └── SCOWL-Copyright.txt
 ```
@@ -51,6 +68,8 @@ wordle-tile-sandbox/
 ## Development
 
 This is a single-file static web app. To modify it, edit `index.html` directly and reload the browser.
+
+To add Wordle answers used since the last refresh, run `node scripts/refresh-answers.mjs` (Node 18+). It fetches only new dates, through yesterday by default and never past today; see [`words/README.md`](words/README.md).
 
 Suggested local workflow:
 
@@ -94,7 +113,10 @@ failure artifacts for 14 days.
 Coverage includes clue entry, duplicate yellow counts, lengths 5–7, arrangements
 and pins, contradictory clues, daily persistence, share links, dictionary modes,
 gray letters, letters-left taps/holds/drags, real dictionary lookup, PNG import,
-guess stepping, cancel/retry, and manual edits after import. Clipboard writes
+guess stepping, cancel/retry, manual edits after import, and vowel odds and the
+Rank view: the filtering and probability functions on a small hand-checked
+list, and the panel, table and ranking against the real answer list, with the
+expected numbers computed independently in the test. Clipboard writes
 are captured at the browser API boundary; dictionary filtering uses a tiny
 controlled word list while a separate test loads the real bundled dictionary.
 The checked-in PNGs are synthetic, contain no personal data, and exercise real
