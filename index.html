@@ -778,7 +778,8 @@
       letter-spacing: -0.01em;
     }
 
-    #oddsCount { font-size: 14px; }
+    #oddsCount { font-size: 14px; margin-right: auto; }
+    #oddsScope[hidden] { display: none; }
     #oddsCount b { color: var(--text); }
     .odds-note { margin: 8px 0 0; }
     .odds-note:empty, #oddsBody[hidden] { display: none; }
@@ -986,6 +987,10 @@
         <h2>Vowel odds</h2>
         <span id="oddsCount" class="hint" role="status"></span>
         <button id="oddsResetBtn" class="link" hidden>reset to clues</button>
+        <span id="oddsScope" class="seg" role="group" aria-label="Clues the odds use">
+          <button data-scope="vowels" title="Use only what you know about the vowels">Vowels only</button>
+          <button data-scope="all" title="Also use your consonants: gray ones are out, green and yellow ones are in">All clues</button>
+        </span>
       </div>
       <p id="oddsNote" class="hint odds-note"></p>
       <div id="oddsBody">
@@ -1013,6 +1018,7 @@
     const HIDE_KEY = 'wordle-sandbox-hide-nonwords';   // earlier on/off setting, read once
     const WORD_MODE_KEY = 'wordle-sandbox-nonword-mode';
     const LETTERS_VIEW_KEY = 'wordle-sandbox-letters-view';
+    const ODDS_SCOPE_KEY = 'wordle-sandbox-odds-scope';
     const FLAT_LIST_MAX = 8;      // at or below this, list without group headers
     const COLLAPSE_OVER = 24;     // above this, hide the list until asked or narrowed by pins
 
@@ -1037,6 +1043,7 @@
     let answerWords = 'loading';  // Wordle answers (words/answers.csv) once loaded, or 'loading' / 'failed'
     let letterRanking = null;     // [{ letter, p }] by share of answers containing the letter
     let vowelOverrides = {};      // vowel -> 'unknown' / 'yellow' / 'gray' tapped in the odds panel
+    let oddsScope = 'vowels';     // odds use 'vowels' only (default) or 'all' clue letters
 
     // ── Utilities ─────────────────────────────────────────────────────────────
 
@@ -1861,12 +1868,13 @@
       return words.filter(w => [...yellow].every(l => w.includes(l)) && ![...gray].some(l => w.includes(l)));
     }
 
-    // states maps a vowel to 'yellow', 'gray' or 'unknown' (the default). Returns how many
-    // answers are left and, most likely first, each unknown vowel's share of them plus
-    // { vowel: '' }: the share holding none of the unknown vowels. Ties keep vowel order.
-    function vowelOdds(words, states) {
+    // states maps a vowel to 'yellow', 'gray' or 'unknown' (the default); have and lack are
+    // other letters the word must or mustn't contain. Returns how many answers are left and,
+    // most likely first, each unknown vowel's share of them plus { vowel: '' }: the share
+    // holding none of the unknown vowels. Ties keep vowel order.
+    function vowelOdds(words, states, have = '', lack = '') {
       const having = state => [...ODDS_VOWELS].filter(v => (states[v] || 'unknown') === state).join('');
-      const left = filterAnswers(words, having('yellow'), having('gray'));
+      const left = filterAnswers(words, having('yellow') + have, having('gray') + lack);
       const unknown = [...having('unknown')];
       if (!left.length || !unknown.length) return { count: left.length, options: [] };
       const share = test => left.filter(test).length / left.length;
@@ -1915,6 +1923,12 @@
       return ruledOut.has(vowel) ? 'gray' : 'unknown';
     }
 
+    // Consonants the clues put in the word (green or yellow) or rule out (gray).
+    function consonantClues() {
+      const consonants = letters => [...new Set(letters)].filter(l => !ODDS_VOWELS.includes(l)).join('');
+      return { have: consonants(greens.join('') + yellows.join('')), lack: consonants(grayLetters()) };
+    }
+
     function vowelStates() {
       const ruledOut = grayLetters();
       return Object.fromEntries([...ODDS_VOWELS].map(v => [v, vowelOverrides[v] || clueVowelState(v, ruledOut)]));
@@ -1936,6 +1950,10 @@
       const note = $('oddsNote');
       const ready = Array.isArray(answerWords);
       $('oddsResetBtn').hidden = !Object.keys(vowelOverrides).length || len !== 5;
+      $('oddsScope').hidden = len !== 5 || !ready;
+      document.querySelectorAll('#oddsScope button').forEach(btn => {
+        btn.setAttribute('aria-pressed', String(btn.dataset.scope === oddsScope));
+      });
       $('oddsCount').textContent = '';
       note.textContent = len !== 5 ? 'Vowel odds come from Wordle’s five-letter answers; switch to 5 letters to see them.'
         : answerWords === 'failed' ? (location.protocol === 'file:'
@@ -1946,7 +1964,8 @@
       if ($('oddsBody').hidden) return;
 
       const states = vowelStates();
-      const { count, options } = vowelOdds(answerWords, states);
+      const { have, lack } = oddsScope === 'all' ? consonantClues() : { have: '', lack: '' };
+      const { count, options } = vowelOdds(answerWords, states, have, lack);
       $('oddsCount').innerHTML = `<b>${count}</b> of ${answerWords.length} answers left`;
 
       const vowelsEl = $('oddsVowels');
@@ -1964,7 +1983,7 @@
         vowelsEl.appendChild(btn);
       }
 
-      $('oddsCaption').textContent = !count ? 'No answer fits these vowels.'
+      $('oddsCaption').textContent = !count ? `No answer fits these ${have || lack ? 'clues' : 'vowels'}.`
         : options.length ? 'Chance each unknown vowel is in the word:' : 'Every vowel is known.';
       const optionsEl = $('oddsOptions');
       optionsEl.innerHTML = '';
@@ -1976,11 +1995,12 @@
         el.innerHTML = `<b>${oddsLabel(option, states)}</b> ${pct(option.p)}`;
         optionsEl.appendChild(el);
       }
-      renderOddsTable(states);
+      renderOddsTable(have || lack ? {} : states);
     }
 
     // The one-yellow, one-gray slice of the panel, every case at once. It depends only on
-    // the answer list, so it is built once; the cell matching the panel is outlined.
+    // the answer list, so it is built once; the cell matching the panel is outlined (never
+    // while consonant clues narrow the panel, since its numbers then differ).
     function renderOddsTable(states) {
       const known = Object.entries(states).filter(([, s]) => s !== 'unknown');
       if (!$('oddsTable').childElementCount) buildOddsTable();
@@ -2722,6 +2742,14 @@
       });
     });
 
+    document.querySelectorAll('#oddsScope button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        oddsScope = btn.dataset.scope;
+        try { localStorage.setItem(ODDS_SCOPE_KEY, oddsScope); } catch {}
+        renderOdds();
+      });
+    });
+
     $('oddsResetBtn').addEventListener('click', () => {
       vowelOverrides = {};
       renderOdds();
@@ -2789,6 +2817,7 @@
       localStorage.removeItem(HIDE_KEY);
       const view = localStorage.getItem(LETTERS_VIEW_KEY);
       if (['vc', 'rank', 'keyboard', 'hide'].includes(view)) lettersView = view;
+      if (localStorage.getItem(ODDS_SCOPE_KEY) === 'all') oddsScope = 'all';
     } catch {}
     renderClueInputs();
     loadWords(len);

@@ -16,8 +16,9 @@ const VOWELS = 'AEIOUY';
 const answerWords = fs.readFileSync(path.join(__dirname, '..', 'words', 'answers.csv'), 'utf8')
   .trim().split('\n').slice(1).map(line => line.split(',')[0]);
 const percent = (n, total) => `${Math.round(100 * n / total)}%`;
-function expectedOdds(yellow, gray) {
-  const left = answerWords.filter(w => [...yellow].every(v => w.includes(v)) && ![...gray].some(v => w.includes(v)));
+// yellow and gray are vowels; have and lack are consonants the word must or mustn't contain.
+function expectedOdds(yellow, gray, have = '', lack = '') {
+  const left = answerWords.filter(w => [...yellow + have].every(l => w.includes(l)) && ![...gray + lack].some(l => w.includes(l)));
   const unknown = [...VOWELS].filter(v => !yellow.includes(v) && !gray.includes(v));
   const options = unknown.map(v => [v, left.filter(w => w.includes(v)).length]);
   options.push([yellow ? 'no other vowel' : 'no vowel', left.filter(w => !unknown.some(v => w.includes(v))).length]);
@@ -310,6 +311,7 @@ test('vowel odds: filtering counts words, not letters, and options sort by proba
       yYellowOGray: brief(vowelOdds(words, { Y: 'yellow', O: 'gray' })),
       noneLeft: brief(vowelOdds(words, { A: 'yellow', E: 'gray' })),
       allKnown: brief(vowelOdds(words, { A: 'yellow', E: 'yellow', I: 'gray', O: 'gray', U: 'gray', Y: 'gray' })),
+      withConsonants: brief(vowelOdds(words, { Y: 'yellow' }, 'P', 'D')),
       rank: letterRank(words).slice(0, 3).map(r => `${r.letter}${Math.round(600 * r.p)}`),
     };
   });
@@ -320,6 +322,8 @@ test('vowel odds: filtering counts words, not letters, and options sort by proba
   expect(result.yYellowOGray).toEqual([2, 'U300 -300 A0 E0 I0']);
   expect(result.noneLeft).toEqual([0, '']);
   expect(result.allKnown).toEqual([2, '']);
+  // Other letters narrow the list too: Y and P in, D out leaves GLYPH.
+  expect(result.withConsonants).toEqual([1, '-600 A0 E0 I0 O0 U0']);
   // APPLE's two Ps count once: P, R and Y are each in three of the six words.
   expect(result.rank).toEqual(['P300', 'R300', 'Y300']);
 });
@@ -408,4 +412,31 @@ test('without the answer list, vowel odds explain and Rank falls back to the bui
   await page.locator('#lettersSeg').getByRole('button', { name: 'Rank', exact: true }).click();
   await expect(page.locator('#lettersBody .key').first()).toHaveText('E');
   await expect(page.locator('#lettersBody .key')).toHaveCount(26);
+});
+
+test('vowel odds use consonant clues only when switched to All clues, and remember it', async ({ page }) => {
+  // Clues: A yellow, M green, E gray vowel, S and T gray consonants.
+  await open(page, '?len=5&green=M%3F%3F%3F%3F&ban2=A&yellow=A&gray=EST');
+  const scope = name => page.locator('#oddsScope').getByRole('button', { name, exact: true });
+  const check = async (...args) => {
+    const { count, chips } = expectedOdds(...args);
+    await expect(page.locator('#oddsCount')).toHaveText(`${count} of ${answerWords.length} answers left`);
+    await expect(oddsChips(page)).toHaveText(chips);
+  };
+  await expect(scope('Vowels only')).toHaveAttribute('aria-pressed', 'true');
+  await check('A', 'E');
+  await expect(page.locator('#oddsTable .odds-cell.current')).toHaveCount(1);
+
+  await scope('All clues').click();
+  await check('A', 'E', 'M', 'ST');
+  // The table is vowels only, so no cell matches the panel now.
+  await expect(page.locator('#oddsTable .odds-cell.current')).toHaveCount(0);
+  await page.locator('#grayInput').fill('ESTR');
+  await check('A', 'E', 'M', 'RST');
+
+  await page.reload();
+  await expect(scope('All clues')).toHaveAttribute('aria-pressed', 'true');
+  await check('A', 'E', 'M', 'RST');
+  await scope('Vowels only').click();
+  await check('A', 'E');
 });
