@@ -27,7 +27,7 @@ Wordle Tile Sandbox lets you enter what you know from a Wordle puzzle, slot by s
   - Two collapsed reference sections: **every case of one yellow and one gray vowel** (the two likeliest other vowels and the chance of none), and the **letter ranking** with percentages, noting the date of the latest answer in the list.
   - Odds count Wordle answer words, not letters, and ignore position. They cover 5-letter words only.
 - **Drag tiles on the board** to try arrangements by hand; a tile in a slot where it was yellow is flagged.
-- **Light and dark themes**: light by default, like Wordle; the sun/moon switch by the title changes it, and the choice is remembered in the browser.
+- **Light and dark themes**: follows your device's light or dark setting; the sun/moon switch by the title overrides it, and that choice is remembered in the browser.
 - **Copy link** shares the current clues. Clues are saved in the browser for the rest of the day, then cleared for the next puzzle.
 
 Words of 5 to 7 letters are supported. The tool is intentionally visual. It uses a dictionary only to flag arrangements no word fits, and the answer list only for letter and vowel odds, never to suggest words; it helps you reason about the puzzle by moving tiles around.

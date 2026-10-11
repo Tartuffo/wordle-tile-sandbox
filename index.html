@@ -6,13 +6,17 @@
   <title>Wordle Tile Sandbox</title>
   <meta name="theme-color" content="#ffffff" />
   <script>
-    // Set the saved theme before the page paints, so dark mode never flashes light.
-    try {
-      if (localStorage.getItem('wordle-sandbox-theme') === 'dark') document.documentElement.dataset.theme = 'dark';
-    } catch {}
+    // Set the theme before the page paints, so dark mode never flashes light: the saved
+    // choice if there is one, otherwise the system's light or dark setting.
+    function savedTheme() {
+      try { return localStorage.getItem('wordle-sandbox-theme'); } catch { return null; }
+    }
+    if (savedTheme() ? savedTheme() === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.documentElement.dataset.theme = 'dark';
+    }
   </script>
   <style>
-    /* Light is the default, matching Wordle; [data-theme="dark"] swaps the palette. */
+    /* The light palette, like Wordle; [data-theme="dark"], from the system setting or the switch, swaps it. */
     :root {
       color-scheme: light;
       --bg: #ffffff;
@@ -2914,6 +2918,10 @@
       try { localStorage.setItem('wordle-sandbox-theme', dark ? 'dark' : 'light'); } catch {}
     });
     applyTheme(document.documentElement.dataset.theme === 'dark');
+    // Follow the system setting as it changes (e.g. at sunset) until the switch is used.
+    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+      if (!savedTheme()) applyTheme(e.matches);
+    });
 
     // ── Init ──────────────────────────────────────────────────────────────────
 
