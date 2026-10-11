@@ -779,7 +779,8 @@
     }
 
     #oddsCount { font-size: 14px; margin-right: auto; }
-    #oddsScope[hidden] { display: none; }
+    .odds-scope { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+    .odds-scope[hidden] { display: none; }
     #oddsCount b { color: var(--text); }
     .odds-note { margin: 8px 0 0; }
     .odds-note:empty, #oddsBody[hidden] { display: none; }
@@ -855,6 +856,22 @@
     }
 
     .odds-cell.current { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+    .rank-rows { display: grid; gap: 4px; margin-top: 8px; }
+    .rank-row { display: flex; gap: 4px; }
+
+    .rank-cell {
+      flex: 0 0 40px;
+      display: grid;
+      place-items: center;
+      padding: 3px 0;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .rank-cell b { font-size: 15px; font-weight: 900; }
 
     .odds-entry {
       padding: 1px 2px;
@@ -987,9 +1004,12 @@
         <h2>Vowel odds</h2>
         <span id="oddsCount" class="hint" role="status"></span>
         <button id="oddsResetBtn" class="link" hidden>reset to clues</button>
-        <span id="oddsScope" class="seg" role="group" aria-label="Clues the odds use">
-          <button data-scope="vowels" title="Use only what you know about the vowels">Vowels only</button>
-          <button data-scope="all" title="Also use your consonants: gray ones are out, green and yellow ones are in">All clues</button>
+        <span id="oddsScopeWrap" class="odds-scope">
+          <span class="hint">Use:</span>
+          <span id="oddsScope" class="seg" role="group" aria-label="Clues the odds use">
+            <button data-scope="vowels" title="Use only what you know about the vowels">Vowels only</button>
+            <button data-scope="all" title="Also use your consonants: gray ones are out, green and yellow ones are in">All clues</button>
+          </span>
         </span>
       </div>
       <p id="oddsNote" class="hint odds-note"></p>
@@ -1001,6 +1021,11 @@
           <summary>Every case of one yellow and one gray vowel</summary>
           <p class="caption">Columns are the yellow vowel, rows the gray one. Each cell gives the two likeliest other vowels, then <b>∅</b>, the chance of no other vowel, all in percent.</p>
           <div id="oddsTable" class="odds-table"></div>
+        </details>
+        <details class="odds-table-wrap">
+          <summary>Letter ranking in Wordle answers</summary>
+          <p class="caption" id="rankCaption"></p>
+          <div id="rankTable" class="rank-rows"></div>
         </details>
       </div>
     </section>
@@ -1950,7 +1975,7 @@
       const note = $('oddsNote');
       const ready = Array.isArray(answerWords);
       $('oddsResetBtn').hidden = !Object.keys(vowelOverrides).length || len !== 5;
-      $('oddsScope').hidden = len !== 5 || !ready;
+      $('oddsScopeWrap').hidden = len !== 5 || !ready;
       document.querySelectorAll('#oddsScope button').forEach(btn => {
         btn.setAttribute('aria-pressed', String(btn.dataset.scope === oddsScope));
       });
@@ -1996,6 +2021,27 @@
         optionsEl.appendChild(el);
       }
       renderOddsTable(have || lack ? {} : states);
+      if (!$('rankTable').childElementCount) buildRankTable();
+    }
+
+    // Every letter by share of answers containing it: the answers' own etaoin shrdlu.
+    // Rows of 6, 6, 7 and 7, so the top 12 read as two words.
+    function buildRankTable() {
+      const top = letterRanking.slice(0, 12).map(r => r.letter).join('');
+      $('rankCaption').innerHTML = `Share of answers containing each letter, each word counted once. ` +
+        `In place of etaoin shrdlu, the top 12 are <b>${top.slice(0, 6)} ${top.slice(6)}</b>.`;
+      for (const [from, to] of [[0, 6], [6, 12], [12, 19], [19, 26]]) {
+        const row = document.createElement('div');
+        row.className = 'rank-row';
+        for (const { letter, p } of letterRanking.slice(from, to)) {
+          const cell = document.createElement('span');
+          cell.className = 'rank-cell';
+          shadeOdds(cell, p);
+          cell.innerHTML = `<b>${letter}</b>${pct(p)}`;
+          row.appendChild(cell);
+        }
+        $('rankTable').appendChild(row);
+      }
     }
 
     // The one-yellow, one-gray slice of the panel, every case at once. It depends only on

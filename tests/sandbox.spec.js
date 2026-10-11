@@ -402,6 +402,12 @@ test('Rank letters view orders letters by share of answers; grays stay in place,
   await expect(letter(page, expected[1])).toHaveAttribute('title', new RegExp(`in ${percent(share(expected[1]), answerWords.length)} of answers`));
   await letter(page, expected[1]).click();
   await expect(page.locator('#board .trial')).toHaveCount(1);
+
+  // The same ranking, with percentages, as reference data under the vowel odds.
+  await page.locator('summary', { hasText: 'Letter ranking' }).click();
+  await expect(page.locator('#rankTable .rank-cell')).toHaveText(expected.map(l => `${l}${percent(share(l), answerWords.length)}`));
+  await expect(page.locator('#rankTable .rank-row')).toHaveCount(4);
+  await expect(page.locator('#rankCaption')).toContainText(`top 12 are ${expected.slice(0, 6).join('')} ${expected.slice(6, 12).join('')}`);
 });
 
 test('without the answer list, vowel odds explain and Rank falls back to the built-in order', async ({ page }) => {
