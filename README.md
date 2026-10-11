@@ -142,6 +142,10 @@ before that marker so unrelated setup failures still fail CI.
 This is a focused desktop Chromium suite, not exhaustive browser, touch-device,
 accessibility, or OCR coverage.
 
+## Bugs and requests
+
+Found a bug or have an idea? [Open an issue](https://github.com/Tartuffo/wordle-tile-sandbox/issues) (a free GitHub account is needed); the app links there too, at the bottom of the page.
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
