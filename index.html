@@ -763,8 +763,137 @@
       text-underline-offset: 2px;
     }
 
+    /* Vowel odds. Shading is by probability (see shadeOdds), in the accent colour so it
+       doesn't read as a yellow or gray clue. */
+    .analysis-toggle {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 10px;
+    }
+
+    #analysisBody { margin-top: 14px; }
+    #analysisBody[hidden] { display: none; }
+
+    .odds-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 4px 12px;
+    }
+
+    .odds-head h2 {
+      margin: 0;
+      font-size: 17px;
+      letter-spacing: -0.01em;
+    }
+
+    #oddsCount { font-size: 14px; margin-right: auto; }
+    .odds-scope { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+    .odds-scope[hidden] { display: none; }
+    #oddsCount b { color: var(--text); }
+    .odds-note { margin: 8px 0 0; }
+    .odds-note:empty, #oddsBody[hidden] { display: none; }
+
+    .odds-vowels {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .odds-vowels .key { flex: 0 0 40px; max-width: none; }
+    .key.gray { background: var(--gray); color: #fff; }
+
+    .odds-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .odds-opt, .odds-entry {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .odds-opt {
+      padding: 4px 10px;
+      font-size: 15px;
+    }
+
+    .odds-opt b, .odds-entry b { font-weight: 900; }
+    .odds-opt.none, .odds-entry.none { border-style: dashed; }
+
+    .odds-table-wrap { margin-top: 14px; }
+
+    .odds-table-wrap summary {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .odds-table {
+      display: grid;
+      grid-template-columns: 24px repeat(6, minmax(0, 1fr));
+      gap: 4px;
+      margin-top: 8px;
+      overflow-x: auto;
+    }
+
+    .odds-table .head {
+      display: grid;
+      place-items: center;
+      min-height: 24px;
+      border-radius: 5px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .odds-table .head.gray { align-self: center; }
+    .odds-table .head.yellow { background: var(--yellow); }
+    .odds-table .head.gray { background: var(--gray); }
+    .odds-table .corner { color: var(--muted); font-size: 10px; font-weight: 700; background: none; }
+
+    .odds-cell {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+      padding: 2px;
+      border-radius: 6px;
+    }
+
+    .odds-cell.current { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+    .rank-rows { display: grid; gap: 4px; margin-top: 8px; }
+    .rank-row { display: flex; gap: 4px; }
+
+    .rank-cell {
+      flex: 0 0 40px;
+      display: grid;
+      place-items: center;
+      padding: 3px 0;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .rank-cell b { font-size: 15px; font-weight: 900; }
+
+    .odds-entry {
+      padding: 1px 2px;
+      border-radius: 4px;
+      font-size: 12px;
+      text-align: center;
+      overflow: hidden;
+    }
+
     @media (max-width: 480px) {
       :root { --label-w: 50px; --gap: 5px; }
+      .odds-entry .pc { display: none; }
       .panel { padding: 12px; }
       .subtitle { font-size: 14px; }
     }
@@ -838,6 +967,7 @@
             <button data-view="hide" title="Hide the letters">Hide</button>
             <button data-view="keyboard" title="Keyboard layout">Keyboard</button>
             <button data-view="vc" title="Vowels and consonants">V/C</button>
+            <button data-view="rank" title="Most common letters in Wordle answers first">Rank</button>
           </span>
         </div>
         <div id="lettersBody"></div>
@@ -849,6 +979,7 @@
 
       <div class="results-head">
         <h2 id="resultsTitle"></h2>
+        <button id="swapResultsBtn" class="link" hidden></button>
         <button id="clearPinsBtn" class="link" hidden>clear pins</button>
       </div>
       <p id="forced" class="forced"></p>
@@ -859,6 +990,11 @@
           <button data-mode="hide" title="Leave them out of the list and counts">Hide</button>
           <button data-mode="off" title="Show them like any other arrangement">Off</button>
         </span>
+      </div>
+
+      <div id="listWrap" hidden>
+        <p class="caption" id="listCaption"></p>
+        <div id="list"></div>
       </div>
 
       <div id="summaryWrap" hidden>
@@ -872,10 +1008,42 @@
           <span><span class="sum-cell swatch pinned" style="background: color-mix(in srgb, var(--yellow) 35%, var(--panel-2))">3</span> pinned</span>
         </div>
       </div>
+    </section>
 
-      <div id="listWrap" hidden>
-        <p class="caption" id="listCaption"></p>
-        <div id="list"></div>
+    <section class="panel" aria-label="More analysis">
+      <div class="analysis-toggle">
+        <button id="analysisBtn" aria-expanded="false" aria-controls="analysisBody">More analysis</button>
+        <span class="hint">Vowel odds and letter ranking from past Wordle answers</span>
+      </div>
+      <div id="analysisBody" hidden>
+        <div class="odds-head">
+          <h2>Vowel odds</h2>
+          <span id="oddsCount" class="hint" role="status"></span>
+          <button id="oddsResetBtn" class="link" hidden>reset to clues</button>
+          <span id="oddsScopeWrap" class="odds-scope">
+            <span class="hint">Use:</span>
+            <span id="oddsScope" class="seg" role="group" aria-label="Clues the odds use">
+              <button data-scope="vowels" title="Use only what you know about the vowels">Vowels only</button>
+              <button data-scope="all" title="Also use your consonants: gray ones are out, green and yellow ones are in">All clues</button>
+            </span>
+          </span>
+        </div>
+        <p id="oddsNote" class="hint odds-note"></p>
+        <div id="oddsBody">
+          <div id="oddsVowels" class="odds-vowels" role="group" aria-label="Vowels: tap to cycle unknown, yellow, gray"></div>
+          <p class="caption" id="oddsCaption"></p>
+          <div id="oddsOptions" class="odds-options"></div>
+          <details class="odds-table-wrap">
+            <summary>Every case of one yellow and one gray vowel</summary>
+            <p class="caption">Columns are the yellow vowel, rows the gray one. Each cell gives the two likeliest other vowels, then <b>∅</b>, the chance of no other vowel, all in percent.</p>
+            <div id="oddsTable" class="odds-table"></div>
+          </details>
+          <details class="odds-table-wrap">
+            <summary>Letter ranking in Wordle answers</summary>
+            <p class="caption" id="rankCaption"></p>
+            <div id="rankTable" class="rank-rows"></div>
+          </details>
+        </div>
       </div>
     </section>
   </main>
@@ -892,6 +1060,9 @@
     const HIDE_KEY = 'wordle-sandbox-hide-nonwords';   // earlier on/off setting, read once
     const WORD_MODE_KEY = 'wordle-sandbox-nonword-mode';
     const LETTERS_VIEW_KEY = 'wordle-sandbox-letters-view';
+    const ODDS_SCOPE_KEY = 'wordle-sandbox-odds-scope';
+    const RESULTS_ORDER_KEY = 'wordle-sandbox-results-order';
+    const ANALYSIS_KEY = 'wordle-sandbox-analysis-open';
     const FLAT_LIST_MAX = 8;      // at or below this, list without group headers
     const COLLAPSE_OVER = 24;     // above this, hide the list until asked or narrowed by pins
 
@@ -906,13 +1077,19 @@
     let pins = new Map();         // slot -> letter ('?' pins an unknown)
     let board = '';               // arrangement currently on the board
     let trials = [];              // per slot: a letter being tried in a blank board slot
-    let lettersView = 'keyboard'; // letters panel: 'keyboard' (default), 'vc' or 'hide'
+    let lettersView = 'keyboard'; // letters panel: 'keyboard' (default), 'vc', 'rank' or 'hide'
     let listExpanded = false;
     let draggedPos = null;
     let touchOverPos = null;
     const wordLists = new Map();  // length -> { words, byPos } once loaded, or 'loading' / 'failed'
     let noWord = new Set();       // arrangements that no dictionary word fits
     let wordMode = 'dim';         // non-word treatment: 'dim', 'hide' or 'off'
+    let answerWords = 'loading';  // Wordle answers (words/answers.csv) once loaded, or 'loading' / 'failed'
+    let letterRanking = null;     // [{ letter, p }] by share of answers containing the letter
+    let vowelOverrides = {};      // vowel -> 'unknown' / 'yellow' / 'gray' tapped in the odds panel
+    let oddsScope = 'vowels';     // odds use 'vowels' only (default) or 'all' clue letters
+    let gridFirst = false;        // the where-each-letter-can-go grid above the arrangement list
+    let analysisOpen = false;     // vowel odds and letter ranking shown (closed by default)
 
     // ── Utilities ─────────────────────────────────────────────────────────────
 
@@ -1675,6 +1852,8 @@
           btn.title = `Try ${letter} in the first blank slot`;
           btn.addEventListener('click', () => addTrial(letter, btn));
         }
+        const share = lettersView === 'rank' && letterRanking?.find(r => r.letter === letter);
+        if (share) btn.title += ` (in ${pct(share.p)} of answers)`;
         return btn;
       };
       const group = (label, letters, extra = '') => {
@@ -1700,6 +1879,13 @@
           [...row].forEach(l => rowEl.appendChild(key(l)));
           body.appendChild(rowEl);
         }
+      } else if (lettersView === 'rank') {
+        // Every letter stays, grays disabled, so the order reads the same each game.
+        body.className = 'vc';
+        const order = rankedLetters();
+        group('Top 12', order.slice(0, 6));
+        group('', order.slice(6, 12));
+        group('Then', order.slice(12));
       } else {
         // Gray letters are dropped here, so this lists exactly what is left.
         // Y sits after the vowels: in five-letter words it mostly acts as one.
@@ -1708,6 +1894,223 @@
         const consonants = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].filter(l => !VOWELS.includes(l) && l !== 'Y');
         group('Vowels', [...VOWELS].filter(left).join(''), left('Y') ? 'Y' : '');
         group('Consonants', consonants.filter(left).join(''));
+      }
+    }
+
+    // ── Vowel odds ────────────────────────────────────────────────────────────
+
+    // How likely each vowel is, given which vowels are known in or out, counted over the
+    // Wordle answer list (words/answers.csv, see words/README.md). Counts are of words, so
+    // a double letter counts once. Position is ignored: a green vowel counts as yellow.
+    const ODDS_VOWELS = 'AEIOUY';
+    const VOWEL_CYCLE = { unknown: 'yellow', yellow: 'gray', gray: 'unknown' };
+    // The ranking words/answers.csv gave when this was written, for when it can't load.
+    const FALLBACK_RANK = 'EAROTILSNUCYHDPMGBFKWVZXQJ';
+
+    const pct = p => `${Math.round(100 * p)}%`;
+
+    // Answers containing every letter of yellow and none of gray.
+    function filterAnswers(words, yellow, gray) {
+      return words.filter(w => [...yellow].every(l => w.includes(l)) && ![...gray].some(l => w.includes(l)));
+    }
+
+    // states maps a vowel to 'yellow', 'gray' or 'unknown' (the default); have and lack are
+    // other letters the word must or mustn't contain. Returns how many answers are left and,
+    // most likely first, each unknown vowel's share of them plus { vowel: '' }: the share
+    // holding none of the unknown vowels. Ties keep vowel order.
+    function vowelOdds(words, states, have = '', lack = '') {
+      const having = state => [...ODDS_VOWELS].filter(v => (states[v] || 'unknown') === state).join('');
+      const left = filterAnswers(words, having('yellow') + have, having('gray') + lack);
+      const unknown = [...having('unknown')];
+      if (!left.length || !unknown.length) return { count: left.length, options: [] };
+      const share = test => left.filter(test).length / left.length;
+      const options = unknown.map(vowel => ({ vowel, p: share(w => w.includes(vowel)) }));
+      options.push({ vowel: '', p: share(w => !unknown.some(v => w.includes(v))) });
+      return { count: left.length, options: options.sort((a, b) => b.p - a.p) };
+    }
+
+    // Every letter with the share of words containing it, most common first.
+    function letterRank(words) {
+      return [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ']
+        .map(letter => ({ letter, p: words.filter(w => w.includes(letter)).length / words.length }))
+        .sort((a, b) => b.p - a.p);
+    }
+
+    function rankedLetters() {
+      return letterRanking ? letterRanking.map(r => r.letter).join('') : FALLBACK_RANK;
+    }
+
+    // Shade an element by a probability: the accent mixed in proportion to it, not to its rank.
+    function shadeOdds(el, p) {
+      el.style.background = `color-mix(in srgb, var(--accent) ${Math.round(100 * p)}%, var(--panel-2))`;
+      if (p >= 0.6) el.style.color = 'var(--on-accent)';
+    }
+
+    function loadAnswers() {
+      if (location.protocol === 'file:') {
+        answerWords = 'failed';
+        return;
+      }
+      fetch('words/answers.csv')
+        .then(r => r.ok ? r.text() : Promise.reject())
+        .then(text => {
+          answerWords = text.trim().split('\n').slice(1).map(line => line.split(',')[0])
+            .filter(w => /^[A-Z]{5}$/.test(w));
+          letterRanking = letterRank(answerWords);
+          renderLetters();
+        })
+        .catch(() => { answerWords = 'failed'; })
+        .finally(renderOdds);
+    }
+
+    // A vowel's state from the clues; the panel follows these until a vowel is tapped.
+    function clueVowelState(vowel, ruledOut) {
+      if (greens.includes(vowel) || yellows.some(cell => cell.includes(vowel))) return 'yellow';
+      return ruledOut.has(vowel) ? 'gray' : 'unknown';
+    }
+
+    // Consonants the clues put in the word (green or yellow) or rule out (gray).
+    function consonantClues() {
+      const consonants = letters => [...new Set(letters)].filter(l => !ODDS_VOWELS.includes(l)).join('');
+      return { have: consonants(greens.join('') + yellows.join('')), lack: consonants(grayLetters()) };
+    }
+
+    function vowelStates() {
+      const ruledOut = grayLetters();
+      return Object.fromEntries([...ODDS_VOWELS].map(v => [v, vowelOverrides[v] || clueVowelState(v, ruledOut)]));
+    }
+
+    function cycleVowel(vowel) {
+      const next = VOWEL_CYCLE[vowelStates()[vowel]];
+      if (next === clueVowelState(vowel, grayLetters())) delete vowelOverrides[vowel];
+      else vowelOverrides[vowel] = next;
+      renderOdds();
+    }
+
+    function oddsLabel(option, states) {
+      if (option.vowel) return option.vowel;
+      return Object.values(states).includes('yellow') ? 'no other vowel' : 'no vowel';
+    }
+
+    // Closed by default: some players would rather not see odds while they solve.
+    function renderAnalysisToggle() {
+      $('analysisBody').hidden = !analysisOpen;
+      $('analysisBtn').setAttribute('aria-expanded', String(analysisOpen));
+      $('analysisBtn').textContent = analysisOpen ? 'Hide analysis' : 'More analysis';
+    }
+
+    function renderOdds() {
+      if (!analysisOpen) return;
+      const note = $('oddsNote');
+      const ready = Array.isArray(answerWords);
+      $('oddsResetBtn').hidden = !Object.keys(vowelOverrides).length || len !== 5;
+      $('oddsScopeWrap').hidden = len !== 5 || !ready;
+      document.querySelectorAll('#oddsScope button').forEach(btn => {
+        btn.setAttribute('aria-pressed', String(btn.dataset.scope === oddsScope));
+      });
+      $('oddsCount').textContent = '';
+      note.textContent = len !== 5 ? 'Vowel odds come from Wordle’s five-letter answers; switch to 5 letters to see them.'
+        : answerWords === 'failed' ? (location.protocol === 'file:'
+          ? 'Vowel odds need the answer list, which loads only when the page is served over http(s).'
+          : 'Vowel odds need the answer list, which didn’t load.')
+        : ready ? '' : 'Loading the answer list…';
+      $('oddsBody').hidden = len !== 5 || !ready;
+      if ($('oddsBody').hidden) return;
+
+      const states = vowelStates();
+      const { have, lack } = oddsScope === 'all' ? consonantClues() : { have: '', lack: '' };
+      const { count, options } = vowelOdds(answerWords, states, have, lack);
+      $('oddsCount').innerHTML = `<b>${count}</b> of ${answerWords.length} answers left`;
+
+      const vowelsEl = $('oddsVowels');
+      vowelsEl.innerHTML = '';
+      for (const v of ODDS_VOWELS) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `key ${states[v] === 'unknown' ? '' : states[v]}`;
+        btn.textContent = v;
+        btn.dataset.vowel = v;
+        btn.dataset.state = states[v];
+        btn.setAttribute('aria-label', `${v}, ${states[v]}`);
+        btn.title = `${v} is ${states[v]}; tap to make it ${VOWEL_CYCLE[states[v]]}`;
+        btn.addEventListener('click', () => cycleVowel(v));
+        vowelsEl.appendChild(btn);
+      }
+
+      $('oddsCaption').textContent = !count ? `No answer fits these ${have || lack ? 'clues' : 'vowels'}.`
+        : options.length ? 'Chance each unknown vowel is in the word:' : 'Every vowel is known.';
+      const optionsEl = $('oddsOptions');
+      optionsEl.innerHTML = '';
+      for (const option of options) {
+        const el = document.createElement('span');
+        el.className = option.vowel ? 'odds-opt' : 'odds-opt none';
+        el.dataset.p = option.p;
+        shadeOdds(el, option.p);
+        el.innerHTML = `<b>${oddsLabel(option, states)}</b> ${pct(option.p)}`;
+        optionsEl.appendChild(el);
+      }
+      renderOddsTable(have || lack ? {} : states);
+      if (!$('rankTable').childElementCount) buildRankTable();
+    }
+
+    // Every letter by share of answers containing it: the answers' own etaoin shrdlu.
+    // Rows of 6, 6, 7 and 7, so the top 12 read as two words.
+    function buildRankTable() {
+      const top = letterRanking.slice(0, 12).map(r => r.letter).join('');
+      $('rankCaption').innerHTML = `Share of answers containing each letter, each word counted once. ` +
+        `In place of etaoin shrdlu, the top 12 are <b>${top.slice(0, 6)} ${top.slice(6)}</b>.`;
+      for (const [from, to] of [[0, 6], [6, 12], [12, 19], [19, 26]]) {
+        const row = document.createElement('div');
+        row.className = 'rank-row';
+        for (const { letter, p } of letterRanking.slice(from, to)) {
+          const cell = document.createElement('span');
+          cell.className = 'rank-cell';
+          shadeOdds(cell, p);
+          cell.innerHTML = `<b>${letter}</b>${pct(p)}`;
+          row.appendChild(cell);
+        }
+        $('rankTable').appendChild(row);
+      }
+    }
+
+    // The one-yellow, one-gray slice of the panel, every case at once. It depends only on
+    // the answer list, so it is built once; the cell matching the panel is outlined (never
+    // while consonant clues narrow the panel, since its numbers then differ).
+    function renderOddsTable(states) {
+      const known = Object.entries(states).filter(([, s]) => s !== 'unknown');
+      if (!$('oddsTable').childElementCount) buildOddsTable();
+      document.querySelectorAll('#oddsTable .odds-cell').forEach(cell => {
+        const { yellow: y, gray: g } = cell.dataset;
+        cell.classList.toggle('current', y !== g && known.length === 2 && states[y] === 'yellow' && states[g] === 'gray');
+      });
+    }
+
+    function buildOddsTable() {
+      const table = $('oddsTable');
+      const head = (text, cls) => Object.assign(document.createElement('div'), { className: `head ${cls}`, textContent: text });
+      table.appendChild(head('', 'corner'));
+      for (const y of ODDS_VOWELS) table.appendChild(head(y, 'yellow'));
+      for (const g of ODDS_VOWELS) {
+        table.appendChild(head(g, 'gray'));
+        for (const y of ODDS_VOWELS) {
+          const cell = document.createElement('div');
+          cell.className = 'odds-cell';
+          cell.dataset.yellow = y;
+          cell.dataset.gray = g;
+          if (y !== g) {
+            const { count, options } = vowelOdds(answerWords, { [y]: 'yellow', [g]: 'gray' });
+            const none = options.filter(o => !o.vowel);
+            for (const o of [...options.filter(o => o.vowel).slice(0, 2), ...none]) {
+              const el = document.createElement('span');
+              el.className = o.vowel ? 'odds-entry' : 'odds-entry none';
+              shadeOdds(el, o.p);
+              el.innerHTML = `<b>${o.vowel || '∅'}</b> ${Math.round(100 * o.p)}<span class="pc">%</span>`;
+              cell.appendChild(el);
+            }
+            cell.title = `${y} yellow, ${g} gray: ${count} answers`;
+          }
+          table.appendChild(cell);
+        }
       }
     }
 
@@ -1803,7 +2206,7 @@
       list.innerHTML = '';
 
       if (total > COLLAPSE_OVER && !listExpanded) {
-        $('listCaption').textContent = 'Pin a cell above to narrow these down, or show them all.';
+        $('listCaption').textContent = `Pin a cell ${gridFirst ? 'above' : 'below'} to narrow these down, or show them all.`;
         const more = document.createElement('button');
         more.type = 'button';
         more.textContent = `Show all ${total}`;
@@ -1845,6 +2248,16 @@
         group.appendChild(wrap);
         list.appendChild(group);
       }
+    }
+
+    // The arrangement list comes first by default; the grid can be put above it instead.
+    function applyResultsOrder() {
+      if (gridFirst) $('listWrap').before($('summaryWrap'));
+      else $('summaryWrap').before($('listWrap'));
+      $('swapResultsBtn').textContent = gridFirst ? 'put list first' : 'put grid first';
+      $('swapResultsBtn').title = gridFirst
+        ? 'Show the list of arrangements above the grid'
+        : 'Show the grid of where each letter can go above the list';
     }
 
     function refreshResults({ keepBoard = false } = {}) {
@@ -1894,6 +2307,7 @@
       const showResults = movable.length > 0 && total > 0;
       $('summaryWrap').hidden = !showResults;
       $('listWrap').hidden = !showResults || !filtered.length;
+      $('swapResultsBtn').hidden = $('listWrap').hidden;
       if (showResults) {
         renderSummary(filtered);
         renderList(layout, filtered.length);
@@ -2293,6 +2707,7 @@
       syncCellClasses(errors);
       renderTileChips();
       renderLetters();
+      renderOdds();
       refreshResults();
       saveState();
     }
@@ -2378,6 +2793,7 @@
       grays = '';
       trials = Array(len).fill('');
       countOverrides = {};
+      vowelOverrides = {};
       pins.clear();
       listExpanded = false;
       renderClueInputs();
@@ -2410,6 +2826,33 @@
         try { localStorage.setItem(LETTERS_VIEW_KEY, lettersView); } catch {}
         renderLetters();
       });
+    });
+
+    document.querySelectorAll('#oddsScope button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        oddsScope = btn.dataset.scope;
+        try { localStorage.setItem(ODDS_SCOPE_KEY, oddsScope); } catch {}
+        renderOdds();
+      });
+    });
+
+    $('analysisBtn').addEventListener('click', () => {
+      analysisOpen = !analysisOpen;
+      try { localStorage.setItem(ANALYSIS_KEY, analysisOpen ? 'open' : 'closed'); } catch {}
+      renderAnalysisToggle();
+      renderOdds();
+    });
+
+    $('oddsResetBtn').addEventListener('click', () => {
+      vowelOverrides = {};
+      renderOdds();
+    });
+
+    $('swapResultsBtn').addEventListener('click', () => {
+      gridFirst = !gridFirst;
+      try { localStorage.setItem(RESULTS_ORDER_KEY, gridFirst ? 'grid' : 'list'); } catch {}
+      applyResultsOrder();
+      refreshResults({ keepBoard: true });
     });
 
     $('clearPinsBtn').addEventListener('click', () => {
@@ -2473,10 +2916,16 @@
       localStorage.setItem(WORD_MODE_KEY, wordMode);
       localStorage.removeItem(HIDE_KEY);
       const view = localStorage.getItem(LETTERS_VIEW_KEY);
-      if (['vc', 'keyboard', 'hide'].includes(view)) lettersView = view;
+      if (['vc', 'rank', 'keyboard', 'hide'].includes(view)) lettersView = view;
+      if (localStorage.getItem(ODDS_SCOPE_KEY) === 'all') oddsScope = 'all';
+      gridFirst = localStorage.getItem(RESULTS_ORDER_KEY) === 'grid';
+      analysisOpen = localStorage.getItem(ANALYSIS_KEY) === 'open';
     } catch {}
+    applyResultsOrder();
+    renderAnalysisToggle();
     renderClueInputs();
     loadWords(len);
+    loadAnswers();
     update();
   </script>
 </body>

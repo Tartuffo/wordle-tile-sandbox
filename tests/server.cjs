@@ -6,7 +6,7 @@ const root = path.resolve(__dirname, '..');
 http.createServer(async (request, response) => {
   const pathname = new URL(request.url, 'http://localhost').pathname;
   const file = pathname === '/' ? 'index.html' : pathname.slice(1);
-  if (file !== 'index.html' && !/^words\/[567]\.txt$/.test(file)) {
+  if (file !== 'index.html' && !/^words\/([567]\.txt|answers\.csv)$/.test(file)) {
     response.writeHead(404).end();
     return;
   }

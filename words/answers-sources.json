@@ -1,0 +1,27 @@
+{
+  "original": {
+    "description": "Josh Wardle's original answer list, in play order (puzzle 0 = CIGAR): the array La in the game's JS",
+    "url": "https://www.powerlanguage.co.uk/wordle/main.e65ce0a5.js",
+    "retrievedFrom": "https://web.archive.org/web/20220203122419id_/https://www.powerlanguage.co.uk/wordle/main.e65ce0a5.js",
+    "sha256": "9f597042f3b148506ac89d047a2bb95f3e7d932f3ac04487b80f96f9bf4908f4",
+    "fetched": "2026-10-11",
+    "count": 2315
+  },
+  "nyt": {
+    "description": "Every answer NYT's per-date endpoint returns, from puzzle 0 (Wardle-era dates included) on; one row per date in nyt-archive.csv, with the date each row was fetched",
+    "endpoint": "https://www.nytimes.com/svc/wordle/v2/{date}.json",
+    "firstDate": "2021-06-19",
+    "throughDate": "2026-10-10",
+    "lastFetched": "2026-10-11",
+    "dates": 1940,
+    "distinctAnswers": 1913
+  },
+  "answers": {
+    "description": "answers.csv: union of original-answers.txt and nyt-archive.csv; source is original, nyt-used or both; first_used and nyt_uses come from the NYT archive",
+    "built": "2026-10-11",
+    "total": 2381,
+    "original": 468,
+    "both": 1847,
+    "nytUsed": 66
+  }
+}
