@@ -239,7 +239,22 @@ test('known bug: gray duplicate excludes BEERY after importing BEEFY against BER
   await expect(page.locator('#resultsTitle')).toHaveText('None of the legal arrangements fits a known word.');
 });
 
-test('theme defaults to light, switches to dark and is remembered', async ({ page }) => {
+test('theme follows the system until the switch is used', async ({ page }) => {
+  const theme = () => page.evaluate(() => document.documentElement.dataset.theme || 'light');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await open(page);
+  expect(await theme()).toBe('dark');
+  await expect(page.getByRole('switch', { name: 'Dark mode' })).toHaveAttribute('aria-checked', 'true');
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect.poll(theme).toBe('light');
+  await page.getByRole('switch', { name: 'Dark mode' }).click();
+  expect(await theme()).toBe('dark');
+  await page.emulateMedia({ colorScheme: 'light' });
+  await open(page);
+  expect(await theme()).toBe('dark');
+});
+
+test('on a light system the theme starts light, switches to dark and is remembered', async ({ page }) => {
   await open(page);
   const theme = () => page.evaluate(() => document.documentElement.dataset.theme || 'light');
   const toggle = page.getByRole('switch', { name: 'Dark mode' });
