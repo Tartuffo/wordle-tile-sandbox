@@ -765,6 +765,16 @@
 
     /* Vowel odds. Shading is by probability (see shadeOdds), in the accent colour so it
        doesn't read as a yellow or gray clue. */
+    .analysis-toggle {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 10px;
+    }
+
+    #analysisBody { margin-top: 14px; }
+    #analysisBody[hidden] { display: none; }
+
     .odds-head {
       display: flex;
       flex-wrap: wrap;
@@ -1000,34 +1010,40 @@
       </div>
     </section>
 
-    <section class="panel" aria-label="Vowel odds">
-      <div class="odds-head">
-        <h2>Vowel odds</h2>
-        <span id="oddsCount" class="hint" role="status"></span>
-        <button id="oddsResetBtn" class="link" hidden>reset to clues</button>
-        <span id="oddsScopeWrap" class="odds-scope">
-          <span class="hint">Use:</span>
-          <span id="oddsScope" class="seg" role="group" aria-label="Clues the odds use">
-            <button data-scope="vowels" title="Use only what you know about the vowels">Vowels only</button>
-            <button data-scope="all" title="Also use your consonants: gray ones are out, green and yellow ones are in">All clues</button>
-          </span>
-        </span>
+    <section class="panel" aria-label="More analysis">
+      <div class="analysis-toggle">
+        <button id="analysisBtn" aria-expanded="false" aria-controls="analysisBody">More analysis</button>
+        <span class="hint">Vowel odds and letter ranking from past Wordle answers</span>
       </div>
-      <p id="oddsNote" class="hint odds-note"></p>
-      <div id="oddsBody">
-        <div id="oddsVowels" class="odds-vowels" role="group" aria-label="Vowels: tap to cycle unknown, yellow, gray"></div>
-        <p class="caption" id="oddsCaption"></p>
-        <div id="oddsOptions" class="odds-options"></div>
-        <details class="odds-table-wrap">
-          <summary>Every case of one yellow and one gray vowel</summary>
-          <p class="caption">Columns are the yellow vowel, rows the gray one. Each cell gives the two likeliest other vowels, then <b>∅</b>, the chance of no other vowel, all in percent.</p>
-          <div id="oddsTable" class="odds-table"></div>
-        </details>
-        <details class="odds-table-wrap">
-          <summary>Letter ranking in Wordle answers</summary>
-          <p class="caption" id="rankCaption"></p>
-          <div id="rankTable" class="rank-rows"></div>
-        </details>
+      <div id="analysisBody" hidden>
+        <div class="odds-head">
+          <h2>Vowel odds</h2>
+          <span id="oddsCount" class="hint" role="status"></span>
+          <button id="oddsResetBtn" class="link" hidden>reset to clues</button>
+          <span id="oddsScopeWrap" class="odds-scope">
+            <span class="hint">Use:</span>
+            <span id="oddsScope" class="seg" role="group" aria-label="Clues the odds use">
+              <button data-scope="vowels" title="Use only what you know about the vowels">Vowels only</button>
+              <button data-scope="all" title="Also use your consonants: gray ones are out, green and yellow ones are in">All clues</button>
+            </span>
+          </span>
+        </div>
+        <p id="oddsNote" class="hint odds-note"></p>
+        <div id="oddsBody">
+          <div id="oddsVowels" class="odds-vowels" role="group" aria-label="Vowels: tap to cycle unknown, yellow, gray"></div>
+          <p class="caption" id="oddsCaption"></p>
+          <div id="oddsOptions" class="odds-options"></div>
+          <details class="odds-table-wrap">
+            <summary>Every case of one yellow and one gray vowel</summary>
+            <p class="caption">Columns are the yellow vowel, rows the gray one. Each cell gives the two likeliest other vowels, then <b>∅</b>, the chance of no other vowel, all in percent.</p>
+            <div id="oddsTable" class="odds-table"></div>
+          </details>
+          <details class="odds-table-wrap">
+            <summary>Letter ranking in Wordle answers</summary>
+            <p class="caption" id="rankCaption"></p>
+            <div id="rankTable" class="rank-rows"></div>
+          </details>
+        </div>
       </div>
     </section>
   </main>
@@ -1046,6 +1062,7 @@
     const LETTERS_VIEW_KEY = 'wordle-sandbox-letters-view';
     const ODDS_SCOPE_KEY = 'wordle-sandbox-odds-scope';
     const RESULTS_ORDER_KEY = 'wordle-sandbox-results-order';
+    const ANALYSIS_KEY = 'wordle-sandbox-analysis-open';
     const FLAT_LIST_MAX = 8;      // at or below this, list without group headers
     const COLLAPSE_OVER = 24;     // above this, hide the list until asked or narrowed by pins
 
@@ -1072,6 +1089,7 @@
     let vowelOverrides = {};      // vowel -> 'unknown' / 'yellow' / 'gray' tapped in the odds panel
     let oddsScope = 'vowels';     // odds use 'vowels' only (default) or 'all' clue letters
     let gridFirst = false;        // the where-each-letter-can-go grid above the arrangement list
+    let analysisOpen = false;     // vowel odds and letter ranking shown (closed by default)
 
     // ── Utilities ─────────────────────────────────────────────────────────────
 
@@ -1974,7 +1992,15 @@
       return Object.values(states).includes('yellow') ? 'no other vowel' : 'no vowel';
     }
 
+    // Closed by default: some players would rather not see odds while they solve.
+    function renderAnalysisToggle() {
+      $('analysisBody').hidden = !analysisOpen;
+      $('analysisBtn').setAttribute('aria-expanded', String(analysisOpen));
+      $('analysisBtn').textContent = analysisOpen ? 'Hide analysis' : 'More analysis';
+    }
+
     function renderOdds() {
+      if (!analysisOpen) return;
       const note = $('oddsNote');
       const ready = Array.isArray(answerWords);
       $('oddsResetBtn').hidden = !Object.keys(vowelOverrides).length || len !== 5;
@@ -2810,6 +2836,13 @@
       });
     });
 
+    $('analysisBtn').addEventListener('click', () => {
+      analysisOpen = !analysisOpen;
+      try { localStorage.setItem(ANALYSIS_KEY, analysisOpen ? 'open' : 'closed'); } catch {}
+      renderAnalysisToggle();
+      renderOdds();
+    });
+
     $('oddsResetBtn').addEventListener('click', () => {
       vowelOverrides = {};
       renderOdds();
@@ -2886,8 +2919,10 @@
       if (['vc', 'rank', 'keyboard', 'hide'].includes(view)) lettersView = view;
       if (localStorage.getItem(ODDS_SCOPE_KEY) === 'all') oddsScope = 'all';
       gridFirst = localStorage.getItem(RESULTS_ORDER_KEY) === 'grid';
+      analysisOpen = localStorage.getItem(ANALYSIS_KEY) === 'open';
     } catch {}
     applyResultsOrder();
+    renderAnalysisToggle();
     renderClueInputs();
     loadWords(len);
     loadAnswers();

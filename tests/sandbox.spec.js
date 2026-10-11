@@ -10,6 +10,7 @@ const arrangements = page => page.locator('#list .arr');
 const fixture = name => path.join(__dirname, 'fixtures', name);
 const vowelKey = (page, vowel) => page.locator(`#oddsVowels [data-vowel="${vowel}"]`);
 const oddsChips = page => page.locator('#oddsOptions .odds-opt');
+const openAnalysis = page => page.getByRole('button', { name: 'More analysis', exact: true }).click();
 
 // Expected vowel odds, computed here independently of the app from the real answer list.
 const VOWELS = 'AEIOUY';
@@ -330,6 +331,7 @@ test('vowel odds: filtering counts words, not letters, and options sort by proba
 
 test('vowel odds panel starts from the clues, cycles vowels and matches the answer list', async ({ page }) => {
   await open(page, '?len=5&green=%3F%3F%3F%3F%3F&ban2=A&yellow=A&gray=EST');
+  await openAnalysis(page);
   const check = async (yellow, gray) => {
     const { count, chips } = expectedOdds(yellow, gray);
     await expect(page.locator('#oddsCount')).toHaveText(`${count} of ${answerWords.length} answers left`);
@@ -404,6 +406,7 @@ test('Rank letters view orders letters by share of answers; grays stay in place,
   await expect(page.locator('#board .trial')).toHaveCount(1);
 
   // The same ranking, with percentages, as reference data under the vowel odds.
+  await openAnalysis(page);
   await page.locator('summary', { hasText: 'Letter ranking' }).click();
   await expect(page.locator('#rankTable .rank-cell')).toHaveText(expected.map(l => `${l}${percent(share(l), answerWords.length)}`));
   await expect(page.locator('#rankTable .rank-row')).toHaveCount(4);
@@ -413,6 +416,7 @@ test('Rank letters view orders letters by share of answers; grays stay in place,
 test('without the answer list, vowel odds explain and Rank falls back to the built-in order', async ({ page }) => {
   await page.route('**/words/answers.csv', route => route.abort());
   await open(page);
+  await openAnalysis(page);
   await expect(page.locator('#oddsNote')).toHaveText('Vowel odds need the answer list, which didn’t load.');
   await expect(page.locator('#oddsBody')).toBeHidden();
   await page.locator('#lettersSeg').getByRole('button', { name: 'Rank', exact: true }).click();
@@ -423,6 +427,7 @@ test('without the answer list, vowel odds explain and Rank falls back to the bui
 test('vowel odds use consonant clues only when switched to All clues, and remember it', async ({ page }) => {
   // Clues: A yellow, M green, E gray vowel, S and T gray consonants.
   await open(page, '?len=5&green=M%3F%3F%3F%3F&ban2=A&yellow=A&gray=EST');
+  await openAnalysis(page);
   const scope = name => page.locator('#oddsScope').getByRole('button', { name, exact: true });
   const check = async (...args) => {
     const { count, chips } = expectedOdds(...args);
@@ -467,4 +472,25 @@ test('arrangement list comes before the grid; the swap link reverses that and is
   expect(await listFirst()).toBe(false);
   await swap.click();
   expect(await listFirst()).toBe(true);
+});
+
+test('more analysis starts closed, opens and closes, and remembers the choice', async ({ page }) => {
+  await open(page, '?len=5&green=%3F%3F%3F%3F%3F&ban2=A&yellow=A');
+  const toggle = page.locator('#analysisBtn');
+  await expect(toggle).toHaveText('More analysis');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('#analysisBody')).toBeHidden();
+
+  await toggle.click();
+  await expect(toggle).toHaveText('Hide analysis');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(vowelKey(page, 'A')).toHaveAttribute('data-state', 'yellow');
+  await expect(page.locator('#oddsCount')).toHaveText(`${expectedOdds('A', '').count} of ${answerWords.length} answers left`);
+
+  await page.reload();
+  await expect(page.locator('#analysisBody')).toBeVisible();
+  await toggle.click();
+  await expect(page.locator('#analysisBody')).toBeHidden();
+  await page.reload();
+  await expect(page.locator('#analysisBody')).toBeHidden();
 });
