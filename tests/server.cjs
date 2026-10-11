@@ -6,14 +6,14 @@ const root = path.resolve(__dirname, '..');
 http.createServer(async (request, response) => {
   const pathname = new URL(request.url, 'http://localhost').pathname;
   const file = pathname === '/' ? 'index.html' : pathname.slice(1);
-  if (file !== 'index.html' && !/^words\/([567]\.txt|answers\.csv)$/.test(file)) {
+  if (file !== 'index.html' && !/^words\/([567]\.txt|answers\.csv|answers-sources\.json)$/.test(file)) {
     response.writeHead(404).end();
     return;
   }
   try {
     const content = await fs.readFile(path.join(root, file));
     response.writeHead(200, {
-      'Content-Type': file.endsWith('.html') ? 'text/html; charset=utf-8' : 'text/plain; charset=utf-8',
+      'Content-Type': file.endsWith('.html') ? 'text/html; charset=utf-8' : file.endsWith('.json') ? 'application/json' : 'text/plain; charset=utf-8',
     }).end(content);
   } catch {
     response.writeHead(404).end();

@@ -411,6 +411,10 @@ test('Rank letters view orders letters by share of answers; grays stay in place,
   await expect(page.locator('#rankTable .rank-cell')).toHaveText(expected.map(l => `${l}${percent(share(l), answerWords.length)}`));
   await expect(page.locator('#rankTable .rank-row')).toHaveCount(4);
   await expect(page.locator('#rankCaption')).toContainText(`top 12 are ${expected.slice(0, 6).join('')} ${expected.slice(6, 12).join('')}`);
+  const through = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'words', 'answers-sources.json'), 'utf8')).nyt.throughDate;
+  const shown = await page.evaluate(d => new Date(d + 'T00:00:00Z').toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }), through);
+  expect(shown).toContain(through.slice(0, 4));
+  await expect(page.locator('#rankThrough')).toHaveText(`Using solutions up to ${shown}.`);
 });
 
 test('without the answer list, vowel odds explain and Rank falls back to the built-in order', async ({ page }) => {

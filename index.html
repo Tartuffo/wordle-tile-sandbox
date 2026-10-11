@@ -642,6 +642,8 @@
     }
 
     .caption b { color: var(--text); font-weight: 700; }
+    .caption.small { font-size: 11px; margin-top: 8px; }
+    .caption:empty { display: none; }
 
     .legend {
       display: flex;
@@ -1042,6 +1044,7 @@
             <summary>Letter ranking in Wordle answers</summary>
             <p class="caption" id="rankCaption"></p>
             <div id="rankTable" class="rank-rows"></div>
+            <p class="caption small" id="rankThrough"></p>
           </details>
         </div>
       </div>
@@ -1961,6 +1964,16 @@
         })
         .catch(() => { answerWords = 'failed'; })
         .finally(renderOdds);
+      // The last puzzle date in the list, refreshed weekly (words/answers-sources.json).
+      fetch('words/answers-sources.json')
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(sources => {
+          const date = new Date(sources.nyt.throughDate + 'T00:00:00Z');
+          if (isNaN(date)) return;
+          $('rankThrough').textContent = 'Using solutions up to ' +
+            date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }) + '.';
+        })
+        .catch(() => {});
     }
 
     // A vowel's state from the clues; the panel follows these until a vowel is tapped.

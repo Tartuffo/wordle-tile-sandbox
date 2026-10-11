@@ -24,7 +24,7 @@ Wordle Tile Sandbox lets you enter what you know from a Wordle puzzle, slot by s
   - **Vowel odds**: how many answers fit, and for each vowel (A E I O U Y) still unknown, the chance it is in the word, plus the chance that no other vowel is, which says when to stop hunting vowels and switch to consonants. Options are sorted by chance and shaded by it.
   - The vowels start from your clues (a green or yellow vowel counts as present). Tap one to cycle it through unknown, yellow and gray; **reset to clues** undoes your taps.
   - **Use: Vowels only / All clues**: by default only vowel clues count. All clues also uses your consonants, gray ones out and green or yellow ones in. That is closer to a solver, so it stays off until you choose it; the choice is remembered.
-  - Two collapsed reference sections: **every case of one yellow and one gray vowel** (the two likeliest other vowels and the chance of none), and the **letter ranking** with percentages.
+  - Two collapsed reference sections: **every case of one yellow and one gray vowel** (the two likeliest other vowels and the chance of none), and the **letter ranking** with percentages, noting the date of the latest answer in the list.
   - Odds count Wordle answer words, not letters, and ignore position. They cover 5-letter words only.
 - **Drag tiles on the board** to try arrangements by hand; a tile in a slot where it was yellow is flagged.
 - **Light and dark themes**: light by default, like Wordle; the sun/moon switch by the title changes it, and the choice is remembered in the browser.
@@ -83,7 +83,7 @@ wordle-tile-sandbox/
 
 This is a single-file static web app. To modify it, edit `index.html` directly and reload the browser.
 
-To add Wordle answers used since the last refresh, run `node scripts/refresh-answers.mjs` (Node 18+). It fetches only new dates, through yesterday by default and never past today; see [`words/README.md`](words/README.md). A GitHub Actions workflow, `refresh-answers.yml`, does this every Monday: it fetches through the last date whose puzzle is over in every time zone, runs the tests, and commits any new answers to main. Run it by hand from the repository's Actions tab.
+The answer list updates itself: the `refresh-answers.yml` workflow runs every Monday, fetches answers through the last date whose puzzle is over in every time zone, runs the tests, and commits any new answers to main. To update it sooner, run it from the repository's Actions tab. The date of the latest answer is shown under the letter ranking in **More analysis**.
 
 Suggested local workflow:
 
