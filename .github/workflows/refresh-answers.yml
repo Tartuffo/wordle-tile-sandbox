@@ -1,0 +1,52 @@
+name: Refresh answers
+on:
+  schedule:
+    - cron: '47 12 * * 1'  # Mondays 12:47 UTC
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: refresh-answers
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # Through the last date whose puzzle is over everywhere: date D ends at
+      # D+1 12:00 UTC in UTC-12, so 36 hours ago. A fetch error fails the run
+      # before anything is committed.
+      - id: refresh
+        run: |
+          node scripts/refresh-answers.mjs --through "$(date -u -d '36 hours ago' +%F)"
+          if git diff --quiet -- words/nyt-archive.csv; then
+            echo "No new answers."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "through=$(node -p "require('./words/answers-sources.json').nyt.throughDate")" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.refresh.outputs.changed == 'true'
+        run: npm ci
+      - if: steps.refresh.outputs.changed == 'true'
+        run: npx playwright install --with-deps chromium
+      - if: steps.refresh.outputs.changed == 'true'
+        run: npm test
+      - if: steps.refresh.outputs.changed == 'true'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add words/
+          git commit -m "Refresh Wordle answers through ${{ steps.refresh.outputs.through }}"
+          git push origin HEAD:main
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
