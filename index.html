@@ -969,6 +969,7 @@
 
       <div class="results-head">
         <h2 id="resultsTitle"></h2>
+        <button id="swapResultsBtn" class="link" hidden></button>
         <button id="clearPinsBtn" class="link" hidden>clear pins</button>
       </div>
       <p id="forced" class="forced"></p>
@@ -981,6 +982,11 @@
         </span>
       </div>
 
+      <div id="listWrap" hidden>
+        <p class="caption" id="listCaption"></p>
+        <div id="list"></div>
+      </div>
+
       <div id="summaryWrap" hidden>
         <p class="caption" id="summaryCaption"></p>
         <div id="summary"></div>
@@ -991,11 +997,6 @@
           <span><span class="sum-cell swatch fixed">A</span> solved</span>
           <span><span class="sum-cell swatch pinned" style="background: color-mix(in srgb, var(--yellow) 35%, var(--panel-2))">3</span> pinned</span>
         </div>
-      </div>
-
-      <div id="listWrap" hidden>
-        <p class="caption" id="listCaption"></p>
-        <div id="list"></div>
       </div>
     </section>
 
@@ -1044,6 +1045,7 @@
     const WORD_MODE_KEY = 'wordle-sandbox-nonword-mode';
     const LETTERS_VIEW_KEY = 'wordle-sandbox-letters-view';
     const ODDS_SCOPE_KEY = 'wordle-sandbox-odds-scope';
+    const RESULTS_ORDER_KEY = 'wordle-sandbox-results-order';
     const FLAT_LIST_MAX = 8;      // at or below this, list without group headers
     const COLLAPSE_OVER = 24;     // above this, hide the list until asked or narrowed by pins
 
@@ -1069,6 +1071,7 @@
     let letterRanking = null;     // [{ letter, p }] by share of answers containing the letter
     let vowelOverrides = {};      // vowel -> 'unknown' / 'yellow' / 'gray' tapped in the odds panel
     let oddsScope = 'vowels';     // odds use 'vowels' only (default) or 'all' clue letters
+    let gridFirst = false;        // the where-each-letter-can-go grid above the arrangement list
 
     // ── Utilities ─────────────────────────────────────────────────────────────
 
@@ -2177,7 +2180,7 @@
       list.innerHTML = '';
 
       if (total > COLLAPSE_OVER && !listExpanded) {
-        $('listCaption').textContent = 'Pin a cell above to narrow these down, or show them all.';
+        $('listCaption').textContent = `Pin a cell ${gridFirst ? 'above' : 'below'} to narrow these down, or show them all.`;
         const more = document.createElement('button');
         more.type = 'button';
         more.textContent = `Show all ${total}`;
@@ -2219,6 +2222,16 @@
         group.appendChild(wrap);
         list.appendChild(group);
       }
+    }
+
+    // The arrangement list comes first by default; the grid can be put above it instead.
+    function applyResultsOrder() {
+      if (gridFirst) $('listWrap').before($('summaryWrap'));
+      else $('summaryWrap').before($('listWrap'));
+      $('swapResultsBtn').textContent = gridFirst ? 'put list first' : 'put grid first';
+      $('swapResultsBtn').title = gridFirst
+        ? 'Show the list of arrangements above the grid'
+        : 'Show the grid of where each letter can go above the list';
     }
 
     function refreshResults({ keepBoard = false } = {}) {
@@ -2268,6 +2281,7 @@
       const showResults = movable.length > 0 && total > 0;
       $('summaryWrap').hidden = !showResults;
       $('listWrap').hidden = !showResults || !filtered.length;
+      $('swapResultsBtn').hidden = $('listWrap').hidden;
       if (showResults) {
         renderSummary(filtered);
         renderList(layout, filtered.length);
@@ -2801,6 +2815,13 @@
       renderOdds();
     });
 
+    $('swapResultsBtn').addEventListener('click', () => {
+      gridFirst = !gridFirst;
+      try { localStorage.setItem(RESULTS_ORDER_KEY, gridFirst ? 'grid' : 'list'); } catch {}
+      applyResultsOrder();
+      refreshResults({ keepBoard: true });
+    });
+
     $('clearPinsBtn').addEventListener('click', () => {
       pins.clear();
       refreshResults();
@@ -2864,7 +2885,9 @@
       const view = localStorage.getItem(LETTERS_VIEW_KEY);
       if (['vc', 'rank', 'keyboard', 'hide'].includes(view)) lettersView = view;
       if (localStorage.getItem(ODDS_SCOPE_KEY) === 'all') oddsScope = 'all';
+      gridFirst = localStorage.getItem(RESULTS_ORDER_KEY) === 'grid';
     } catch {}
+    applyResultsOrder();
     renderClueInputs();
     loadWords(len);
     loadAnswers();

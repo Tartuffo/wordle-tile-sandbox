@@ -446,3 +446,25 @@ test('vowel odds use consonant clues only when switched to All clues, and rememb
   await scope('Vowels only').click();
   await check('A', 'E');
 });
+
+test('arrangement list comes before the grid; the swap link reverses that and is remembered', async ({ page }) => {
+  // Three yellows give more arrangements than the list shows before "Show all".
+  await open(page, '?len=5&green=%3F%3F%3F%3F%3F&ban0=A&ban1=E&ban2=R&yellow=AER');
+  const listFirst = () => page.evaluate(() =>
+    !!($('listWrap').compareDocumentPosition($('summaryWrap')) & Node.DOCUMENT_POSITION_FOLLOWING));
+  const swap = page.locator('#swapResultsBtn');
+  expect(await listFirst()).toBe(true);
+  await expect(swap).toHaveText('put grid first');
+  await expect(page.locator('#listCaption')).toContainText('Pin a cell below');
+
+  await swap.click();
+  expect(await listFirst()).toBe(false);
+  await expect(swap).toHaveText('put list first');
+  await expect(page.locator('#listCaption')).toContainText('Pin a cell above');
+
+  await page.reload();
+  await expect(swap).toHaveText('put list first');
+  expect(await listFirst()).toBe(false);
+  await swap.click();
+  expect(await listFirst()).toBe(true);
+});
