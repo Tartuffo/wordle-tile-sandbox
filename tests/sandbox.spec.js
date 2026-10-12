@@ -139,6 +139,32 @@ test('gray letters and Dim / Hide / Off use deterministic dictionary results', a
   await expect(letter(page, 'P')).toBeEnabled();
 });
 
+test('holding an arrangement lists the dictionary words that fit it, marking past answers', async ({ page }) => {
+  await page.route('**/words/5.txt', route => route.fulfill({ body: 'APPLE\nAMPLE\nPLANT\n', contentType: 'text/plain' }));
+  await open(page);
+  await yellow(page, 1).fill('P');
+  const arr = arrangements(page).filter({ hasText: '··P··' });
+  await arr.hover();
+  await page.mouse.down();
+  const dialog = page.locator('#wordsDialog');
+  await expect(dialog).toBeVisible();
+  await page.mouse.up();
+  await expect(page.locator('#wordsTitle')).toHaveText('··P··');
+  await expect(page.locator('#wordsList span')).toHaveText(['APPLE', 'AMPLE']);
+  const used = ['APPLE', 'AMPLE'].filter(w => answerWords.includes(w));
+  await expect(page.locator('#wordsList .answer')).toHaveText(used);
+  await expect(page.locator('#wordsNote')).toContainText('2 dictionary words fit');
+  await dialog.getByRole('button', { name: 'Close' }).click();
+  await expect(dialog).toBeHidden();
+  // The hold wasn't a tap: the board is unchanged until a real tap.
+  await expect(arr).not.toHaveClass(/current/);
+  await arr.click();
+  await expect(arr).toHaveClass(/current/);
+  // Right-click opens it too; an arrangement no word fits says so.
+  await arrangements(page).filter({ hasText: '····P' }).click({ button: 'right' });
+  await expect(page.locator('#wordsNote')).toHaveText('No word in the dictionary fits this.');
+});
+
 test('letters-left taps fill legal blanks; quick tap keeps a trial, hold removes it', async ({ page }) => {
   await open(page, '?len=5&green=B%3F%3F%3F%3F&ban1=E&yellow=E');
   await letter(page, 'E').click();
