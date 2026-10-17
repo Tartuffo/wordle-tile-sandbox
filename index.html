@@ -748,6 +748,12 @@
     }
     .help-btn:hover { color: var(--accent); border-color: var(--accent); }
     .toolbar .help-btn, .results-head .help-btn, .odds-head .help-btn { margin-left: auto; align-self: center; }
+    /* The clues help covers the whole panel, so where the grid leaves room at its right
+       it sits there, centered on the panel's height; narrower, it ends the toolbar. */
+    .clues-panel { position: relative; }
+    @media (min-width: 560px) {
+      .clues-panel .toolbar .help-btn { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); }
+    }
     .caption-row { display: flex; align-items: flex-start; gap: 10px; }
     .caption-row .caption { flex: 1; }
     .caption-row .help-btn { margin-top: 12px; flex: none; }
@@ -991,7 +997,7 @@
       </div>
     </section>
 
-    <section class="panel" aria-label="Clues">
+    <section class="panel clues-panel" aria-label="Clues">
       <div id="slotNums" class="row-grid slot-nums"></div>
       <div id="greenRow" class="row-grid"></div>
       <div id="yellowRow" class="row-grid"></div>
