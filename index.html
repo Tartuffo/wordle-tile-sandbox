@@ -320,12 +320,23 @@
       font-size: 13px;
     }
 
+    /* One line where it fits; on a phone, two rows: where clues come from, then the guess
+       stepper and Clear. */
     .toolbar {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      align-items: center;
       margin-top: 14px;
+    }
+    @media (max-width: 559px) {
+      .toolbar { display: grid; }
+    }
+
+    .toolbar-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
     }
 
     .toolbar label {
@@ -345,7 +356,7 @@
     .guess-nav[hidden] { display: none; }
 
     .guess-nav button {
-      padding: 2px 12px 5px;
+      padding: 2px 8px 5px;
       font-size: 20px;
       line-height: 1.2;
     }
@@ -748,6 +759,42 @@
     }
     .help-btn:hover { color: var(--accent); border-color: var(--accent); }
     .toolbar .help-btn, .results-head .help-btn, .odds-head .help-btn { margin-left: auto; align-self: center; }
+    /* The clues help covers the whole panel, so where the grid leaves room at its right
+       it sits there, centered on the panel's height; narrower, it ends the toolbar. */
+    .clues-panel { position: relative; }
+    @media (min-width: 560px) {
+      .clues-panel .toolbar .help-btn { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); }
+    }
+    /* Copy link: an icon in the clues panel's top right corner, with a brief note beside it. */
+    .clue-link-btn {
+      position: absolute;
+      top: 12px;
+      right: 14px;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+    }
+    .clue-link-btn:hover { color: var(--accent); border-color: var(--accent); }
+    .clue-link-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .clue-link-note {
+      position: absolute;
+      top: 15px;
+      right: 50px;
+      padding: 1px 6px;
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .clue-link-btn[hidden], .clue-link-note:empty { display: none; }
+    /* Where the grid fills the width, the corner is taken: end the toolbar's second row instead. */
+    @media (max-width: 559px) {
+      .clue-link-btn { top: auto; bottom: 20px; right: 14px; }
+      .clue-link-note { top: auto; bottom: 24px; right: 50px; }
+    }
     .caption-row { display: flex; align-items: flex-start; gap: 10px; }
     .caption-row .caption { flex: 1; }
     .caption-row .help-btn { margin-top: 12px; flex: none; }
@@ -962,6 +1009,10 @@
     @media (max-width: 480px) {
       :root { --label-w: 50px; --gap: 5px; }
       .odds-entry .pc { display: none; }
+      /* The subtitle says "paste or import a screenshot", so the short labels are enough. */
+      .toolbar .wide { display: none; }
+      .clue-link-btn { bottom: 16px; right: 10px; }
+      .clue-link-note { bottom: 20px; right: 46px; }
       .panel { padding: 12px; }
       .subtitle { font-size: 14px; }
     }
@@ -991,7 +1042,9 @@
       </div>
     </section>
 
-    <section class="panel" aria-label="Clues">
+    <section class="panel clues-panel" aria-label="Clues">
+      <button id="clueLinkBtn" class="clue-link-btn" hidden aria-label="Copy link" title="Copy a link to these clues"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
+      <span id="clueLinkNote" class="clue-link-note" role="status"></span>
       <div id="slotNums" class="row-grid slot-nums"></div>
       <div id="greenRow" class="row-grid"></div>
       <div id="yellowRow" class="row-grid"></div>
@@ -1007,17 +1060,21 @@
       <div id="clueStatus" class="status" role="status"></div>
 
       <div class="toolbar">
-        <button id="pasteBtn" title="Read your clues from a screenshot on the clipboard">Paste screenshot</button>
-        <button id="importBtn" title="Read your clues from a saved Wordle screenshot">Import file</button>
-        <input id="importFile" type="file" accept="image/*" hidden>
-        <span id="guessNav" class="guess-nav" hidden>
-          <button id="guessPrevBtn" aria-label="Previous guess" title="Show the clues one guess earlier">‹</button>
-          <span id="guessStep"></span>
-          <button id="guessNextBtn" aria-label="Next guess" title="Show the clues one guess later">›</button>
-        </span>
-        <button id="clearBtn">Clear</button>
-        <button id="shareBtn">Copy link</button>
-        <button type="button" class="help-btn" data-help="cluesHelp" aria-label="About entering clues" title="About entering clues">?</button>
+        <div class="toolbar-row">
+          <button id="pasteBtn" aria-label="Paste screenshot" title="Read your clues from a screenshot on the clipboard">Paste<span class="wide"> screenshot</span></button>
+          <button id="importBtn" aria-label="Import file" title="Read your clues from a saved Wordle screenshot">Import<span class="wide"> file</span></button>
+          <input id="importFile" type="file" accept="image/*" hidden>
+          <button id="randomBtn" title="Make up a puzzle: one or two guesses against a past Wordle answer" disabled>Random</button>
+          <button type="button" class="help-btn" data-help="cluesHelp" aria-label="About entering clues" title="About entering clues">?</button>
+        </div>
+        <div class="toolbar-row">
+          <span id="guessNav" class="guess-nav" hidden>
+            <button id="guessPrevBtn" aria-label="Previous guess" title="Show the clues one guess earlier">‹</button>
+            <span id="guessStep"></span>
+            <button id="guessNextBtn" aria-label="Next guess" title="Show the clues one guess later">›</button>
+          </span>
+          <button id="clearBtn">Clear</button>
+        </div>
       </div>
     </section>
 
@@ -1132,7 +1189,9 @@
   <dialog id="cluesHelp" class="words-dialog help-dialog" aria-labelledby="cluesHelpTitle">
     <h2 id="cluesHelpTitle">Entering clues</h2>
     <div class="help-body">
-      <p><b>From a screenshot:</b> Paste screenshot reads one you’ve copied, and Import file opens a saved one; on a computer, Ctrl/⌘+V also works. Check the letters, fix any that were misread, then choose Use these clues. Afterwards, ‹ and › step through your guesses; editing a clue by hand ends the stepping.</p>
+      <p><b>From a screenshot:</b> Paste screenshot reads one you’ve copied, and Import file opens a saved one; on a computer, Ctrl/⌘+V also works. Check the letters, fix any that were misread, then choose Use these clues. If the puzzle was solved, the all-green row is left out, so the clues are as they stood just before the answer.</p>
+      <p><b>Random</b> makes up a puzzle to practice on: one or two guesses against a past Wordle answer, which stays hidden. It’s chosen so that from a few to a few dozen arrangements fit a word.</p>
+      <p><b>‹ Guess 2/3 ›</b> appears after a screenshot or Random: the clues as they stood after each guess, here after the second of three. ‹ and › step back and forth, say to see how much one guess narrowed things down. Editing a clue by hand ends the stepping and keeps the clues shown.</p>
       <p><b>By hand:</b></p>
       <dl>
         <dt>Green</dt>
@@ -1144,7 +1203,7 @@
         <dt>Tiles</dt>
         <dd>The yellow letters still to place, one tile each; a letter that’s already green starts with none. If a single guess showed a letter twice in green or yellow, <span class="tap">tap</span> it here to add a tile.</dd>
       </dl>
-      <p>Clear starts over. Copy link copies a link to these clues. Your clues also come back if you reopen the app the same day.</p>
+      <p>Clear starts over. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day.</p>
     </div>
     <form method="dialog"><button>Close</button></form>
   </dialog>
@@ -2170,6 +2229,7 @@
     function loadAnswers() {
       if (location.protocol === 'file:') {
         answerWords = 'failed';
+        $('randomBtn').hidden = true;
         return;
       }
       fetch('words/answers.csv')
@@ -2187,10 +2247,14 @@
             if (uses && row[lastCol]) answerUses.set(word, { uses, last: row[lastCol] });
           }
           letterRanking = letterRank(answerWords);
+          $('randomBtn').disabled = false;
           renderLetters();
           renderBoardWord();
         })
-        .catch(() => { answerWords = 'failed'; })
+        .catch(() => {
+          answerWords = 'failed';
+          $('randomBtn').hidden = true;
+        })
         .finally(renderOdds);
       // The last puzzle date in the list, refreshed weekly (words/answers-sources.json).
       fetch('words/answers-sources.json')
@@ -2954,10 +3018,6 @@
       });
     }
 
-    // Guesses -> per-slot clues. Greens and yellows map directly. The screenshot also
-    // gives exact double-letter counts: the most copies of a letter colored in any one
-    // guess is the minimum in the word, less the copies already green. Every gray letter
-    // goes in the gray row, including a colored letter's gray copy, which caps its count.
     function applyImportedGuesses() {
       importHistory = { rows: importRows.map(row => row.map(t => ({ ...t }))), step: importRows.length };
       closeImport();
@@ -2966,13 +3026,25 @@
 
     // Rebuilds the clues from the first `step` imported guesses.
     function showGuessStep() {
-      const importRows = importHistory.rows.slice(0, importHistory.step);
-      const n = importRows[0].length;
+      setCluesFromGuesses(importHistory.rows.slice(0, importHistory.step));
+      pins.clear();
+      listExpanded = false;
+      renderClueInputs();
+      update();
+      renderGuessNav();
+    }
+
+    // Guesses -> per-slot clues. Greens and yellows map directly. The guesses also give
+    // exact double-letter counts: the most copies of a letter colored in any one guess is
+    // the minimum in the word, less the copies already green. Every gray letter goes in
+    // the gray row, including a colored letter's gray copy, which caps its count.
+    function setCluesFromGuesses(rows) {
+      const n = rows[0].length;
       const newGreens = Array(n).fill('');
       const newYellows = Array.from({ length: n }, () => new Set());
       const minCount = {};
 
-      for (const row of importRows) {
+      for (const row of rows) {
         const colored = {};
         row.forEach((t, i) => {
           if (t.color === 'green') newGreens[i] = t.letter;
@@ -2984,25 +3056,19 @@
 
       greens = newGreens;
       yellows = newYellows.map(s => [...s].join(''));
-      grays = [...new Set(importRows.flat().filter(t => t.color === 'gray').map(t => t.letter))].sort().join('');
+      grays = [...new Set(rows.flat().filter(t => t.color === 'gray').map(t => t.letter))].sort().join('');
       countOverrides = {};
       for (const letter of new Set(yellows.join(''))) {
         countOverrides[letter] = Math.max(0, minCount[letter] - newGreens.filter(g => g === letter).length);
       }
-
       fitSlots();
-      pins.clear();
-      listExpanded = false;
-      renderClueInputs();
-      update();
-      renderGuessNav();
     }
 
     function renderGuessNav() {
       $('guessNav').hidden = !importHistory;
       if (!importHistory) return;
       const { step, rows } = importHistory;
-      $('guessStep').textContent = `${step}/${rows.length}`;
+      $('guessStep').textContent = `Guess ${step}/${rows.length}`;
       $('guessStep').title = `Clues after guess ${step} of ${rows.length}`;
       $('guessPrevBtn').disabled = step <= 1;
       $('guessNextBtn').disabled = step >= rows.length;
@@ -3030,6 +3096,75 @@
       importRows = [];
     }
 
+    // ── Random example ────────────────────────────────────────────────────────
+
+    const RANDOM_OPENERS = 400;                        // first guesses: the answers richest in common letters
+    const RANDOM_BANDS = [[3, 6], [7, 15], [16, 40]];  // arrangements that fit a word: few, some, many
+    const RANDOM_MAX_TOTAL = 80;                       // arrangements in all, fitting a word or not
+
+    // Wordle's coloring of guess against solution: greens first, then yellows left to right
+    // while the solution has copies of the letter not yet matched.
+    function scoreGuess(guess, solution) {
+      const colors = Array(len).fill('gray');
+      const unmatched = {};
+      for (let i = 0; i < len; i++) {
+        if (guess[i] === solution[i]) colors[i] = 'green';
+        else unmatched[solution[i]] = (unmatched[solution[i]] || 0) + 1;
+      }
+      for (let i = 0; i < len; i++) {
+        if (colors[i] === 'gray' && unmatched[guess[i]] > 0) {
+          colors[i] = 'yellow';
+          unmatched[guess[i]]--;
+        }
+      }
+      return [...guess].map((letter, i) => ({ letter, color: colors[i] }));
+    }
+
+    // A made-up puzzle: a past answer as the solution and a first guess from the answers with
+    // five different, common letters. If that finds fewer than two letters (green or tiles),
+    // a second guess fits its clues, as in hard mode. A band is chosen first so that few, some
+    // and many arrangements come up equally often, and puzzles outside it are drawn again.
+    // Each candidate is tried as the actual clues, so the counts are the ones then shown.
+    function randomExample() {
+      const pick = list => list[Math.floor(Math.random() * list.length)];
+      const share = Object.fromEntries(letterRanking.map(r => [r.letter, r.p]));
+      const strength = w => new Set(w).size < len ? 0 : [...w].reduce((sum, l) => sum + share[l], 0);
+      const openers = [...answerWords].sort((a, b) => strength(b) - strength(a)).slice(0, RANDOM_OPENERS);
+      const [lo, hi] = pick(RANDOM_BANDS);
+      const saved = { greens, yellows, grays, countOverrides, trials };
+      const known = () => greens.filter(Boolean).length + movable.length;
+      const tryClues = rows => {
+        setCluesFromGuesses(rows);
+        deriveTiles();
+        arrangements = findClueErrors().length ? [] : enumerate();
+      };
+
+      for (let tries = 0; tries < 1000; tries++) {
+        const solution = pick(answerWords);
+        const rows = [scoreGuess(pick(openers), solution)];
+        tryClues(rows);
+        if (known() < 2) {
+          const first = rows[0].map(t => t.letter).join('');
+          const fits = w => w !== solution && scoreGuess(first, w).every((t, i) => t.color === rows[0][i].color);
+          const next = answerWords.filter(fits);
+          if (!next.length) continue;
+          rows.push(scoreGuess(pick(next), solution));
+          tryClues(rows);
+        }
+        if (!movable.length || known() < 2 || arrangements.length > RANDOM_MAX_TOTAL) continue;
+        const fitting = arrangements.length - findNonWords().size;
+        if (fitting < lo || fitting > hi) continue;
+
+        importHistory = { rows, step: rows.length };
+        vowelOverrides = {};
+        closeImport();
+        showGuessStep();
+        return;
+      }
+      ({ greens, yellows, grays, countOverrides, trials } = saved);
+      update();
+    }
+
     // ── Update pipeline ───────────────────────────────────────────────────────
 
     function update() {
@@ -3043,7 +3178,15 @@
       renderLetters();
       renderOdds();
       refreshResults();
+      renderClueLink();
       saveState();
+    }
+
+    // A link to no clues shares nothing, so the link icon shows once there is a clue.
+    function renderClueLink() {
+      const any = greens.some(Boolean) || yellows.some(Boolean) || !!grays;
+      $('clueLinkBtn').hidden = !any;
+      if (!any) $('clueLinkNote').textContent = '';
     }
 
     // ── Persistence ───────────────────────────────────────────────────────────
@@ -3202,19 +3345,26 @@
       refreshResults();
     });
 
-    $('shareBtn').addEventListener('click', () => {
-      const btn = $('shareBtn');
+    const linkIcon = $('clueLinkBtn').innerHTML;
+    const checkIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+    $('clueLinkBtn').addEventListener('click', () => {
+      const btn = $('clueLinkBtn');
       navigator.clipboard.writeText(getShareURL()).then(() => {
-        btn.textContent = 'Copied!';
+        btn.innerHTML = checkIcon;
+        $('clueLinkNote').textContent = 'Copied';
       }).catch(() => {
-        btn.textContent = 'Failed';
+        $('clueLinkNote').textContent = 'Couldn\u2019t copy';
       }).finally(() => {
-        setTimeout(() => { btn.textContent = 'Copy link'; }, 2000);
+        setTimeout(() => {
+          btn.innerHTML = linkIcon;
+          $('clueLinkNote').textContent = '';
+        }, 2000);
       });
     });
 
     $('importBtn').addEventListener('click', () => $('importFile').click());
     $('pasteBtn').addEventListener('click', pasteScreenshot);
+    $('randomBtn').addEventListener('click', randomExample);
     $('pasteBtn').hidden = !navigator.clipboard?.read;
     $('importFile').addEventListener('change', e => importScreenshot(e.target.files[0]));
     $('importUseBtn').addEventListener('click', applyImportedGuesses);
