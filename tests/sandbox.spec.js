@@ -23,7 +23,7 @@ function expectedOdds(yellow, gray, have = '', lack = '') {
   const left = answerWords.filter(w => [...yellow + have].every(l => w.includes(l)) && ![...gray + lack].some(l => w.includes(l)));
   const unknown = [...VOWELS].filter(v => !yellow.includes(v) && !gray.includes(v));
   const options = unknown.map(v => [v, left.filter(w => w.includes(v)).length]);
-  options.push([yellow ? 'no other vowel' : 'no vowel', left.filter(w => !unknown.some(v => w.includes(v))).length]);
+  options.push([yellow ? 'No other vowel' : 'No vowel', left.filter(w => !unknown.some(v => w.includes(v))).length]);
   options.sort((a, b) => b[1] - a[1]);
   return { count: left.length, chips: options.map(([label, n]) => `${label} ${percent(n, left.length)}`), options };
 }
@@ -57,7 +57,7 @@ test('green typing advances, space skips, yellow arrangements can be pinned and 
   await expect(arrangements(page)).toHaveCount(1);
   await arrangements(page).click();
   await expect(boardSlot(page, 3)).toHaveText('E');
-  await page.getByRole('button', { name: 'clear pins', exact: true }).click();
+  await page.getByRole('button', { name: 'Clear pins', exact: true }).click();
   await expect(arrangements(page)).toHaveCount(3);
   await page.getByRole('button', { name: 'Clear', exact: true }).click();
   await expect(page.locator('#board .tile')).toHaveCount(0);
@@ -123,7 +123,7 @@ test('same-day clues survive reload, copy link round-trips, yesterday expires', 
   await expect(page.locator('#board .tile')).toHaveCount(0);
 });
 
-test('gray letters and Dim / Hide / Off use deterministic dictionary results', async ({ page }) => {
+test('gray letters and Dim / Hide / Show use deterministic dictionary results', async ({ page }) => {
   // Isolate filtering from changes to the full dictionary. The normal smoke test below uses it.
   await page.route('**/words/5.txt', route => route.fulfill({ body: 'APPLE\nAMPLE\n', contentType: 'text/plain' }));
   await open(page);
@@ -132,7 +132,7 @@ test('gray letters and Dim / Hide / Off use deterministic dictionary results', a
   await expect(page.locator('#list .arr.noword')).toHaveCount(2);
   await page.locator('#wordNote').getByRole('button', { name: 'Hide', exact: true }).click();
   await expect(arrangements(page)).toHaveCount(2);
-  await page.locator('#wordNote').getByRole('button', { name: 'Off', exact: true }).click();
+  await page.locator('#wordNote').getByRole('button', { name: 'Show', exact: true }).click();
   await expect(arrangements(page)).toHaveCount(4);
   await expect(page.locator('#list .arr.noword')).toHaveCount(0);
   await page.locator('#wordNote').getByRole('button', { name: 'Dim', exact: true }).click();
@@ -151,7 +151,7 @@ test('holding an arrangement asks once per tab, then lists matching words with r
   await yellow(page, 1).fill('P');
   await page.locator('#grayInput').fill('M');
   // Desktop Chrome has a mouse, so the caption mentions right-click.
-  await expect(page.locator('#listCaption')).toHaveText('Tap one to put it on the board. Long tap / right click to see all matching words.');
+  await expect(page.locator('#listCaption')).toHaveText('Click one to put it on the board. Long click / right click to see all matching words.');
   const arr = arrangements(page).filter({ hasText: '··P··' });
   const confirm = page.locator('#wordsConfirm');
   const dialog = page.locator('#wordsDialog');
@@ -227,7 +227,8 @@ test('trial drag swaps letters, preserves fixed greens and flags banned destinat
 test('full board checks the real word list; changing arrangement clears displaced trials', async ({ page }) => {
   await open(page);
   for (const value of 'APPLE') await letter(page, value).click();
-  await expect(page.locator('#boardWord')).toHaveText(/^APPLE ✓ is in the word list/);
+  await expect(page.locator('#boardWord')).toHaveText(/^APPLE ✓ is in the word list\./);
+  await expect(boardSlot(page, 1)).toHaveAttribute('aria-label', 'Slot 1: A, tried');
   await letter(page, 'Z').click();
   await expect(page.locator('#board .trial')).toHaveCount(5);
   await yellow(page, 1).fill('Z');
@@ -252,9 +253,11 @@ test('a full board says when the word was last a Wordle answer', async ({ page }
   await type('APPLE');
   await expect(note).toHaveText(`Wordle answer on ${date(once[3])}.`);
   await type('CIGAR');
-  await expect(page.locator('#boardWord')).toHaveText(`CIGAR ✓ is in the word list Wordle answer 2 times, last on ${date(twice[3])}.`);
+  await expect(page.locator('#boardWord')).toHaveText(`CIGAR ✓ is in the word list. Wordle answer 2 times, last on ${date(twice[3])}.`);
   await type('GAFFE');
-  await expect(note).toHaveText('Not a past Wordle answer.');
+  // Never used: says how recent the list is, since it is refreshed weekly.
+  const through = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'words', 'answers-sources.json'), 'utf8')).nyt.throughDate;
+  await expect(note).toHaveText(`Not a Wordle answer through ${date(through)}.`);
 });
 
 test('PNG import reads colors/letters, omits solved row, steps guesses and ends on manual edit', async ({ page }) => {
@@ -269,7 +272,8 @@ test('PNG import reads colors/letters, omits solved row, steps guesses and ends 
   await expect(green(page, 1)).toHaveValue('B');
   await expect(green(page, 2)).toHaveValue('E');
   await expect(green(page, 5)).toHaveValue('Y');
-  await expect(page.locator('#grayInput')).toHaveValue('ACFN');
+  // BEEFY's second E was gray: kept, since it caps the E count at the green one.
+  await expect(page.locator('#grayInput')).toHaveValue('ACEFN');
   await expect(page.getByRole('button', { name: 'Next guess' })).toBeDisabled();
   await page.getByRole('button', { name: 'Previous guess' }).click();
   await expect(page.locator('#guessStep')).toHaveText('1/2');
@@ -296,9 +300,9 @@ test('import cancel preserves clues and invalid images can be retried', async ({
   await expect(page.locator('#importRows input')).toHaveCount(10);
 });
 
-test('known bug: gray duplicate excludes BEERY after importing BEEFY against BERRY', async ({ page }) => {
-  // BEERY would satisfy every positional clue, but has one E too many.
-  // A single-word dictionary makes that maximum-count defect observable in the list.
+test('a gray duplicate caps the count: BEEFY against BERRY rules out BEERY', async ({ page }) => {
+  // BEERY satisfies every positional clue, but BEEFY's second E was gray, so the word
+  // has one E. A single-word dictionary makes the count check observable in the list.
   await page.route('**/words/5.txt', route => route.fulfill({ body: 'BEERY\n', contentType: 'text/plain' }));
   await open(page);
   await importImage(page, 'duplicate-cap.png');
@@ -306,13 +310,21 @@ test('known bug: gray duplicate excludes BEERY after importing BEEFY against BER
   await page.getByRole('button', { name: 'Use these clues' }).click();
   expect(await values(page.locator('.green-cell'))).toEqual(['B', 'E', '', '', 'Y']);
   expect(await values(page.locator('.yellow-cell'))).toEqual(['R', '', '', '', '']);
-  await expect(page.locator('#grayInput')).toHaveValue('AFNST');
+  // The gray E is kept: it is what caps the count.
+  await expect(page.locator('#grayInput')).toHaveValue('AEFNST');
   await expect(page.locator('#clueStatus')).toHaveText('');
-  await expect(page.locator('#wordNote')).toBeVisible();
+  await expect(page.locator('#lettersTitle')).toContainText('21 letters left');  // E isn't counted as gray
+  await expect(page.locator('#list .arr.noword')).toHaveCount(2);
+  await arrangements(page).filter({ hasText: 'BE·RY' }).click({ button: 'right' });
+  await page.locator('#wordsConfirm').getByRole('button', { name: 'Show words' }).click();
+  await expect(page.locator('#wordsList .out')).toHaveText(['BEERY']);
+  await expect(page.locator('#wordsList .out')).toHaveAttribute('title', /^Ruled out: more E’s than your clues allow\./);
+  await page.locator('#wordsDialog').getByRole('button', { name: 'Close' }).click();
   await page.locator('#wordNote').getByRole('button', { name: 'Hide', exact: true }).click();
-  // Setup errors remain real failures. Only the missing semantic constraint is expected.
-  test.fail(true, 'Import stores minimum counts only; the gray duplicate maximum is lost.');
   await expect(page.locator('#resultsTitle')).toHaveText('None of the legal arrangements fits a known word.');
+  // Trying another E on the board is flagged too.
+  await letter(page, 'E').click();
+  await expect(page.locator('#boardStatus')).toHaveText('Too many E’s: your clues allow 1.');
 });
 
 test('theme follows the system until the switch is used', async ({ page }) => {
@@ -387,7 +399,7 @@ test('the letters help button opens a dialog explaining the views', async ({ pag
   await page.getByRole('button', { name: 'About the letters' }).click();
   await expect(help).toBeVisible();
   await expect(help.getByRole('heading')).toHaveText('Letters left');
-  await expect(help.locator('dt')).toHaveText(['Keyboard', 'V/C', 'Rank', 'Hide']);
+  await expect(help.locator('dt')).toHaveText(['Keyboard', 'V/C', 'Rank']);
   await help.getByRole('button', { name: 'Close' }).click();
   await expect(help).toBeHidden();
   await page.getByRole('button', { name: 'About the letters' }).click();
@@ -398,12 +410,45 @@ test('the letters help button opens a dialog explaining the views', async ({ pag
   await expect(help).toBeHidden();
 });
 
+test('every section has a help button that opens its own popup', async ({ page }) => {
+  await open(page, '?green=B%3F%3F%3F%3F&ban1=E&yellow=E');
+  await openAnalysis(page);
+  const helps = [
+    ['About entering clues', 'Entering clues'],
+    ['About the letters', 'Letters left'],
+    ['About the arrangements', 'Arrangements'],
+    ['About the grid', 'Where each letter can go'],
+    ['About More analysis', 'More analysis'],
+  ];
+  await expect(page.locator('[data-help]')).toHaveCount(helps.length);
+  for (const [button, heading] of helps) {
+    await page.getByRole('button', { name: button, exact: true }).click();
+    const dialog = page.locator('dialog[open]');
+    await expect(dialog.getByRole('heading')).toHaveText(heading);
+    // With a mouse, instructions say Click.
+    await expect(dialog).not.toContainText(/\btap\b/i);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('dialog[open]')).toHaveCount(0);
+  }
+});
+
+test('on a touch screen, instructions say Tap and the list caption says Long tap', async ({ browser }) => {
+  const context = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 800 } });
+  const phone = await context.newPage();
+  await phone.goto('http://127.0.0.1:4173/?green=B%3F%3F%3F%3F&ban1=E&yellow=E');
+  await expect(phone.locator('#lettersHint')).toHaveText(/^Tap a letter to try it\./);
+  await expect(phone.locator('#listCaption')).toHaveText('Tap one to put it on the board. Long tap to see all matching words.');
+  await expect(phone.locator('#summaryCaption')).toContainText('Tap a number to pin the letter there; tap a letter');
+  await expect(phone.locator('#gridHelp')).toContainText('Tap a number to pin the letter there');
+  await context.close();
+});
+
 test('letters panel defaults to the keyboard view and remembers a change', async ({ page }) => {
   await open(page);
   const pressed = page.locator('#lettersSeg [aria-pressed="true"]');
   await expect(pressed).toHaveText('Keyboard');
   await expect(page.locator('#lettersBody .kb-row')).toHaveCount(3);
-  await page.locator('#lettersSeg').getByRole('button', { name: 'V/C', exact: true }).click();
+  await page.locator('#lettersSeg').getByRole('button', { name: 'Vowels and consonants (V/C)', exact: true }).click();
   await expect(page.locator('#lettersBody .vc-label')).toHaveCount(2);
   await open(page);
   await expect(pressed).toHaveText('V/C');
@@ -495,7 +540,7 @@ test('vowel odds panel starts from the clues, cycles vowels and matches the answ
   await vowelKey(page, 'Y').click();
   await page.getByRole('button', { name: 'Clear', exact: true }).click();
   await check('', '');
-  await expect(oddsChips(page).last()).toHaveText('no vowel 0%');
+  await expect(oddsChips(page).last()).toHaveText('No vowel 0%');
 });
 
 test('Rank letters view orders letters by share of answers; grays stay in place, disabled', async ({ page }) => {
@@ -507,7 +552,7 @@ test('Rank letters view orders letters by share of answers; grays stay in place,
   await expect(page.locator('#lettersBody .vc-label')).toHaveText(['Top 12', '', 'Then']);
   await expect(letter(page, 'E')).toBeDisabled();
   await expect(letter(page, expected[1])).toHaveAttribute('title',
-    `Tap to try ${expected[1]} in the first blank slot. ${expected[1]} is in ${percent(share(expected[1]), answerWords.length)} of all Wordle answers.`);
+    `Click to try ${expected[1]} in the first blank slot that allows it. ${expected[1]} is in ${percent(share(expected[1]), answerWords.length)} of all Wordle answers.`);
   await letter(page, expected[1]).click();
   await expect(page.locator('#board .trial')).toHaveCount(1);
 
@@ -520,7 +565,7 @@ test('Rank letters view orders letters by share of answers; grays stay in place,
   const through = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'words', 'answers-sources.json'), 'utf8')).nyt.throughDate;
   const shown = await page.evaluate(d => new Date(d + 'T00:00:00Z').toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }), through);
   expect(shown).toContain(through.slice(0, 4));
-  await expect(page.locator('#rankThrough')).toHaveText(`Using solutions up to ${shown}.`);
+  await expect(page.locator('#rankThrough')).toHaveText(`Published answers through ${shown}.`);
 });
 
 test('without the answer list, vowel odds explain and Rank falls back to the built-in order', async ({ page }) => {
@@ -570,8 +615,13 @@ test('tapping a letter in the grid groups the whole list by where it goes', asyn
   const total = await page.locator('#summary .row-grid').first().locator('.sum-cell')
     .evaluateAll(cells => cells.reduce((n, c) => n + (Number(c.textContent) || 0), 0));
   expect(total).toBeGreaterThan(24);  // collapsed until shown
+  await expect(page.locator('#summaryCaption')).toHaveText(
+    `Where each letter can go in the ${total} arrangements. Click a number to pin the letter there; click a letter to sort the list by it.`);
   await expect(page.locator('#list .arr')).toHaveCount(0);
 
+  // Screen readers get each cell's letter, slot and count.
+  await expect(page.locator('#summary .sum-cell[aria-label="E, slot 2: 0 arrangements"]')).toHaveCount(1);  // E was yellow there
+  await expect(page.locator('#summary .sum-cell[aria-label^="E, slot 1: "]')).not.toHaveAttribute('aria-label', /: 0 /);
   await label('E').click();
   await expect(label('E')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#list .arr')).toHaveCount(total);
@@ -598,16 +648,16 @@ test('arrangement list comes before the grid; the swap link reverses that and is
     !!($('listWrap').compareDocumentPosition($('summaryWrap')) & Node.DOCUMENT_POSITION_FOLLOWING));
   const swap = page.locator('#swapResultsBtn');
   expect(await listFirst()).toBe(true);
-  await expect(swap).toHaveText('put grid first');
-  await expect(page.locator('#listCaption')).toContainText('Pin a cell below');
+  await expect(swap).toHaveText('Put grid first');
+  await expect(page.locator('#listCaption')).toContainText('Click a number in the grid below');
 
   await swap.click();
   expect(await listFirst()).toBe(false);
-  await expect(swap).toHaveText('put list first');
-  await expect(page.locator('#listCaption')).toContainText('Pin a cell above');
+  await expect(swap).toHaveText('Put list first');
+  await expect(page.locator('#listCaption')).toContainText('Click a number in the grid above');
 
   await page.reload();
-  await expect(swap).toHaveText('put list first');
+  await expect(swap).toHaveText('Put list first');
   expect(await listFirst()).toBe(false);
   await swap.click();
   expect(await listFirst()).toBe(true);
