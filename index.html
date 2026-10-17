@@ -1965,7 +1965,8 @@
           btn.addEventListener('click', () => addTrial(letter, btn));
         }
         const share = lettersView === 'rank' && letterRanking?.find(r => r.letter === letter);
-        if (share) btn.title += ` (in ${pct(share.p)} of answers)`;
+        if (share) btn.title = `${status === 'out' ? btn.title : `Tap to try ${letter} in the first blank slot`}. ` +
+          `${letter} is in ${pct(share.p)} of all Wordle answers.`;
         return btn;
       };
       const group = (label, letters, extra = '') => {

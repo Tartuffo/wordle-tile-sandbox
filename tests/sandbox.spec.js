@@ -506,7 +506,8 @@ test('Rank letters view orders letters by share of answers; grays stay in place,
   await expect(page.locator('#lettersBody .key')).toHaveText(expected);
   await expect(page.locator('#lettersBody .vc-label')).toHaveText(['Top 12', '', 'Then']);
   await expect(letter(page, 'E')).toBeDisabled();
-  await expect(letter(page, expected[1])).toHaveAttribute('title', new RegExp(`in ${percent(share(expected[1]), answerWords.length)} of answers`));
+  await expect(letter(page, expected[1])).toHaveAttribute('title',
+    `Tap to try ${expected[1]} in the first blank slot. ${expected[1]} is in ${percent(share(expected[1]), answerWords.length)} of all Wordle answers.`);
   await letter(page, expected[1]).click();
   await expect(page.locator('#board .trial')).toHaveCount(1);
 
