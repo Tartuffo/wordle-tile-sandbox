@@ -747,6 +747,10 @@
       line-height: 1;
     }
     .help-btn:hover { color: var(--accent); border-color: var(--accent); }
+    .toolbar .help-btn, .results-head .help-btn, .odds-head .help-btn { margin-left: auto; align-self: center; }
+    .caption-row { display: flex; align-items: flex-start; gap: 10px; }
+    .caption-row .caption { flex: 1; }
+    .caption-row .help-btn { margin-top: 12px; flex: none; }
     .help-dialog { width: min(92vw, 480px); }
     .help-dialog h2 { font-family: inherit; letter-spacing: normal; font-size: 20px; }
     .help-dialog .help-body { min-height: 0; overflow-y: auto; margin: 8px 0 14px; font-size: 14px; line-height: 1.45; }
@@ -1013,6 +1017,7 @@
         </span>
         <button id="clearBtn">Clear</button>
         <button id="shareBtn">Copy link</button>
+        <button type="button" class="help-btn" data-help="cluesHelp" aria-label="About entering clues" title="About entering clues">?</button>
       </div>
     </section>
 
@@ -1031,7 +1036,7 @@
           </span>
         </div>
         <div id="lettersBody"></div>
-        <p id="lettersHint" class="hint letters-hint">Tap a letter to try it. On the board, drag a tile to move or swap it; hold a tried one to remove it.</p>
+        <p id="lettersHint" class="hint letters-hint"><span class="tap">Tap</span> a letter to try it. On the board, drag a tile to move or swap it; hold a tried one to remove it.</p>
       </div>
       <div id="board" class="row-grid" aria-label="Tile board"></div>
       <p id="boardWord" class="board-word" role="status"></p>
@@ -1041,6 +1046,7 @@
         <h2 id="resultsTitle"></h2>
         <button id="swapResultsBtn" class="link" hidden></button>
         <button id="clearPinsBtn" class="link" hidden>Clear pins</button>
+        <button type="button" class="help-btn" data-help="arrangementsHelp" aria-label="About the arrangements" title="About the arrangements">?</button>
       </div>
       <p id="forced" class="forced"></p>
       <div id="wordNote" class="word-note" hidden>
@@ -1058,7 +1064,10 @@
       </div>
 
       <div id="summaryWrap" hidden>
-        <p class="caption" id="summaryCaption"></p>
+        <div class="caption-row">
+          <p class="caption" id="summaryCaption"></p>
+          <button type="button" class="help-btn" data-help="gridHelp" aria-label="About the grid" title="About the grid">?</button>
+        </div>
         <div id="summary"></div>
         <div class="legend" aria-label="Legend">
           <span><span class="sum-cell swatch" style="background: color-mix(in srgb, var(--yellow) 35%, var(--panel-2))">4</span> possible</span>
@@ -1087,11 +1096,12 @@
               <button data-scope="all" title="Also use your consonants: gray ones are out, green and yellow ones are in">All clues</button>
             </span>
           </span>
+          <button type="button" class="help-btn" data-help="analysisHelp" aria-label="About More analysis" title="About More analysis">?</button>
         </div>
         <p id="oddsNote" class="hint odds-note"></p>
         <div id="oddsBody">
           <div id="oddsVowels" class="odds-vowels" role="group" aria-label="Vowels: tap to cycle unknown, yellow, gray"></div>
-          <p class="hint odds-hint">Tap a vowel to cycle unknown, yellow, gray.</p>
+          <p class="hint odds-hint"><span class="tap">Tap</span> a vowel to cycle unknown, yellow, gray.</p>
           <p class="caption" id="oddsCaption"></p>
           <div id="oddsOptions" class="odds-options"></div>
           <details class="odds-table-wrap">
@@ -1119,11 +1129,77 @@
     </form>
   </dialog>
 
+  <dialog id="cluesHelp" class="words-dialog help-dialog" aria-labelledby="cluesHelpTitle">
+    <h2 id="cluesHelpTitle">Entering clues</h2>
+    <div class="help-body">
+      <p><b>From a screenshot:</b> Paste screenshot reads one you’ve copied, and Import file opens a saved one; on a computer, Ctrl/⌘+V also works. Check the letters, fix any that were misread, then choose Use these clues. Afterwards, ‹ and › step through your guesses; editing a clue by hand ends the stepping.</p>
+      <p><b>By hand:</b></p>
+      <dl>
+        <dt>Green</dt>
+        <dd>The letter in each slot you’ve solved. Typing moves to the next slot; space skips one.</dd>
+        <dt>Yellow</dt>
+        <dd>Under each slot, every letter that turned yellow there, across all your guesses.</dd>
+        <dt>Gray</dt>
+        <dd>Letters that aren’t in the word. If a letter turned gray in one place but green or yellow in another, enter it here too: the word then has no more copies of it than your green and yellow ones.</dd>
+        <dt>Tiles</dt>
+        <dd>The yellow letters still to place, one tile each; a letter that’s already green starts with none. If a single guess showed a letter twice in green or yellow, <span class="tap">tap</span> it here to add a tile.</dd>
+      </dl>
+      <p>Clear starts over. Copy link copies a link to these clues. Your clues also come back if you reopen the app the same day.</p>
+    </div>
+    <form method="dialog"><button>Close</button></form>
+  </dialog>
+
+  <dialog id="arrangementsHelp" class="words-dialog help-dialog" aria-labelledby="arrangementsHelpTitle">
+    <h2 id="arrangementsHelpTitle">Arrangements</h2>
+    <div class="help-body">
+      <p>Every way your yellow tiles can fill the open slots without going where they were yellow. A · marks a slot whose letter you don’t know yet.</p>
+      <p><span class="tap">Tap</span> an arrangement to put it on the board. Hold it (or right-click it) to see the dictionary words that match it; since that can give the answer away, you’re asked first, once per tab.</p>
+      <p>A line such as “E must go in slot 4” means every arrangement agrees. Longer lists are sorted into groups by where one letter goes; <span class="tap">tap</span> a group heading to pin that letter there. Lists of more than 24 stay folded until you narrow them with pins or choose Show all.</p>
+      <p>An arrangement is dimmed and struck through when no word in the word list fits it and your clues. When some don’t fit, Dim, Hide and Show choose how they appear.</p>
+      <p>Put grid first moves the grid of where each letter can go above the list.</p>
+    </div>
+    <form method="dialog"><button>Close</button></form>
+  </dialog>
+
+  <dialog id="gridHelp" class="words-dialog help-dialog" aria-labelledby="gridHelpTitle">
+    <h2 id="gridHelpTitle">Where each letter can go</h2>
+    <div class="help-body">
+      <p>One row per yellow letter, one column per slot. Each number counts the arrangements that put that letter in that slot. The <b>unknown</b> row counts slots whose letter you don’t know yet; such a slot may hold another copy of a known letter.</p>
+      <p><span class="tap">Tap</span> a number to pin the letter there: the list keeps only the arrangements that agree, and the counts update. <span class="tap">Tap</span> it again, or choose Clear pins, to undo.</p>
+      <p><span class="tap">Tap</span> a letter to sort the list by where it goes; <span class="tap">tap</span> it again to go back.</p>
+      <dl>
+        <dt>possible</dt>
+        <dd>Shaded by how many arrangements put the letter there.</dd>
+        <dt>forced</dt>
+        <dd>Every arrangement puts it there.</dd>
+        <dt>impossible</dt>
+        <dd>No arrangement does.</dd>
+        <dt>solved</dt>
+        <dd>A green slot.</dd>
+        <dt>pinned</dt>
+        <dd>A slot you pinned.</dd>
+      </dl>
+    </div>
+    <form method="dialog"><button>Close</button></form>
+  </dialog>
+
+  <dialog id="analysisHelp" class="words-dialog help-dialog" aria-labelledby="analysisHelpTitle">
+    <h2 id="analysisHelpTitle">More analysis</h2>
+    <div class="help-body">
+      <p>These figures come from Wordle’s answer list: the original answers plus every word NYT has used. They count words, not letters, and ignore positions.</p>
+      <p><b>Vowel odds:</b> of the answers that contain every vowel marked yellow and none marked gray, how many contain each unknown vowel, and how many contain none of them. The vowels start from your clues; <span class="tap">tap</span> one to change it, and Reset to clues undoes that.</p>
+      <p><b>All clues</b> also uses your consonants: green or yellow ones must be in the word, gray ones must not. It is closer to a solver, so it stays off until you choose it.</p>
+      <p><b>Every case of one yellow and one gray vowel:</b> the same odds for each such pair, for reference. On a computer, hover over a cell to see how many answers it covers.</p>
+      <p><b>Letter ranking:</b> the share of answers containing each letter, which is the order the Rank view uses.</p>
+    </div>
+    <form method="dialog"><button>Close</button></form>
+  </dialog>
+
   <dialog id="lettersHelp" class="words-dialog help-dialog" aria-labelledby="lettersHelpTitle">
     <h2 id="lettersHelpTitle">Letters left</h2>
     <div class="help-body">
       <p>The letters that could still be in the word. Green and yellow keys are from your clues. Gray letters can’t be tapped: Keyboard and Rank keep them in place, and V/C leaves them out.</p>
-      <p><b>Tap a letter</b> to try it in the first blank board slot that allows it. On the board, <b>drag</b> a tile to move or swap it, and <b>hold</b> a tried letter to remove it. Green tiles stay fixed.</p>
+      <p><b><span class="tap">Tap</span> a letter</b> to try it in the first blank board slot that allows it. On the board, <b>drag</b> a tile to move or swap it, and <b>hold</b> a tried letter to remove it. Green tiles stay fixed.</p>
       <p>Fill the board to see whether the word is in the word list and whether it has been a Wordle answer.</p>
       <dl>
         <dt>Keyboard</dt>
@@ -1162,6 +1238,10 @@
     const COLLAPSE_OVER = 24;     // above this, hide the list until asked or narrowed by pins
 
     const len = 5;                // Wordle's word length
+    // A mouse or trackpad clicks; a touch screen taps. Tooltips need a mouse, so they always say Click.
+    const CLICK = matchMedia('(any-pointer: fine)').matches;
+    const TAP = CLICK ? 'Click' : 'Tap';
+    const tap = TAP.toLowerCase();
     let greens = [];              // per slot: one letter or ''
     let yellows = [];             // per slot: letters that were yellow in that slot
     let grays = '';               // letters shown gray and so not in the word
@@ -1570,9 +1650,9 @@
 
         if (t.count === 0) {
           chip.classList.add('placed');
-          chip.title = `${t.letter} is already green. Tap if the word has another ${t.letter}.`;
+          chip.title = `${t.letter} is already green. Click if the word has another ${t.letter}.`;
         } else {
-          chip.title = t.max > t.min ? `Tap to change how many ${t.letter} tiles` : `${t.letter} tile`;
+          chip.title = t.max > t.min ? `Click to change how many ${t.letter} tiles` : `${t.letter} tile`;
         }
         if (t.count > 1) {
           const c = document.createElement('span');
@@ -1595,7 +1675,7 @@
       if (tileInfo.some(t => t.max > t.min)) {
         const hint = document.createElement('span');
         hint.className = 'hint';
-        hint.textContent = 'Tap a letter here to change its tile count.';
+        hint.textContent = `${TAP} a letter here to change its tile count.`;
         wrap.appendChild(hint);
       }
     }
@@ -1993,7 +2073,7 @@
           btn.addEventListener('click', () => addTrial(letter, btn));
         }
         const share = lettersView === 'rank' && letterRanking?.find(r => r.letter === letter);
-        if (share) btn.title = `${status === 'out' ? btn.title : `Tap to try ${letter} in the first blank slot that allows it`}. ` +
+        if (share) btn.title = `${status === 'out' ? btn.title : `Click to try ${letter} in the first blank slot that allows it`}. ` +
           `${letter} is in ${pct(share.p)} of all Wordle answers.`;
         return btn;
       };
@@ -2193,7 +2273,7 @@
         btn.dataset.vowel = v;
         btn.dataset.state = states[v];
         btn.setAttribute('aria-label', `${v}, ${states[v]}`);
-        btn.title = `${v} is ${states[v]}; tap to make it ${VOWEL_CYCLE[states[v]]}`;
+        btn.title = `${v} is ${states[v]}; click to make it ${VOWEL_CYCLE[states[v]]}`;
         btn.addEventListener('click', () => cycleVowel(v));
         vowelsEl.appendChild(btn);
       }
@@ -2291,7 +2371,7 @@
       btn.title = 'Put this arrangement on the board; hold to see the matching words';
       if (wordMode === 'dim' && noWord.has(a)) {
         btn.classList.add('noword');
-        btn.title = 'No word in the word list fits this arrangement and your clues. Tap to put it on the board anyway.';
+        btn.title = 'No word in the word list fits this arrangement and your clues. Click to put it on the board anyway.';
       }
       btn.addEventListener('click', () => {
         if (btn.dataset.held) return;
@@ -2390,7 +2470,7 @@
       const n = filtered.length;
       $('summaryCaption').innerHTML =
         `<b>Where each letter can go</b> in ${n === 1 ? 'the one arrangement' : `the ${n} arrangements`}. ` +
-        'Tap a number to pin the letter there; tap a letter to sort the list by it.';
+        `${TAP} a number to pin the letter there; ${tap} a letter to sort the list by it.`;
       const rows = [...new Set(movable)];
       if (openSlots().length > movable.length) rows.push('?');
 
@@ -2463,7 +2543,7 @@
       list.innerHTML = '';
 
       if (total > COLLAPSE_OVER && !listExpanded) {
-        $('listCaption').textContent = `Tap a number in the grid ${gridFirst ? 'above' : 'below'} to narrow the list.`;
+        $('listCaption').textContent = `${TAP} a number in the grid ${gridFirst ? 'above' : 'below'} to narrow the list.`;
         const more = document.createElement('button');
         more.type = 'button';
         more.textContent = `Show all ${total}`;
@@ -2475,8 +2555,8 @@
         return;
       }
 
-      $('listCaption').textContent = 'Tap one to put it on the board. ' +
-        (matchMedia('(any-pointer: fine)').matches ? 'Long tap / right click' : 'Long tap') + ' to see all matching words.';
+      $('listCaption').textContent = `${TAP} one to put it on the board. ` +
+        (CLICK ? 'Long click / right click' : 'Long tap') + ' to see all matching words.';
 
       if (layout.flat) {
         const wrap = document.createElement('div');
@@ -2830,7 +2910,7 @@
       renderImportRows();
       const unsure = rows.flat().some(t => t.unsure);
       $('importNote').textContent = [
-        'Check the letters against your game; tap a tile to fix one.',
+        `Check the letters against your game; ${tap} a tile to fix one.`,
         unsure ? 'Outlined tiles were hard to read.' : '',
         solved ? 'The solved row was left out.' : '',
       ].filter(Boolean).join(' ');
@@ -3036,6 +3116,8 @@
     }
 
     // ── Event wiring ──────────────────────────────────────────────────────────
+
+    if (CLICK) document.querySelectorAll('.tap').forEach(el => { el.textContent = el.textContent === 'Tap' ? 'Click' : 'click'; });
 
     // Help: each [data-help] button opens its dialog; a click on the backdrop closes it.
     document.querySelectorAll('[data-help]').forEach(btn => {

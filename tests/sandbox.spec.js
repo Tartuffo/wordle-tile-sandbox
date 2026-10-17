@@ -151,7 +151,7 @@ test('holding an arrangement asks once per tab, then lists matching words with r
   await yellow(page, 1).fill('P');
   await page.locator('#grayInput').fill('M');
   // Desktop Chrome has a mouse, so the caption mentions right-click.
-  await expect(page.locator('#listCaption')).toHaveText('Tap one to put it on the board. Long tap / right click to see all matching words.');
+  await expect(page.locator('#listCaption')).toHaveText('Click one to put it on the board. Long click / right click to see all matching words.');
   const arr = arrangements(page).filter({ hasText: '··P··' });
   const confirm = page.locator('#wordsConfirm');
   const dialog = page.locator('#wordsDialog');
@@ -410,6 +410,39 @@ test('the letters help button opens a dialog explaining the views', async ({ pag
   await expect(help).toBeHidden();
 });
 
+test('every section has a help button that opens its own popup', async ({ page }) => {
+  await open(page, '?green=B%3F%3F%3F%3F&ban1=E&yellow=E');
+  await openAnalysis(page);
+  const helps = [
+    ['About entering clues', 'Entering clues'],
+    ['About the letters', 'Letters left'],
+    ['About the arrangements', 'Arrangements'],
+    ['About the grid', 'Where each letter can go'],
+    ['About More analysis', 'More analysis'],
+  ];
+  await expect(page.locator('[data-help]')).toHaveCount(helps.length);
+  for (const [button, heading] of helps) {
+    await page.getByRole('button', { name: button, exact: true }).click();
+    const dialog = page.locator('dialog[open]');
+    await expect(dialog.getByRole('heading')).toHaveText(heading);
+    // With a mouse, instructions say Click.
+    await expect(dialog).not.toContainText(/\btap\b/i);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('dialog[open]')).toHaveCount(0);
+  }
+});
+
+test('on a touch screen, instructions say Tap and the list caption says Long tap', async ({ browser }) => {
+  const context = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 800 } });
+  const phone = await context.newPage();
+  await phone.goto('http://127.0.0.1:4173/?green=B%3F%3F%3F%3F&ban1=E&yellow=E');
+  await expect(phone.locator('#lettersHint')).toHaveText(/^Tap a letter to try it\./);
+  await expect(phone.locator('#listCaption')).toHaveText('Tap one to put it on the board. Long tap to see all matching words.');
+  await expect(phone.locator('#summaryCaption')).toContainText('Tap a number to pin the letter there; tap a letter');
+  await expect(phone.locator('#gridHelp')).toContainText('Tap a number to pin the letter there');
+  await context.close();
+});
+
 test('letters panel defaults to the keyboard view and remembers a change', async ({ page }) => {
   await open(page);
   const pressed = page.locator('#lettersSeg [aria-pressed="true"]');
@@ -519,7 +552,7 @@ test('Rank letters view orders letters by share of answers; grays stay in place,
   await expect(page.locator('#lettersBody .vc-label')).toHaveText(['Top 12', '', 'Then']);
   await expect(letter(page, 'E')).toBeDisabled();
   await expect(letter(page, expected[1])).toHaveAttribute('title',
-    `Tap to try ${expected[1]} in the first blank slot that allows it. ${expected[1]} is in ${percent(share(expected[1]), answerWords.length)} of all Wordle answers.`);
+    `Click to try ${expected[1]} in the first blank slot that allows it. ${expected[1]} is in ${percent(share(expected[1]), answerWords.length)} of all Wordle answers.`);
   await letter(page, expected[1]).click();
   await expect(page.locator('#board .trial')).toHaveCount(1);
 
@@ -583,7 +616,7 @@ test('tapping a letter in the grid groups the whole list by where it goes', asyn
     .evaluateAll(cells => cells.reduce((n, c) => n + (Number(c.textContent) || 0), 0));
   expect(total).toBeGreaterThan(24);  // collapsed until shown
   await expect(page.locator('#summaryCaption')).toHaveText(
-    `Where each letter can go in the ${total} arrangements. Tap a number to pin the letter there; tap a letter to sort the list by it.`);
+    `Where each letter can go in the ${total} arrangements. Click a number to pin the letter there; click a letter to sort the list by it.`);
   await expect(page.locator('#list .arr')).toHaveCount(0);
 
   // Screen readers get each cell's letter, slot and count.
@@ -616,12 +649,12 @@ test('arrangement list comes before the grid; the swap link reverses that and is
   const swap = page.locator('#swapResultsBtn');
   expect(await listFirst()).toBe(true);
   await expect(swap).toHaveText('Put grid first');
-  await expect(page.locator('#listCaption')).toContainText('Tap a number in the grid below');
+  await expect(page.locator('#listCaption')).toContainText('Click a number in the grid below');
 
   await swap.click();
   expect(await listFirst()).toBe(false);
   await expect(swap).toHaveText('Put list first');
-  await expect(page.locator('#listCaption')).toContainText('Tap a number in the grid above');
+  await expect(page.locator('#listCaption')).toContainText('Click a number in the grid above');
 
   await page.reload();
   await expect(swap).toHaveText('Put list first');
