@@ -17,8 +17,8 @@
     "distinctAnswers": 1914
   },
   "answers": {
-    "description": "answers.csv: union of original-answers.txt and nyt-archive.csv; source is original, nyt-used or both; first_used and nyt_uses come from the NYT archive",
-    "built": "2026-10-12",
+    "description": "answers.csv: union of original-answers.txt and nyt-archive.csv; source is original, nyt-used or both; first_used, last_used and nyt_uses come from the NYT archive",
+    "built": "2026-10-17",
     "total": 2382,
     "original": 468,
     "both": 1847,

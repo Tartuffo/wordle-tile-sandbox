@@ -16,21 +16,22 @@ Wordle Tile Sandbox lets you enter what you know from a Wordle puzzle, slot by s
 - **Gray row**: letters that are not in the word. They sharpen the word check, and gray vowels feed the vowel odds.
 - **Double letters**: a yellow letter counts as one tile, or as already placed if it is green elsewhere. Tap its tile to change the count.
 - **Every legal arrangement**, sorted and grouped by where the most constrained letter sits. Tap one to put it on the board.
-- **Where each yellow can go**: a letter-by-slot grid counting the arrangements that put each letter in each slot, with forced placements called out and a legend for the cell styles. An "unknown" row covers the letter that isn't one of your yellows. Tap a number to pin that letter there and narrow the list.
+- **Matching words**: hold an arrangement (or right-click it) to list every dictionary word with its known letters in place. Words your clues rule out (a gray letter, or a letter in a slot where it was yellow) are struck through and listed last, and past Wordle answers are bold. Since this can give the answer away, it asks first, once per browser tab.
+- **Where each yellow can go**: a letter-by-slot grid counting the arrangements that put each letter in each slot, with forced placements called out and a legend for the cell styles. An "unknown" row covers the letter that isn't one of your yellows. Tap a number to pin that letter there and narrow the list. Tap a yellow letter at the left of the grid to show every arrangement, grouped by where that letter goes; tap it again to go back.
 - **List or grid first**: the list comes first; **put grid first**, next to the arrangement count, swaps them, and the order is remembered.
 - **Word check**: arrangements that no English word fits are dimmed and struck through by default; a Dim / Hide / Off switch can instead hide them or show them normally. Unknown slots may hold any letter that is not gray and was not yellow in that slot. The word lists are in [`words/`](words/README.md).
-- **Letters left**: above the board, the letters that aren't gray, as a keyboard (default), as vowels and consonants, or by **Rank** (most common in Wordle answers first, gray letters disabled in place), so you needn't switch back to the game to check them. Tap one to try it in the first blank board slot that allows it; hold a tried letter to remove it, or drag it. Once every slot is filled, the board says whether the word is in the word list.
+- **Letters left**: above the board, the letters that aren't gray, as a keyboard (default), as vowels and consonants, or by **Rank** (most common in Wordle answers first, gray letters disabled in place), so you needn't switch back to the game to check them. Tap one to try it in the first blank board slot that allows it; hold a tried letter to remove it, or drag it. Once every slot is filled, the board says whether the word is in the word list and whether it has been a Wordle answer: the date it was used, or the number of times and the last date if NYT has reused it. The **?** next to the view switch explains the panel and its views.
 - **More analysis**: closed by default, since some players would rather not see odds while they solve; the choice is remembered. Inside:
   - **Vowel odds**: how many answers fit, and for each vowel (A E I O U Y) still unknown, the chance it is in the word, plus the chance that no other vowel is, which says when to stop hunting vowels and switch to consonants. Options are sorted by chance and shaded by it.
   - The vowels start from your clues (a green or yellow vowel counts as present). Tap one to cycle it through unknown, yellow and gray; **reset to clues** undoes your taps.
   - **Use: Vowels only / All clues**: by default only vowel clues count. All clues also uses your consonants, gray ones out and green or yellow ones in. That is closer to a solver, so it stays off until you choose it; the choice is remembered.
   - Two collapsed reference sections: **every case of one yellow and one gray vowel** (the two likeliest other vowels and the chance of none), and the **letter ranking** with percentages, noting the date of the latest answer in the list.
-  - Odds count Wordle answer words, not letters, and ignore position. They cover 5-letter words only.
+  - Odds count Wordle answer words, not letters, and ignore position.
 - **Drag tiles on the board** to try arrangements by hand; a tile in a slot where it was yellow is flagged.
 - **Light and dark themes**: follows your device's light or dark setting; the sun/moon switch by the title overrides it, and that choice is remembered in the browser.
 - **Copy link** shares the current clues. Clues are saved in the browser for the rest of the day, then cleared for the next puzzle.
 
-Words of 5 to 7 letters are supported. The tool is intentionally visual. It uses a dictionary only to flag arrangements no word fits, and the answer list only for letter and vowel odds, never to suggest words; it helps you reason about the puzzle by moving tiles around.
+The tool is intentionally visual. It uses a dictionary only to flag arrangements no word fits, and the answer list only for letter and vowel odds and to say when a word on the board was an answer, never to suggest words; it helps you reason about the puzzle by moving tiles around.
 
 ## Letters in Wordle answers
 
@@ -73,7 +74,7 @@ wordle-tile-sandbox/
 │   ├── refresh-answers.mjs    adds newly used answers to words/answers.csv
 │   └── analyze-answers.mjs    prints the letter ranking and vowel tables
 └── words/
-    ├── 5.txt, 6.txt, 7.txt
+    ├── 5.txt
     ├── answers.csv, answers-sources.json, nyt-archive.csv, original-answers.txt
     ├── README.md
     └── SCOWL-Copyright.txt
@@ -116,7 +117,7 @@ last HTML report. Failed tests retain a trace and screenshot. GitHub Actions
 runs the suite for pull requests and pushes to main, and uploads reports and
 failure artifacts for 14 days.
 
-Coverage includes clue entry, duplicate yellow counts, lengths 5–7, arrangements
+Coverage includes clue entry, duplicate yellow counts, old 6/7-letter links, arrangements, held-arrangement word lists
 and pins, the list/grid order switch, contradictory clues, daily persistence,
 share links, dictionary modes, gray letters, letters-left taps/holds/drags, the
 Rank view, real dictionary lookup, PNG import, guess stepping, cancel/retry,
