@@ -373,6 +373,11 @@
     }
 
     .letters-title b { color: var(--text); }
+    /* The view switch and its help button wrap as one. */
+    .letters-tools { display: inline-flex; align-items: center; gap: 6px; }
+    @media (max-width: 420px) {
+      .letters-tools .seg button { padding: 3px 7px; }
+    }
     .letters-hint { margin: 8px 0 0; font-size: 12px; }
     .letters-hint[hidden], #lettersBody[hidden] { display: none; }
 
@@ -724,6 +729,25 @@
     .words-list .answer { font-weight: 800; color: var(--accent); }
     .words-list .out { color: var(--muted); text-decoration: line-through; }
 
+    /* A circled ? that opens the help dialog named by its data-help. */
+    .help-btn {
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      border-radius: 50%;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1;
+    }
+    .help-btn:hover { color: var(--accent); border-color: var(--accent); }
+    .help-dialog { width: min(92vw, 480px); }
+    .help-dialog h2 { font-family: inherit; letter-spacing: normal; font-size: 20px; }
+    .help-dialog .help-body { min-height: 0; overflow-y: auto; margin: 8px 0 14px; font-size: 14px; line-height: 1.45; }
+    .help-dialog .help-body p { margin: 0 0 10px; }
+    .help-dialog dl { margin: 0; }
+    .help-dialog dt { font-weight: 700; margin-top: 10px; }
+    .help-dialog dd { margin: 2px 0 0; }
+
     .arr.current {
       border-color: var(--accent);
       box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
@@ -989,11 +1013,14 @@
       <div class="letters" aria-label="Letters still possible">
         <div class="letters-head">
           <span id="lettersTitle" class="letters-title"></span>
-          <span id="lettersSeg" class="seg" role="group" aria-label="Letters view">
-            <button data-view="hide" title="Hide the letters">Hide</button>
-            <button data-view="keyboard" title="Keyboard layout">Keyboard</button>
-            <button data-view="vc" title="Vowels and consonants">V/C</button>
-            <button data-view="rank" title="Most common letters in Wordle answers first">Rank</button>
+          <span class="letters-tools">
+            <span id="lettersSeg" class="seg" role="group" aria-label="Letters view">
+              <button data-view="hide" title="Hide the letters">Hide</button>
+              <button data-view="keyboard" title="Keyboard layout">Keyboard</button>
+              <button data-view="vc" title="Vowels and consonants">V/C</button>
+              <button data-view="rank" title="Most common letters in Wordle answers first">Rank</button>
+            </span>
+            <button type="button" class="help-btn" data-help="lettersHelp" aria-label="About the letters" title="About the letters">?</button>
           </span>
         </div>
         <div id="lettersBody"></div>
@@ -1082,6 +1109,26 @@
       <button value="cancel">Cancel</button>
       <button value="show" class="primary">Show words</button>
     </form>
+  </dialog>
+
+  <dialog id="lettersHelp" class="words-dialog help-dialog" aria-labelledby="lettersHelpTitle">
+    <h2 id="lettersHelpTitle">Letters left</h2>
+    <div class="help-body">
+      <p>The letters that could still be in the word: all 26, less the ones you’ve entered as gray. It saves switching back to the game to check its keyboard. The count beside it says how many are left.</p>
+      <p>Green and yellow keys are letters from your clues. Gray letters can’t be tapped.</p>
+      <p><b>Tap a letter</b> to try it on the board, in the first empty slot where it’s allowed (not one where it was yellow). <b>Hold</b> a letter you’ve tried to remove it, or drag it to another slot. Once every slot is filled, the board says whether the word is in the word list and whether it has been a Wordle answer.</p>
+      <dl>
+        <dt>Keyboard</dt>
+        <dd>The letters in the game’s keyboard layout. Gray letters stay in place, dashed.</dd>
+        <dt>V/C</dt>
+        <dd>Vowels, then consonants, each in alphabetical order, with gray letters left out, so it shows exactly what’s left. Y follows the vowels, since in five-letter words it mostly acts as one.</dd>
+        <dt>Rank</dt>
+        <dd>All 26 letters, most common in past Wordle answers first: by the share of answers containing the letter, each word counted once however often the letter appears in it. Gray letters stay in place, disabled, so the order is the same every game. On a computer, hover over a letter to see its share; More analysis has the full table. The ranking is over all answers and doesn’t change with your clues.</dd>
+        <dt>Hide</dt>
+        <dd>Hides the letters.</dd>
+      </dl>
+    </div>
+    <form method="dialog"><button>Close</button></form>
   </dialog>
 
   <dialog id="wordsDialog" class="words-dialog" aria-labelledby="wordsTitle">
@@ -2933,6 +2980,16 @@
     }
 
     // ── Event wiring ──────────────────────────────────────────────────────────
+
+    // Help: each [data-help] button opens its dialog; a click on the backdrop closes it.
+    document.querySelectorAll('[data-help]').forEach(btn => {
+      const dialog = $(btn.dataset.help);
+      btn.addEventListener('click', () => dialog.showModal());
+      dialog.addEventListener('click', e => {
+        const r = dialog.getBoundingClientRect();
+        if (e.target === dialog && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom)) dialog.close();
+      });
+    });
 
     $('clearBtn').addEventListener('click', () => {
       greens = Array(len).fill('');

@@ -379,6 +379,24 @@ test('keyboard paste of an image imports it', async ({ page, context }) => {
   expect(await values(page.locator('#importRows input'))).toEqual([...'CRANEBEEFY']);
 });
 
+test('the letters help button opens a dialog explaining the views', async ({ page }) => {
+  await open(page);
+  const help = page.locator('#lettersHelp');
+  await expect(help).toBeHidden();
+  await page.getByRole('button', { name: 'About the letters' }).click();
+  await expect(help).toBeVisible();
+  await expect(help.getByRole('heading')).toHaveText('Letters left');
+  await expect(help.locator('dt')).toHaveText(['Keyboard', 'V/C', 'Rank', 'Hide']);
+  await help.getByRole('button', { name: 'Close' }).click();
+  await expect(help).toBeHidden();
+  await page.getByRole('button', { name: 'About the letters' }).click();
+  await page.mouse.click(5, 5);  // the backdrop
+  await expect(help).toBeHidden();
+  await page.getByRole('button', { name: 'About the letters' }).click();
+  await page.keyboard.press('Escape');
+  await expect(help).toBeHidden();
+});
+
 test('letters panel defaults to the keyboard view and remembers a change', async ({ page }) => {
   await open(page);
   const pressed = page.locator('#lettersSeg [aria-pressed="true"]');
