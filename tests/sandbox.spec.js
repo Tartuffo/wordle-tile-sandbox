@@ -123,7 +123,7 @@ test('same-day clues survive reload, copy link round-trips, yesterday expires', 
   await expect(page.locator('#board .tile')).toHaveCount(0);
 });
 
-test('gray letters and Dim / Hide / Off use deterministic dictionary results', async ({ page }) => {
+test('gray letters and Dim / Hide / Show use deterministic dictionary results', async ({ page }) => {
   // Isolate filtering from changes to the full dictionary. The normal smoke test below uses it.
   await page.route('**/words/5.txt', route => route.fulfill({ body: 'APPLE\nAMPLE\n', contentType: 'text/plain' }));
   await open(page);
@@ -132,7 +132,7 @@ test('gray letters and Dim / Hide / Off use deterministic dictionary results', a
   await expect(page.locator('#list .arr.noword')).toHaveCount(2);
   await page.locator('#wordNote').getByRole('button', { name: 'Hide', exact: true }).click();
   await expect(arrangements(page)).toHaveCount(2);
-  await page.locator('#wordNote').getByRole('button', { name: 'Off', exact: true }).click();
+  await page.locator('#wordNote').getByRole('button', { name: 'Show', exact: true }).click();
   await expect(arrangements(page)).toHaveCount(4);
   await expect(page.locator('#list .arr.noword')).toHaveCount(0);
   await page.locator('#wordNote').getByRole('button', { name: 'Dim', exact: true }).click();
@@ -227,7 +227,8 @@ test('trial drag swaps letters, preserves fixed greens and flags banned destinat
 test('full board checks the real word list; changing arrangement clears displaced trials', async ({ page }) => {
   await open(page);
   for (const value of 'APPLE') await letter(page, value).click();
-  await expect(page.locator('#boardWord')).toHaveText(/^APPLE ✓ is in the word list/);
+  await expect(page.locator('#boardWord')).toHaveText(/^APPLE ✓ is in the word list\./);
+  await expect(boardSlot(page, 1)).toHaveAttribute('aria-label', 'Slot 1: A, tried');
   await letter(page, 'Z').click();
   await expect(page.locator('#board .trial')).toHaveCount(5);
   await yellow(page, 1).fill('Z');
@@ -252,9 +253,11 @@ test('a full board says when the word was last a Wordle answer', async ({ page }
   await type('APPLE');
   await expect(note).toHaveText(`Wordle answer on ${date(once[3])}.`);
   await type('CIGAR');
-  await expect(page.locator('#boardWord')).toHaveText(`CIGAR ✓ is in the word list Wordle answer 2 times, last on ${date(twice[3])}.`);
+  await expect(page.locator('#boardWord')).toHaveText(`CIGAR ✓ is in the word list. Wordle answer 2 times, last on ${date(twice[3])}.`);
   await type('GAFFE');
-  await expect(note).toHaveText('Not a past Wordle answer.');
+  // Never used: says how recent the list is, since it is refreshed weekly.
+  const through = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'words', 'answers-sources.json'), 'utf8')).nyt.throughDate;
+  await expect(note).toHaveText(`Not a Wordle answer through ${date(through)}.`);
 });
 
 test('PNG import reads colors/letters, omits solved row, steps guesses and ends on manual edit', async ({ page }) => {
@@ -387,7 +390,7 @@ test('the letters help button opens a dialog explaining the views', async ({ pag
   await page.getByRole('button', { name: 'About the letters' }).click();
   await expect(help).toBeVisible();
   await expect(help.getByRole('heading')).toHaveText('Letters left');
-  await expect(help.locator('dt')).toHaveText(['Keyboard', 'V/C', 'Rank', 'Hide']);
+  await expect(help.locator('dt')).toHaveText(['Keyboard', 'V/C', 'Rank']);
   await help.getByRole('button', { name: 'Close' }).click();
   await expect(help).toBeHidden();
   await page.getByRole('button', { name: 'About the letters' }).click();
@@ -403,7 +406,7 @@ test('letters panel defaults to the keyboard view and remembers a change', async
   const pressed = page.locator('#lettersSeg [aria-pressed="true"]');
   await expect(pressed).toHaveText('Keyboard');
   await expect(page.locator('#lettersBody .kb-row')).toHaveCount(3);
-  await page.locator('#lettersSeg').getByRole('button', { name: 'V/C', exact: true }).click();
+  await page.locator('#lettersSeg').getByRole('button', { name: 'Vowels and consonants (V/C)', exact: true }).click();
   await expect(page.locator('#lettersBody .vc-label')).toHaveCount(2);
   await open(page);
   await expect(pressed).toHaveText('V/C');
@@ -507,7 +510,7 @@ test('Rank letters view orders letters by share of answers; grays stay in place,
   await expect(page.locator('#lettersBody .vc-label')).toHaveText(['Top 12', '', 'Then']);
   await expect(letter(page, 'E')).toBeDisabled();
   await expect(letter(page, expected[1])).toHaveAttribute('title',
-    `Tap to try ${expected[1]} in the first blank slot. ${expected[1]} is in ${percent(share(expected[1]), answerWords.length)} of all Wordle answers.`);
+    `Tap to try ${expected[1]} in the first blank slot that allows it. ${expected[1]} is in ${percent(share(expected[1]), answerWords.length)} of all Wordle answers.`);
   await letter(page, expected[1]).click();
   await expect(page.locator('#board .trial')).toHaveCount(1);
 
@@ -520,7 +523,7 @@ test('Rank letters view orders letters by share of answers; grays stay in place,
   const through = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'words', 'answers-sources.json'), 'utf8')).nyt.throughDate;
   const shown = await page.evaluate(d => new Date(d + 'T00:00:00Z').toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }), through);
   expect(shown).toContain(through.slice(0, 4));
-  await expect(page.locator('#rankThrough')).toHaveText(`Using solutions up to ${shown}.`);
+  await expect(page.locator('#rankThrough')).toHaveText(`Published answers through ${shown}.`);
 });
 
 test('without the answer list, vowel odds explain and Rank falls back to the built-in order', async ({ page }) => {
@@ -572,6 +575,9 @@ test('tapping a letter in the grid groups the whole list by where it goes', asyn
   expect(total).toBeGreaterThan(24);  // collapsed until shown
   await expect(page.locator('#list .arr')).toHaveCount(0);
 
+  // Screen readers get each cell's letter, slot and count.
+  await expect(page.locator('#summary .sum-cell[aria-label="E, slot 2: 0 arrangements"]')).toHaveCount(1);  // E was yellow there
+  await expect(page.locator('#summary .sum-cell[aria-label^="E, slot 1: "]')).not.toHaveAttribute('aria-label', /: 0 /);
   await label('E').click();
   await expect(label('E')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#list .arr')).toHaveCount(total);
@@ -599,12 +605,12 @@ test('arrangement list comes before the grid; the swap link reverses that and is
   const swap = page.locator('#swapResultsBtn');
   expect(await listFirst()).toBe(true);
   await expect(swap).toHaveText('put grid first');
-  await expect(page.locator('#listCaption')).toContainText('Pin a cell below');
+  await expect(page.locator('#listCaption')).toContainText('Tap a number in the grid below');
 
   await swap.click();
   expect(await listFirst()).toBe(false);
   await expect(swap).toHaveText('put list first');
-  await expect(page.locator('#listCaption')).toContainText('Pin a cell above');
+  await expect(page.locator('#listCaption')).toContainText('Tap a number in the grid above');
 
   await page.reload();
   await expect(swap).toHaveText('put list first');

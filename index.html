@@ -460,6 +460,7 @@
     .board-word:empty { display: none; }
     .board-word.known { color: var(--green-ink); font-weight: 700; }
     .board-word .answer-date { color: var(--muted); font-weight: 400; }
+    .odds-hint { margin: 6px 0 0; }
 
     .status {
       margin-top: 10px;
@@ -1023,7 +1024,7 @@
             <span id="lettersSeg" class="seg" role="group" aria-label="Letters view">
               <button data-view="hide" title="Hide the letters">Hide</button>
               <button data-view="keyboard" title="Keyboard layout">Keyboard</button>
-              <button data-view="vc" title="Vowels and consonants">V/C</button>
+              <button data-view="vc" title="Vowels and consonants" aria-label="Vowels and consonants (V/C)">V/C</button>
               <button data-view="rank" title="Most common letters in Wordle answers first">Rank</button>
             </span>
             <button type="button" class="help-btn" data-help="lettersHelp" aria-label="About the letters" title="About the letters">?</button>
@@ -1047,7 +1048,7 @@
         <span class="seg" role="group" aria-label="How to show arrangements no word fits">
           <button data-mode="dim" title="Dim and strike them through">Dim</button>
           <button data-mode="hide" title="Leave them out of the list and counts">Hide</button>
-          <button data-mode="off" title="Show them like any other arrangement">Off</button>
+          <button data-mode="off" title="Show them like any other arrangement">Show</button>
         </span>
       </div>
 
@@ -1072,7 +1073,7 @@
     <section class="panel" aria-label="More analysis">
       <div class="analysis-toggle">
         <button id="analysisBtn" aria-expanded="false" aria-controls="analysisBody">More analysis</button>
-        <span class="hint">Vowel odds and letter ranking from past Wordle answers</span>
+        <span class="hint">Vowel odds and letter ranking from Wordle’s answer list</span>
       </div>
       <div id="analysisBody" hidden>
         <div class="odds-head">
@@ -1090,11 +1091,12 @@
         <p id="oddsNote" class="hint odds-note"></p>
         <div id="oddsBody">
           <div id="oddsVowels" class="odds-vowels" role="group" aria-label="Vowels: tap to cycle unknown, yellow, gray"></div>
+          <p class="hint odds-hint">Tap a vowel to cycle unknown, yellow, gray.</p>
           <p class="caption" id="oddsCaption"></p>
           <div id="oddsOptions" class="odds-options"></div>
           <details class="odds-table-wrap">
             <summary>Every case of one yellow and one gray vowel</summary>
-            <p class="caption">Columns are the yellow vowel, rows the gray one. Each cell gives the two likeliest other vowels, then <b>∅</b>, the chance of no other vowel, all in percent.</p>
+            <p class="caption">Columns: the yellow vowel. Rows: the gray one. Each cell gives the two likeliest other vowels, then <b>∅</b>, the chance of no other vowel, in percent.</p>
             <div id="oddsTable" class="odds-table"></div>
           </details>
           <details class="odds-table-wrap">
@@ -1120,18 +1122,16 @@
   <dialog id="lettersHelp" class="words-dialog help-dialog" aria-labelledby="lettersHelpTitle">
     <h2 id="lettersHelpTitle">Letters left</h2>
     <div class="help-body">
-      <p>The letters that could still be in the word: all 26, less the ones you’ve entered as gray. It saves switching back to the game to check its keyboard. The count beside it says how many are left.</p>
-      <p>Green and yellow keys are letters from your clues. Gray letters can’t be tapped.</p>
-      <p><b>Tap a letter</b> to try it on the board, in the first empty slot where it’s allowed (not one where it was yellow). <b>Hold</b> a letter you’ve tried to remove it. <b>Drag</b> a tried letter or a yellow tile on the board to move it to another slot, or to swap it with what’s there. Once every slot is filled, the board says whether the word is in the word list and whether it has been a Wordle answer.</p>
+      <p>The letters that could still be in the word. Green and yellow keys are from your clues. Gray letters can’t be tapped: Keyboard and Rank keep them in place, and V/C leaves them out.</p>
+      <p><b>Tap a letter</b> to try it in the first blank board slot that allows it. On the board, <b>drag</b> a tile to move or swap it, and <b>hold</b> a tried letter to remove it. Green tiles stay fixed.</p>
+      <p>Fill the board to see whether the word is in the word list and whether it has been a Wordle answer.</p>
       <dl>
         <dt>Keyboard</dt>
-        <dd>The letters in the game’s keyboard layout. Gray letters stay in place, dashed.</dd>
+        <dd>Wordle’s keyboard layout.</dd>
         <dt>V/C</dt>
-        <dd>Vowels, then consonants, each in alphabetical order, with gray letters left out, so it shows exactly what’s left. Y follows the vowels, since in five-letter words it mostly acts as one.</dd>
+        <dd>Vowels, then Y (in five-letter words it mostly acts as one), then consonants.</dd>
         <dt>Rank</dt>
-        <dd>All 26 letters, most common in past Wordle answers first: by the share of answers containing the letter, each word counted once however often the letter appears in it. Gray letters stay in place, disabled, so the order is the same every game. On a computer, hover over a letter to see its share. The More Analysis section has the full table. The ranking is over all answers and doesn’t change with your clues.</dd>
-        <dt>Hide</dt>
-        <dd>Hides the letters.</dd>
+        <dd>Letters by how many Wordle answers contain them, most common first. The order doesn’t change with your clues, so it’s the same every game. On a computer, hover over a letter to see its share. The More Analysis section has the full table.</dd>
       </dl>
     </div>
     <form method="dialog"><button>Close</button></form>
@@ -1182,6 +1182,7 @@
     let wordMode = 'dim';         // non-word treatment: 'dim', 'hide' or 'off'
     let answerWords = 'loading';  // Wordle answers (words/answers.csv) once loaded, or 'loading' / 'failed'
     let answerUses = new Map();   // answer -> { uses, last }: how often NYT used it and the last date
+    let answersThrough = '';      // the answer list's last puzzle date, formatted, once loaded
     let letterRanking = null;     // [{ letter, p }] by share of answers containing the letter
     let vowelOverrides = {};      // vowel -> 'unknown' / 'yellow' / 'gray' tapped in the odds panel
     let oddsScope = 'vowels';     // odds use 'vowels' only (default) or 'all' clue letters
@@ -1576,7 +1577,7 @@
       if (tileInfo.some(t => t.max > t.min)) {
         const hint = document.createElement('span');
         hint.className = 'hint';
-        hint.textContent = 'tap a tile for a double letter';
+        hint.textContent = 'Tap a letter here to change its tile count.';
         wrap.appendChild(hint);
       }
     }
@@ -1709,10 +1710,13 @@
         slot.className = 'slot';
         slot.dataset.pos = String(pos);
         const letter = slotLetter(pos);
+        const kind = greens[pos] ? 'green' : board[pos] !== '?' ? 'yellow' : 'trial';
+        slot.setAttribute('role', 'img');
+        slot.setAttribute('aria-label', letter
+          ? `Slot ${pos + 1}: ${letter}, ${kind === 'trial' ? 'tried' : kind}` : `Slot ${pos + 1}: empty`);
 
         if (letter) {
           slot.classList.add('occupied');
-          const kind = greens[pos] ? 'green' : board[pos] !== '?' ? 'yellow' : 'trial';
           const tile = document.createElement('div');
           tile.className = `tile ${kind}`;
           tile.textContent = letter;
@@ -1776,12 +1780,13 @@
       }
       list.set ??= new Set(list.words);
       const known = list.set.has(word);
-      el.textContent = known ? `${word} ✓ is in the word list` : `${word} is not in the word list`;
+      el.textContent = known ? `${word} ✓ is in the word list.` : `${word} is not in the word list.`;
       el.classList.toggle('known', known);
       if (!Array.isArray(answerWords)) return;
       const note = document.createElement('span');
       note.className = 'answer-date';
-      note.textContent = answerNote(word) || 'Not a past Wordle answer.';
+      note.textContent = answerNote(word) ||
+        (answersThrough ? `Not a Wordle answer through ${answersThrough}.` : 'Not a past Wordle answer.');
       el.append(' ', note);
     }
 
@@ -1961,11 +1966,11 @@
           btn.disabled = true;
           btn.title = `${letter} is gray`;
         } else {
-          btn.title = `Try ${letter} in the first blank slot`;
+          btn.title = `Try ${letter} in the first blank slot that allows it`;
           btn.addEventListener('click', () => addTrial(letter, btn));
         }
         const share = lettersView === 'rank' && letterRanking?.find(r => r.letter === letter);
-        if (share) btn.title = `${status === 'out' ? btn.title : `Tap to try ${letter} in the first blank slot`}. ` +
+        if (share) btn.title = `${status === 'out' ? btn.title : `Tap to try ${letter} in the first blank slot that allows it`}. ` +
           `${letter} is in ${pct(share.p)} of all Wordle answers.`;
         return btn;
       };
@@ -2089,7 +2094,10 @@
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(sources => {
           const date = formatDate(sources.nyt.throughDate);
-          if (date) $('rankThrough').textContent = `Using solutions up to ${date}.`;
+          if (!date) return;
+          answersThrough = date;
+          $('rankThrough').textContent = `Published answers through ${date}.`;
+          renderBoardWord();
         })
         .catch(() => {});
     }
@@ -2141,7 +2149,7 @@
       });
       $('oddsCount').textContent = '';
       note.textContent = answerWords === 'failed' ? (location.protocol === 'file:'
-          ? 'Vowel odds need the answer list, which loads only when the page is served over http(s).'
+          ? 'Open the online app to use vowel odds. The answer list can’t load from a local file.'
           : 'Vowel odds need the answer list, which didn’t load.')
         : ready ? '' : 'Loading the answer list…';
       $('oddsBody').hidden = !ready;
@@ -2260,7 +2268,7 @@
       btn.title = 'Put this arrangement on the board; hold to see the matching words';
       if (wordMode === 'dim' && noWord.has(a)) {
         btn.classList.add('noword');
-        btn.title = 'No word in the dictionary fits this. Tap to put it on the board anyway.';
+        btn.title = 'No word in the word list fits this arrangement and your clues. Tap to put it on the board anyway.';
       }
       btn.addEventListener('click', () => {
         if (btn.dataset.held) return;
@@ -2325,7 +2333,8 @@
       const list = $('wordsList');
       list.innerHTML = '';
       if (!wordList?.words) {
-        $('wordsNote').textContent = wordList === 'loading' ? 'The word list is still loading.' : 'The word list didn’t load.';
+        $('wordsNote').textContent = wordList === 'loading' ? 'The word list is still loading.'
+          : 'Couldn’t load the word list. Open the online app, or reload if you’re already using it.';
         $('wordsDialog').showModal();
         return;
       }
@@ -2357,7 +2366,7 @@
       const n = filtered.length;
       $('summaryCaption').innerHTML =
         `<b>Where each letter can go:</b> how many of the ${n} arrangement${n === 1 ? '' : 's'} put it in each slot. ` +
-        'Tap a number to pin it, or a letter to group the list by where it goes.';
+        'Tap a number to show only arrangements with that letter there, or a letter to group the list by where it goes.';
       const rows = [...new Set(movable)];
       if (openSlots().length > movable.length) rows.push('?');
 
@@ -2370,14 +2379,14 @@
         if (letter === '?') {
           label.classList.add('other');
           label.textContent = 'unknown';
-          label.title = 'A letter that isn’t one of your yellows (shown as · in the list)';
+          label.title = 'An unknown slot, shown as · in the list. It may hold another copy of a known letter.';
         } else {
           const copies = movable.filter(l => l === letter).length;
           const chosen = groupLetter === letter;
           label.type = 'button';
           label.textContent = copies > 1 ? `${letter}×${copies}` : letter;
           label.setAttribute('aria-pressed', String(chosen));
-          label.title = chosen ? `Stop grouping the list by ${letter}` : `Show all the arrangements, grouped by where ${letter} goes`;
+          label.title = chosen ? `Stop grouping the list by ${letter}` : `Group the list by where ${letter} goes`;
           label.addEventListener('click', () => {
             groupLetter = chosen ? null : letter;
             listExpanded = true;
@@ -2398,6 +2407,8 @@
           } else {
             const count = filtered.filter(a => a[pos] === letter).length;
             const pinned = pins.get(pos) === letter;
+            cell.setAttribute('aria-label', `${letter === '?' ? 'Unknown' : letter}, slot ${pos + 1}: ` +
+              `${count} arrangement${count === 1 ? '' : 's'}${pinned ? ', pinned' : ''}`);
             if (letter === '?') cell.classList.add('other-row');
             if (pinned) cell.classList.add('pinned');
 
@@ -2428,7 +2439,7 @@
       list.innerHTML = '';
 
       if (total > COLLAPSE_OVER && !listExpanded) {
-        $('listCaption').textContent = `Pin a cell ${gridFirst ? 'above' : 'below'} to narrow these down, or show them all.`;
+        $('listCaption').textContent = `Tap a number in the grid ${gridFirst ? 'above' : 'below'} to narrow the list.`;
         const more = document.createElement('button');
         more.type = 'button';
         more.textContent = `Show all ${total}`;
@@ -2499,13 +2510,13 @@
       const hiddenAll = wordMode === 'hide' && !total && arrangements.length > 0;
       let title;
       if (!tileInfo.length) {
-        title = 'Add the yellow letters you’ve seen to see where they can go.';
+        title = 'Enter your yellow letters to see where they can go.';
       } else if (!movable.length) {
         title = 'Every yellow letter is already placed.';
       } else if (hiddenAll) {
         title = 'None of the legal arrangements fits a known word.';
       } else if (!total) {
-        title = 'No legal arrangement fits these clues.';
+        title = 'No legal arrangement fits these clues. Check the Green, Yellow and Tiles rows.';
       } else if (pins.size) {
         title = `${filtered.length} of ${total} arrangement${total === 1 ? '' : 's'} match your pins`;
       } else {
@@ -2752,7 +2763,7 @@
       try {
         items = await navigator.clipboard.read();
       } catch {
-        showImportMessage(`Couldn\u2019t read the clipboard. ${howTo} You can also paste with Ctrl/\u2318+V on a computer.`);
+        showImportMessage('Couldn\u2019t read the clipboard. Try Import file with a saved screenshot; on a computer you can also paste with Ctrl/\u2318+V.');
         return;
       }
       for (const item of items) {
@@ -2762,7 +2773,7 @@
           return;
         }
       }
-      showImportMessage(`There\u2019s no image on the clipboard. ${howTo}`);
+      showImportMessage(`There\u2019s no image on the clipboard. ${howTo} Or use Import file.`);
     }
 
     async function importScreenshot(file) {
@@ -2787,7 +2798,7 @@
 
       if (!rows.length) {
         $('importNote').textContent = solved
-          ? 'That puzzle was solved on the first guess; there is nothing to import.'
+          ? 'Solved on the first guess; there are no earlier clues to import.'
           : 'Couldn’t find a Wordle grid in that image. Try a full, uncropped screenshot.';
         return;
       }
@@ -2823,7 +2834,7 @@
           input.autocomplete = 'off';
           input.spellcheck = false;
           input.setAttribute('autocapitalize', 'characters');
-          input.setAttribute('aria-label', `Guess ${r + 1}, letter ${i + 1}`);
+          input.setAttribute('aria-label', `Guess ${r + 1}, slot ${i + 1}, ${tile.color}`);
           input.addEventListener('focus', () => input.select());
           input.addEventListener('input', e => {
             const letter = (e.data || input.value).toUpperCase().replace(/[^A-Z]/g, '').slice(-1);
