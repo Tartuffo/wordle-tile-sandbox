@@ -47,9 +47,11 @@ test.beforeEach(async ({ page }) => {
 
 test('green typing advances, space skips, yellow arrangements can be pinned and cleared', async ({ page }) => {
   await open(page);
+  await expect(page.getByRole('button', { name: 'Copy link', exact: true })).toBeHidden();
   await green(page, 1).pressSequentially('B ');
   await expect(green(page, 3)).toBeFocused();
   await expect(green(page, 1)).toHaveValue('B');
+  await expect(page.getByRole('button', { name: 'Copy link', exact: true })).toBeVisible();
   await yellow(page, 2).fill('e');
   await expect(arrangements(page)).toHaveCount(3);
   expect((await arrangements(page).allTextContents()).sort()).toEqual(['B···E', 'B··E·', 'B·E··'].sort());
@@ -62,6 +64,7 @@ test('green typing advances, space skips, yellow arrangements can be pinned and 
   await page.getByRole('button', { name: 'Clear', exact: true }).click();
   await expect(page.locator('#board .tile')).toHaveCount(0);
   await expect(green(page, 1)).toHaveValue('');
+  await expect(page.getByRole('button', { name: 'Copy link', exact: true })).toBeHidden();
 });
 
 test('contradictory green/yellow clues are reported and recover after editing', async ({ page }) => {
@@ -105,7 +108,7 @@ test('same-day clues survive reload, copy link round-trips, yesterday expires', 
   await expect(page.locator('#grayInput')).toHaveValue('FX');
   await expect(page.locator('#board .tile.yellow')).toHaveCount(2);
   await page.getByRole('button', { name: 'Copy link', exact: true }).click();
-  await expect(page.locator('#shareNote')).toHaveText('Copied');
+  await expect(page.locator('#clueLinkNote')).toHaveText('Copied');
   const shared = await page.evaluate(() => window.copiedLink);
   const fresh = await context.browser().newContext();
   const recipient = await fresh.newPage();

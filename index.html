@@ -766,7 +766,7 @@
       .clues-panel .toolbar .help-btn { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); }
     }
     /* Copy link: an icon in the clues panel's top right corner, with a brief note beside it. */
-    .share-btn {
+    .clue-link-btn {
       position: absolute;
       top: 12px;
       right: 14px;
@@ -777,9 +777,9 @@
       place-items: center;
       color: var(--muted);
     }
-    .share-btn:hover { color: var(--accent); border-color: var(--accent); }
-    .share-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .share-note {
+    .clue-link-btn:hover { color: var(--accent); border-color: var(--accent); }
+    .clue-link-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .clue-link-note {
       position: absolute;
       top: 15px;
       right: 50px;
@@ -789,11 +789,11 @@
       color: var(--muted);
       font-size: 13px;
     }
-    .share-note:empty { display: none; }
+    .clue-link-btn[hidden], .clue-link-note:empty { display: none; }
     /* Where the grid fills the width, the corner is taken: end the toolbar's second row instead. */
     @media (max-width: 559px) {
-      .share-btn { top: auto; bottom: 20px; right: 14px; }
-      .share-note { top: auto; bottom: 24px; right: 50px; }
+      .clue-link-btn { top: auto; bottom: 20px; right: 14px; }
+      .clue-link-note { top: auto; bottom: 24px; right: 50px; }
     }
     .caption-row { display: flex; align-items: flex-start; gap: 10px; }
     .caption-row .caption { flex: 1; }
@@ -1011,8 +1011,8 @@
       .odds-entry .pc { display: none; }
       /* The subtitle says "paste or import a screenshot", so the short labels are enough. */
       .toolbar .wide { display: none; }
-      .share-btn { bottom: 16px; right: 10px; }
-      .share-note { bottom: 20px; right: 46px; }
+      .clue-link-btn { bottom: 16px; right: 10px; }
+      .clue-link-note { bottom: 20px; right: 46px; }
       .panel { padding: 12px; }
       .subtitle { font-size: 14px; }
     }
@@ -1043,8 +1043,8 @@
     </section>
 
     <section class="panel clues-panel" aria-label="Clues">
-      <button id="shareBtn" class="share-btn" aria-label="Copy link" title="Copy a link to these clues"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
-      <span id="shareNote" class="share-note" role="status"></span>
+      <button id="clueLinkBtn" class="clue-link-btn" hidden aria-label="Copy link" title="Copy a link to these clues"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
+      <span id="clueLinkNote" class="clue-link-note" role="status"></span>
       <div id="slotNums" class="row-grid slot-nums"></div>
       <div id="greenRow" class="row-grid"></div>
       <div id="yellowRow" class="row-grid"></div>
@@ -1203,7 +1203,7 @@
         <dt>Tiles</dt>
         <dd>The yellow letters still to place, one tile each; a letter that’s already green starts with none. If a single guess showed a letter twice in green or yellow, <span class="tap">tap</span> it here to add a tile.</dd>
       </dl>
-      <p>Clear starts over. The link icon at the top right copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day.</p>
+      <p>Clear starts over. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day.</p>
     </div>
     <form method="dialog"><button>Close</button></form>
   </dialog>
@@ -3178,7 +3178,15 @@
       renderLetters();
       renderOdds();
       refreshResults();
+      renderClueLink();
       saveState();
+    }
+
+    // A link to no clues shares nothing, so the link icon shows once there is a clue.
+    function renderClueLink() {
+      const any = greens.some(Boolean) || yellows.some(Boolean) || !!grays;
+      $('clueLinkBtn').hidden = !any;
+      if (!any) $('clueLinkNote').textContent = '';
     }
 
     // ── Persistence ───────────────────────────────────────────────────────────
@@ -3337,19 +3345,19 @@
       refreshResults();
     });
 
-    const linkIcon = $('shareBtn').innerHTML;
+    const linkIcon = $('clueLinkBtn').innerHTML;
     const checkIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
-    $('shareBtn').addEventListener('click', () => {
-      const btn = $('shareBtn');
+    $('clueLinkBtn').addEventListener('click', () => {
+      const btn = $('clueLinkBtn');
       navigator.clipboard.writeText(getShareURL()).then(() => {
         btn.innerHTML = checkIcon;
-        $('shareNote').textContent = 'Copied';
+        $('clueLinkNote').textContent = 'Copied';
       }).catch(() => {
-        $('shareNote').textContent = 'Couldn\u2019t copy';
+        $('clueLinkNote').textContent = 'Couldn\u2019t copy';
       }).finally(() => {
         setTimeout(() => {
           btn.innerHTML = linkIcon;
-          $('shareNote').textContent = '';
+          $('clueLinkNote').textContent = '';
         }, 2000);
       });
     });
