@@ -1040,7 +1040,7 @@
       <div class="results-head">
         <h2 id="resultsTitle"></h2>
         <button id="swapResultsBtn" class="link" hidden></button>
-        <button id="clearPinsBtn" class="link" hidden>clear pins</button>
+        <button id="clearPinsBtn" class="link" hidden>Clear pins</button>
       </div>
       <p id="forced" class="forced"></p>
       <div id="wordNote" class="word-note" hidden>
@@ -1079,7 +1079,7 @@
         <div class="odds-head">
           <h2>Vowel odds</h2>
           <span id="oddsCount" class="hint" role="status"></span>
-          <button id="oddsResetBtn" class="link" hidden>reset to clues</button>
+          <button id="oddsResetBtn" class="link" hidden>Reset to clues</button>
           <span id="oddsScopeWrap" class="odds-scope">
             <span class="hint">Use:</span>
             <span id="oddsScope" class="seg" role="group" aria-label="Clues the odds use">
@@ -2512,7 +2512,7 @@
     function applyResultsOrder() {
       if (gridFirst) $('listWrap').before($('summaryWrap'));
       else $('summaryWrap').before($('listWrap'));
-      $('swapResultsBtn').textContent = gridFirst ? 'put list first' : 'put grid first';
+      $('swapResultsBtn').textContent = gridFirst ? 'Put list first' : 'Put grid first';
       $('swapResultsBtn').title = gridFirst
         ? 'Show the list of arrangements above the grid'
         : 'Show the grid of where each letter can go above the list';

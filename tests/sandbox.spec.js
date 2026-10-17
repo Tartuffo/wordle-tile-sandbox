@@ -57,7 +57,7 @@ test('green typing advances, space skips, yellow arrangements can be pinned and 
   await expect(arrangements(page)).toHaveCount(1);
   await arrangements(page).click();
   await expect(boardSlot(page, 3)).toHaveText('E');
-  await page.getByRole('button', { name: 'clear pins', exact: true }).click();
+  await page.getByRole('button', { name: 'Clear pins', exact: true }).click();
   await expect(arrangements(page)).toHaveCount(3);
   await page.getByRole('button', { name: 'Clear', exact: true }).click();
   await expect(page.locator('#board .tile')).toHaveCount(0);
@@ -615,16 +615,16 @@ test('arrangement list comes before the grid; the swap link reverses that and is
     !!($('listWrap').compareDocumentPosition($('summaryWrap')) & Node.DOCUMENT_POSITION_FOLLOWING));
   const swap = page.locator('#swapResultsBtn');
   expect(await listFirst()).toBe(true);
-  await expect(swap).toHaveText('put grid first');
+  await expect(swap).toHaveText('Put grid first');
   await expect(page.locator('#listCaption')).toContainText('Tap a number in the grid below');
 
   await swap.click();
   expect(await listFirst()).toBe(false);
-  await expect(swap).toHaveText('put list first');
+  await expect(swap).toHaveText('Put list first');
   await expect(page.locator('#listCaption')).toContainText('Tap a number in the grid above');
 
   await page.reload();
-  await expect(swap).toHaveText('put list first');
+  await expect(swap).toHaveText('Put list first');
   expect(await listFirst()).toBe(false);
   await swap.click();
   expect(await listFirst()).toBe(true);
