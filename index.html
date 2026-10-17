@@ -1010,6 +1010,7 @@
         <button id="pasteBtn" title="Read your clues from a screenshot on the clipboard">Paste screenshot</button>
         <button id="importBtn" title="Read your clues from a saved Wordle screenshot">Import file</button>
         <input id="importFile" type="file" accept="image/*" hidden>
+        <button id="randomBtn" title="Make up a puzzle: one or two guesses against a past Wordle answer" disabled>Random</button>
         <span id="guessNav" class="guess-nav" hidden>
           <button id="guessPrevBtn" aria-label="Previous guess" title="Show the clues one guess earlier">‹</button>
           <span id="guessStep"></span>
@@ -1133,6 +1134,7 @@
     <h2 id="cluesHelpTitle">Entering clues</h2>
     <div class="help-body">
       <p><b>From a screenshot:</b> Paste screenshot reads one you’ve copied, and Import file opens a saved one; on a computer, Ctrl/⌘+V also works. Check the letters, fix any that were misread, then choose Use these clues. Afterwards, ‹ and › step through your guesses; editing a clue by hand ends the stepping.</p>
+      <p><b>Random</b> makes up a puzzle to practice on: one or two guesses against a past Wordle answer, which stays hidden. It’s chosen so that from a few to a few dozen arrangements fit a word; ‹ and › step through the guesses.</p>
       <p><b>By hand:</b></p>
       <dl>
         <dt>Green</dt>
@@ -2170,6 +2172,7 @@
     function loadAnswers() {
       if (location.protocol === 'file:') {
         answerWords = 'failed';
+        $('randomBtn').hidden = true;
         return;
       }
       fetch('words/answers.csv')
@@ -2187,10 +2190,14 @@
             if (uses && row[lastCol]) answerUses.set(word, { uses, last: row[lastCol] });
           }
           letterRanking = letterRank(answerWords);
+          $('randomBtn').disabled = false;
           renderLetters();
           renderBoardWord();
         })
-        .catch(() => { answerWords = 'failed'; })
+        .catch(() => {
+          answerWords = 'failed';
+          $('randomBtn').hidden = true;
+        })
         .finally(renderOdds);
       // The last puzzle date in the list, refreshed weekly (words/answers-sources.json).
       fetch('words/answers-sources.json')
@@ -2954,10 +2961,6 @@
       });
     }
 
-    // Guesses -> per-slot clues. Greens and yellows map directly. The screenshot also
-    // gives exact double-letter counts: the most copies of a letter colored in any one
-    // guess is the minimum in the word, less the copies already green. Every gray letter
-    // goes in the gray row, including a colored letter's gray copy, which caps its count.
     function applyImportedGuesses() {
       importHistory = { rows: importRows.map(row => row.map(t => ({ ...t }))), step: importRows.length };
       closeImport();
@@ -2966,13 +2969,25 @@
 
     // Rebuilds the clues from the first `step` imported guesses.
     function showGuessStep() {
-      const importRows = importHistory.rows.slice(0, importHistory.step);
-      const n = importRows[0].length;
+      setCluesFromGuesses(importHistory.rows.slice(0, importHistory.step));
+      pins.clear();
+      listExpanded = false;
+      renderClueInputs();
+      update();
+      renderGuessNav();
+    }
+
+    // Guesses -> per-slot clues. Greens and yellows map directly. The guesses also give
+    // exact double-letter counts: the most copies of a letter colored in any one guess is
+    // the minimum in the word, less the copies already green. Every gray letter goes in
+    // the gray row, including a colored letter's gray copy, which caps its count.
+    function setCluesFromGuesses(rows) {
+      const n = rows[0].length;
       const newGreens = Array(n).fill('');
       const newYellows = Array.from({ length: n }, () => new Set());
       const minCount = {};
 
-      for (const row of importRows) {
+      for (const row of rows) {
         const colored = {};
         row.forEach((t, i) => {
           if (t.color === 'green') newGreens[i] = t.letter;
@@ -2984,18 +2999,12 @@
 
       greens = newGreens;
       yellows = newYellows.map(s => [...s].join(''));
-      grays = [...new Set(importRows.flat().filter(t => t.color === 'gray').map(t => t.letter))].sort().join('');
+      grays = [...new Set(rows.flat().filter(t => t.color === 'gray').map(t => t.letter))].sort().join('');
       countOverrides = {};
       for (const letter of new Set(yellows.join(''))) {
         countOverrides[letter] = Math.max(0, minCount[letter] - newGreens.filter(g => g === letter).length);
       }
-
       fitSlots();
-      pins.clear();
-      listExpanded = false;
-      renderClueInputs();
-      update();
-      renderGuessNav();
     }
 
     function renderGuessNav() {
@@ -3028,6 +3037,75 @@
       $('importPanel').hidden = true;
       $('importFile').value = '';
       importRows = [];
+    }
+
+    // ── Random example ────────────────────────────────────────────────────────
+
+    const RANDOM_OPENERS = 400;                        // first guesses: the answers richest in common letters
+    const RANDOM_BANDS = [[3, 6], [7, 15], [16, 40]];  // arrangements that fit a word: few, some, many
+    const RANDOM_MAX_TOTAL = 80;                       // arrangements in all, fitting a word or not
+
+    // Wordle's coloring of guess against solution: greens first, then yellows left to right
+    // while the solution has copies of the letter not yet matched.
+    function scoreGuess(guess, solution) {
+      const colors = Array(len).fill('gray');
+      const unmatched = {};
+      for (let i = 0; i < len; i++) {
+        if (guess[i] === solution[i]) colors[i] = 'green';
+        else unmatched[solution[i]] = (unmatched[solution[i]] || 0) + 1;
+      }
+      for (let i = 0; i < len; i++) {
+        if (colors[i] === 'gray' && unmatched[guess[i]] > 0) {
+          colors[i] = 'yellow';
+          unmatched[guess[i]]--;
+        }
+      }
+      return [...guess].map((letter, i) => ({ letter, color: colors[i] }));
+    }
+
+    // A made-up puzzle: a past answer as the solution and a first guess from the answers with
+    // five different, common letters. If that finds fewer than two letters (green or tiles),
+    // a second guess fits its clues, as in hard mode. A band is chosen first so that few, some
+    // and many arrangements come up equally often, and puzzles outside it are drawn again.
+    // Each candidate is tried as the actual clues, so the counts are the ones then shown.
+    function randomExample() {
+      const pick = list => list[Math.floor(Math.random() * list.length)];
+      const share = Object.fromEntries(letterRanking.map(r => [r.letter, r.p]));
+      const strength = w => new Set(w).size < len ? 0 : [...w].reduce((sum, l) => sum + share[l], 0);
+      const openers = [...answerWords].sort((a, b) => strength(b) - strength(a)).slice(0, RANDOM_OPENERS);
+      const [lo, hi] = pick(RANDOM_BANDS);
+      const saved = { greens, yellows, grays, countOverrides, trials };
+      const known = () => greens.filter(Boolean).length + movable.length;
+      const tryClues = rows => {
+        setCluesFromGuesses(rows);
+        deriveTiles();
+        arrangements = findClueErrors().length ? [] : enumerate();
+      };
+
+      for (let tries = 0; tries < 1000; tries++) {
+        const solution = pick(answerWords);
+        const rows = [scoreGuess(pick(openers), solution)];
+        tryClues(rows);
+        if (known() < 2) {
+          const first = rows[0].map(t => t.letter).join('');
+          const fits = w => w !== solution && scoreGuess(first, w).every((t, i) => t.color === rows[0][i].color);
+          const next = answerWords.filter(fits);
+          if (!next.length) continue;
+          rows.push(scoreGuess(pick(next), solution));
+          tryClues(rows);
+        }
+        if (!movable.length || known() < 2 || arrangements.length > RANDOM_MAX_TOTAL) continue;
+        const fitting = arrangements.length - findNonWords().size;
+        if (fitting < lo || fitting > hi) continue;
+
+        importHistory = { rows, step: rows.length };
+        vowelOverrides = {};
+        closeImport();
+        showGuessStep();
+        return;
+      }
+      ({ greens, yellows, grays, countOverrides, trials } = saved);
+      update();
     }
 
     // ── Update pipeline ───────────────────────────────────────────────────────
@@ -3215,6 +3293,7 @@
 
     $('importBtn').addEventListener('click', () => $('importFile').click());
     $('pasteBtn').addEventListener('click', pasteScreenshot);
+    $('randomBtn').addEventListener('click', randomExample);
     $('pasteBtn').hidden = !navigator.clipboard?.read;
     $('importFile').addEventListener('change', e => importScreenshot(e.target.files[0]));
     $('importUseBtn').addEventListener('click', applyImportedGuesses);

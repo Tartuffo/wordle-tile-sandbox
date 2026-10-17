@@ -13,6 +13,7 @@ Developed with assistance from ChatGPT and Claude Code.
 Wordle Tile Sandbox lets you enter what you know from a Wordle puzzle, slot by slot, and shows every way the yellow tiles can still be arranged. Optional analysis, closed until you ask for it, adds vowel odds and a letter ranking drawn from Wordle's answer list.
 
 - **Paste or import a screenshot** of your Wordle game. **Paste screenshot** reads it from the clipboard, so it never has to be saved to Photos (on iPhone: take the screenshot, tap its thumbnail, tap Done, then Copy and Delete); **Import file** picks a saved one, and Ctrl/⌘+V works on a computer. Either way the grid and letters are read in the browser, you check them, and the green, yellow and gray rows fill in, including double letters. A solved row is left out. After importing, ‹ and › step back and forward through the guesses, so one screenshot gives you the clues as they stood after each guess; editing a clue by hand ends the stepping.
+- **Random** makes up a puzzle to practice on: a past Wordle answer as the solution, which stays hidden, and a first guess drawn from the 400 answers with five different letters most common in answers. If that guess turns up fewer than two letters (green, or yellow tiles), a second guess that fits its clues is added, as in hard mode. It is drawn again until 3 to 40 arrangements fit a word, with a few, some (7 to 15) or many (16 or more) equally likely; ‹ and › step through the guesses as after an import.
 - **Green row**: type a letter into each slot you know; it fills and moves on, like Wordle itself. Space skips a slot, and pasting a pattern such as `..A.E` into slot 1 fills the row.
 - **Yellow row**: enter each letter under every slot where it turned yellow, across all your guesses. The app creates the tiles for you.
 - **Gray row**: letters that are not in the word. They sharpen the word check, and gray vowels feed the vowel odds. If a letter turned gray in one place but green or yellow in another, enter it here too: the word then has no more copies of it than your green and yellow ones.
@@ -52,7 +53,7 @@ So the top twelve are **EAROTI LSNUCY**: R and L rise, H and D drop out, Y comes
 
 This is a single-file static web app with no build step or dependencies. To modify it, edit `index.html` directly and reload the browser.
 
-Opened directly as a file, the app works except for what needs the files in `words/`, since browsers don't let a local file load them: the word check, matching words, vowel odds and letter ranking are off, and the Rank view uses a built-in order. To have everything locally, serve the folder:
+Opened directly as a file, the app works except for what needs the files in `words/`, since browsers don't let a local file load them: the word check, matching words, vowel odds and letter ranking are off, Random is hidden, and the Rank view uses a built-in order. To have everything locally, serve the folder:
 
 ```bash
 git clone git@github.com:YOUR-GITHUB-USERNAME/wordle-tile-sandbox.git
@@ -114,6 +115,7 @@ Coverage includes clue entry, duplicate yellow counts, old 6/7-letter links, arr
 and pins, the list/grid order switch, contradictory clues, daily persistence,
 share links, dictionary modes, gray letters and gray duplicates capping a count,
 letters-left taps/holds/drags, the Rank view, real dictionary lookup, PNG import, guess stepping, cancel/retry,
+Random puzzles (Wordle scoring with duplicates, and each puzzle checked against the real answer list and the arrangement range),
 manual edits after import, and More analysis: opening and closing it, the vowel
 odds' filtering and probability functions on a small hand-checked list, and the
 panel, Vowels only / All clues, the vowel table and the letter ranking against

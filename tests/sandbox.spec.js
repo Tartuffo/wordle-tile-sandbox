@@ -327,6 +327,49 @@ test('a gray duplicate caps the count: BEEFY against BERRY rules out BEERY', asy
   await expect(page.locator('#boardStatus')).toHaveText('Too many E’s: your clues allow 1.');
 });
 
+test('Random scores guesses like Wordle, duplicates included', async ({ page }) => {
+  await open(page);
+  const brief = await page.evaluate(() => [['SPEED', 'ABIDE'], ['EERIE', 'THREE'], ['CRANE', 'CRANE']].map(([g, s]) =>
+    scoreGuess(g, s).map(t => t.color === 'green' ? t.letter : t.color === 'yellow' ? t.letter.toLowerCase() : '.').join('')));
+  expect(brief).toEqual(['..e.d', 'e.R.E', 'CRANE']);
+});
+
+test('Random makes up one or two guesses against an answer, with a few to a few dozen arrangements', async ({ page }) => {
+  // Colors computed here independently of the app, to check each guess against some answer.
+  const colors = (guess, solution) => {
+    const out = [...guess].map((l, i) => l === solution[i] ? 'green' : 'gray');
+    const left = [...solution].filter((l, i) => out[i] !== 'green');
+    out.forEach((c, i) => {
+      const k = left.indexOf(guess[i]);
+      if (c === 'gray' && k >= 0) { out[i] = 'yellow'; left.splice(k, 1); }
+    });
+    return out.join();
+  };
+  await open(page);
+  await expect(page.locator('#randomBtn')).toBeEnabled();
+  for (let n = 0; n < 12; n++) {
+    await page.locator('#randomBtn').click();
+    const { rows, total, fitting, tiles } = await page.evaluate(() => ({
+      rows: importHistory.rows.map(r => ({ word: r.map(t => t.letter).join(''), colors: r.map(t => t.color).join() })),
+      total: arrangements.length, fitting: arrangements.length - noWord.size, tiles: movable.length,
+    }));
+    expect([1, 2]).toContain(rows.length);
+    await expect(page.locator('#guessStep')).toHaveText(`${rows.length}/${rows.length}`);
+    await expect(page.locator('#resultsTitle')).toHaveText(`${total} legal arrangements`);
+    expect(total).toBeLessThanOrEqual(80);
+    expect(fitting).toBeGreaterThanOrEqual(3);
+    expect(fitting).toBeLessThanOrEqual(40);
+    expect(tiles).toBeGreaterThanOrEqual(1);
+    expect(new Set(rows[0].word).size).toBe(5);
+    expect(answerWords.some(w => w !== rows.at(-1).word && rows.every(r => colors(r.word, w) === r.colors))).toBe(true);
+    if (rows.length === 2) expect(colors(rows[0].word, rows[1].word)).toBe(rows[0].colors);
+  }
+  // A two-guess puzzle steps back to its first guess.
+  for (let n = 0; n < 100 && await page.evaluate(() => importHistory.rows.length) < 2; n++) await page.locator('#randomBtn').click();
+  await page.getByRole('button', { name: 'Previous guess' }).click();
+  await expect(page.locator('#guessStep')).toHaveText('1/2');
+});
+
 test('theme follows the system until the switch is used', async ({ page }) => {
   const theme = () => page.evaluate(() => document.documentElement.dataset.theme || 'light');
   await page.emulateMedia({ colorScheme: 'dark' });
@@ -574,6 +617,7 @@ test('without the answer list, vowel odds explain and Rank falls back to the bui
   await openAnalysis(page);
   await expect(page.locator('#oddsNote')).toHaveText('Vowel odds need the answer list, which didn’t load.');
   await expect(page.locator('#oddsBody')).toBeHidden();
+  await expect(page.locator('#randomBtn')).toBeHidden();
   await page.locator('#lettersSeg').getByRole('button', { name: 'Rank', exact: true }).click();
   await expect(page.locator('#lettersBody .key').first()).toHaveText('E');
   await expect(page.locator('#lettersBody .key')).toHaveCount(26);
