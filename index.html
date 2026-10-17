@@ -1425,11 +1425,24 @@
     }
 
     // Letters ruled out everywhere: gray, unless also green or yellow (a gray duplicate
-    // only caps the count).
+    // only caps the count; see letterCaps).
     function grayLetters() {
       const seen = greens.join('') + yellows.join('');
       return new Set([...grays].filter(l => !seen.includes(l)));
     }
+
+    // A letter that is gray and also green or yellow (one copy turned gray in a guess)
+    // has no more copies than its green slots plus its yellow tiles: letter -> that count.
+    function letterCaps() {
+      const caps = new Map();
+      for (const l of grays) {
+        if (!greens.includes(l) && !yellows.some(cell => cell.includes(l))) continue;
+        caps.set(l, greens.filter(g => g === l).length + movable.filter(m => m === l).length);
+      }
+      return caps;
+    }
+
+    const copiesOf = (word, l) => [...word].filter(x => x === l).length;
 
     // Dictionary words with arrangement a's known letters in place, found through the
     // rarest of them in the (slot, letter) index. The word list must have loaded.
@@ -1445,12 +1458,16 @@
     }
 
     // Why the clues rule out word w in a's unknown slots, or '' if they don't: an unknown
-    // slot can hold any letter that isn't gray and wasn't yellow there.
-    function whyRuledOut(w, a, ruledOut = grayLetters()) {
+    // slot can hold any letter that isn't gray and wasn't yellow there, as long as the
+    // word doesn't end up with more copies of a letter than letterCaps allows.
+    function whyRuledOut(w, a, ruledOut = grayLetters(), caps = letterCaps()) {
       for (let i = 0; i < len; i++) {
         if (a[i] !== '?') continue;
         if (ruledOut.has(w[i])) return `${w[i]} is gray`;
         if (yellows[i].includes(w[i])) return `${w[i]} was yellow in slot ${i + 1}`;
+      }
+      for (const [l, cap] of caps) {
+        if (copiesOf(w, l) > cap) return `more ${l}’s than your clues allow`;
       }
       return '';
     }
@@ -1458,7 +1475,8 @@
     function findNonWords() {
       if (!wordList?.words) return new Set();
       const ruledOut = grayLetters();
-      return new Set(arrangements.filter(a => !wordsMatching(a).some(w => !whyRuledOut(w, a, ruledOut))));
+      const caps = letterCaps();
+      return new Set(arrangements.filter(a => !wordsMatching(a).some(w => !whyRuledOut(w, a, ruledOut, caps))));
     }
 
     function visibleArrangements() {
@@ -1686,15 +1704,24 @@
       return board[pos] !== '?' ? board[pos] : trials[pos] || '';
     }
 
+    // Why a slot's letter breaks the clues, or '' if it doesn't. Only a tried letter can be
+    // gray or one copy too many; a yellow tile is never gray and is counted in its cap.
+    function slotConflict(pos, ruledOut = grayLetters(), caps = letterCaps()) {
+      const letter = slotLetter(pos);
+      if (greens[pos] || !letter) return '';
+      if (trials[pos] && ruledOut.has(letter)) return `${letter} is gray.`;
+      if (isBanned(letter, pos)) return `${letter} can't go in slot ${pos + 1}; it was yellow there.`;
+      const word = Array.from({ length: len }, (_, p) => slotLetter(p)).join('');
+      if (trials[pos] && caps.has(letter) && copiesOf(word, letter) > caps.get(letter)) {
+        return `Too many ${letter}’s: your clues allow ${caps.get(letter)}.`;
+      }
+      return '';
+    }
+
     function boardConflicts() {
       const ruledOut = grayLetters();
-      const out = [];
-      for (let pos = 0; pos < len; pos++) {
-        if (greens[pos]) continue;
-        const letter = slotLetter(pos);
-        if (isBanned(letter, pos) || (trials[pos] && ruledOut.has(letter))) out.push(pos);
-      }
-      return out;
+      const caps = letterCaps();
+      return [...Array(len).keys()].filter(pos => slotConflict(pos, ruledOut, caps));
     }
 
     function renderBoard() {
@@ -1760,11 +1787,7 @@
         el.appendChild(slot);
       }
 
-      $('boardStatus').textContent = conflicts
-        .map(pos => trials[pos] && grayLetters().has(trials[pos])
-          ? `${trials[pos]} is gray.`
-          : `${slotLetter(pos)} can't go in slot ${pos + 1}; it was yellow there.`)
-        .join(' ');
+      $('boardStatus').textContent = [...new Set(conflicts.map(pos => slotConflict(pos)))].join(' ');
       renderBoardWord();
     }
 
@@ -2339,7 +2362,8 @@
         return;
       }
       const ruledOut = grayLetters();
-      const words = wordsMatching(a).map(w => ({ w, why: whyRuledOut(w, a, ruledOut) }));
+      const caps = letterCaps();
+      const words = wordsMatching(a).map(w => ({ w, why: whyRuledOut(w, a, ruledOut, caps) }));
       const fit = words.filter(x => !x.why);
       const out = words.filter(x => x.why);
       const used = words.filter(x => answerUses.has(x.w)).length;
@@ -2852,7 +2876,8 @@
 
     // Guesses -> per-slot clues. Greens and yellows map directly. The screenshot also
     // gives exact double-letter counts: the most copies of a letter colored in any one
-    // guess is the minimum in the word, less the copies already green.
+    // guess is the minimum in the word, less the copies already green. Every gray letter
+    // goes in the gray row, including a colored letter's gray copy, which caps its count.
     function applyImportedGuesses() {
       importHistory = { rows: importRows.map(row => row.map(t => ({ ...t }))), step: importRows.length };
       closeImport();
@@ -2879,8 +2904,7 @@
 
       greens = newGreens;
       yellows = newYellows.map(s => [...s].join(''));
-      const colored = new Set(Object.keys(minCount));
-      grays = [...new Set(importRows.flat().filter(t => t.color === 'gray' && !colored.has(t.letter)).map(t => t.letter))].sort().join('');
+      grays = [...new Set(importRows.flat().filter(t => t.color === 'gray').map(t => t.letter))].sort().join('');
       countOverrides = {};
       for (const letter of new Set(yellows.join(''))) {
         countOverrides[letter] = Math.max(0, minCount[letter] - newGreens.filter(g => g === letter).length);

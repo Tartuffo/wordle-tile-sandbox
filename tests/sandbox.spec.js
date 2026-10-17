@@ -272,7 +272,8 @@ test('PNG import reads colors/letters, omits solved row, steps guesses and ends 
   await expect(green(page, 1)).toHaveValue('B');
   await expect(green(page, 2)).toHaveValue('E');
   await expect(green(page, 5)).toHaveValue('Y');
-  await expect(page.locator('#grayInput')).toHaveValue('ACFN');
+  // BEEFY's second E was gray: kept, since it caps the E count at the green one.
+  await expect(page.locator('#grayInput')).toHaveValue('ACEFN');
   await expect(page.getByRole('button', { name: 'Next guess' })).toBeDisabled();
   await page.getByRole('button', { name: 'Previous guess' }).click();
   await expect(page.locator('#guessStep')).toHaveText('1/2');
@@ -299,9 +300,9 @@ test('import cancel preserves clues and invalid images can be retried', async ({
   await expect(page.locator('#importRows input')).toHaveCount(10);
 });
 
-test('known bug: gray duplicate excludes BEERY after importing BEEFY against BERRY', async ({ page }) => {
-  // BEERY would satisfy every positional clue, but has one E too many.
-  // A single-word dictionary makes that maximum-count defect observable in the list.
+test('a gray duplicate caps the count: BEEFY against BERRY rules out BEERY', async ({ page }) => {
+  // BEERY satisfies every positional clue, but BEEFY's second E was gray, so the word
+  // has one E. A single-word dictionary makes the count check observable in the list.
   await page.route('**/words/5.txt', route => route.fulfill({ body: 'BEERY\n', contentType: 'text/plain' }));
   await open(page);
   await importImage(page, 'duplicate-cap.png');
@@ -309,13 +310,21 @@ test('known bug: gray duplicate excludes BEERY after importing BEEFY against BER
   await page.getByRole('button', { name: 'Use these clues' }).click();
   expect(await values(page.locator('.green-cell'))).toEqual(['B', 'E', '', '', 'Y']);
   expect(await values(page.locator('.yellow-cell'))).toEqual(['R', '', '', '', '']);
-  await expect(page.locator('#grayInput')).toHaveValue('AFNST');
+  // The gray E is kept: it is what caps the count.
+  await expect(page.locator('#grayInput')).toHaveValue('AEFNST');
   await expect(page.locator('#clueStatus')).toHaveText('');
-  await expect(page.locator('#wordNote')).toBeVisible();
+  await expect(page.locator('#lettersTitle')).toContainText('21 letters left');  // E isn't counted as gray
+  await expect(page.locator('#list .arr.noword')).toHaveCount(2);
+  await arrangements(page).filter({ hasText: 'BE·RY' }).click({ button: 'right' });
+  await page.locator('#wordsConfirm').getByRole('button', { name: 'Show words' }).click();
+  await expect(page.locator('#wordsList .out')).toHaveText(['BEERY']);
+  await expect(page.locator('#wordsList .out')).toHaveAttribute('title', /^Ruled out: more E’s than your clues allow\./);
+  await page.locator('#wordsDialog').getByRole('button', { name: 'Close' }).click();
   await page.locator('#wordNote').getByRole('button', { name: 'Hide', exact: true }).click();
-  // Setup errors remain real failures. Only the missing semantic constraint is expected.
-  test.fail(true, 'Import stores minimum counts only; the gray duplicate maximum is lost.');
   await expect(page.locator('#resultsTitle')).toHaveText('None of the legal arrangements fits a known word.');
+  // Trying another E on the board is flagged too.
+  await letter(page, 'E').click();
+  await expect(page.locator('#boardStatus')).toHaveText('Too many E’s: your clues allow 1.');
 });
 
 test('theme follows the system until the switch is used', async ({ page }) => {

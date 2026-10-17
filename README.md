@@ -15,7 +15,7 @@ Wordle Tile Sandbox lets you enter what you know from a Wordle puzzle, slot by s
 - **Paste or import a screenshot** of your Wordle game. **Paste screenshot** reads it from the clipboard, so it never has to be saved to Photos (on iPhone: take the screenshot, tap its thumbnail, tap Done, then Copy and Delete); **Import file** picks a saved one, and Ctrl/⌘+V works on a computer. Either way the grid and letters are read in the browser, you check them, and the green, yellow and gray rows fill in, including double letters. A solved row is left out. After importing, ‹ and › step back and forward through the guesses, so one screenshot gives you the clues as they stood after each guess; editing a clue by hand ends the stepping.
 - **Green row**: type a letter into each slot you know; it fills and moves on, like Wordle itself. Space skips a slot, and pasting a pattern such as `..A.E` into slot 1 fills the row.
 - **Yellow row**: enter each letter under every slot where it turned yellow, across all your guesses. The app creates the tiles for you.
-- **Gray row**: letters that are not in the word. They sharpen the word check, and gray vowels feed the vowel odds.
+- **Gray row**: letters that are not in the word. They sharpen the word check, and gray vowels feed the vowel odds. If a letter turned gray in one place but green or yellow in another, enter it here too: the word then has no more copies of it than your green and yellow ones.
 - **Double letters**: a yellow letter counts as one tile, or as already placed if it is green elsewhere. Tap the letter in the Tiles row to change the count.
 - **Letters left**: above the board, the letters that aren't gray, so you needn't switch back to the game to check them. Show them as **Keyboard** (the default), **V/C** (vowels, then consonants) or **Rank** (most common in Wordle answers first, gray letters disabled in place), or hide them with **Hide**. Tap one to try it in the first blank board slot that allows it; hold a tried letter to remove it, or drag it. Once every slot is filled, the board says whether the word is in the word list and whether it has been a Wordle answer: the date it was used, or the number of times and the last date if NYT has reused it. The **?** next to the view switch explains the panel and its views.
 - **Drag tiles on the board** to try arrangements by hand; a tile in a slot where it was yellow is flagged.
@@ -111,8 +111,8 @@ failure artifacts for 14 days.
 
 Coverage includes clue entry, duplicate yellow counts, old 6/7-letter links, arrangements, held-arrangement word lists
 and pins, the list/grid order switch, contradictory clues, daily persistence,
-share links, dictionary modes, gray letters, letters-left taps/holds/drags, the
-Rank view, real dictionary lookup, PNG import, guess stepping, cancel/retry,
+share links, dictionary modes, gray letters and gray duplicates capping a count,
+letters-left taps/holds/drags, the Rank view, real dictionary lookup, PNG import, guess stepping, cancel/retry,
 manual edits after import, and More analysis: opening and closing it, the vowel
 odds' filtering and probability functions on a small hand-checked list, and the
 panel, Vowels only / All clues, the vowel table and the letter ranking against
@@ -123,14 +123,6 @@ controlled word list while a separate test loads the real bundled dictionary.
 The checked-in PNGs are synthetic, contain no personal data, and exercise real
 image decoding, tile detection and OCR. See `tests/fixtures/generate.py` for
 optional regeneration (Pillow and Liberation Sans Bold required only then).
-
-One test is explicitly marked as an **expected failure**: importing BEEFY's
-feedback against BERRY loses the maximum count of one E, so the dictionary
-filter can still admit BEERY. It asserts the desired filtering behavior and
-does not bless the bug or change the app. If the assertion starts passing,
-Playwright fails the run as an unexpected pass; remove the expected-failure
-marker when fixing the underlying count handling. Fixture/import setup runs
-before that marker so unrelated setup failures still fail CI.
 
 This is a focused desktop Chromium suite, not exhaustive browser, touch-device,
 accessibility, or OCR coverage.
