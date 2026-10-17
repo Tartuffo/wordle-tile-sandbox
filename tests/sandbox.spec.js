@@ -23,7 +23,7 @@ function expectedOdds(yellow, gray, have = '', lack = '') {
   const left = answerWords.filter(w => [...yellow + have].every(l => w.includes(l)) && ![...gray + lack].some(l => w.includes(l)));
   const unknown = [...VOWELS].filter(v => !yellow.includes(v) && !gray.includes(v));
   const options = unknown.map(v => [v, left.filter(w => w.includes(v)).length]);
-  options.push([yellow ? 'no other vowel' : 'no vowel', left.filter(w => !unknown.some(v => w.includes(v))).length]);
+  options.push([yellow ? 'No other vowel' : 'No vowel', left.filter(w => !unknown.some(v => w.includes(v))).length]);
   options.sort((a, b) => b[1] - a[1]);
   return { count: left.length, chips: options.map(([label, n]) => `${label} ${percent(n, left.length)}`), options };
 }
@@ -540,7 +540,7 @@ test('vowel odds panel starts from the clues, cycles vowels and matches the answ
   await vowelKey(page, 'Y').click();
   await page.getByRole('button', { name: 'Clear', exact: true }).click();
   await check('', '');
-  await expect(oddsChips(page).last()).toHaveText('no vowel 0%');
+  await expect(oddsChips(page).last()).toHaveText('No vowel 0%');
 });
 
 test('Rank letters view orders letters by share of answers; grays stay in place, disabled', async ({ page }) => {

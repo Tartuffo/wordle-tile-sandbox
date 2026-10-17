@@ -1070,11 +1070,11 @@
         </div>
         <div id="summary"></div>
         <div class="legend" aria-label="Legend">
-          <span><span class="sum-cell swatch" style="background: color-mix(in srgb, var(--yellow) 35%, var(--panel-2))">4</span> possible</span>
-          <span><span class="sum-cell swatch all">7</span> forced</span>
-          <span><span class="sum-cell swatch none"></span> impossible</span>
-          <span><span class="sum-cell swatch fixed">A</span> solved</span>
-          <span><span class="sum-cell swatch pinned" style="background: color-mix(in srgb, var(--yellow) 35%, var(--panel-2))">3</span> pinned</span>
+          <span><span class="sum-cell swatch" style="background: color-mix(in srgb, var(--yellow) 35%, var(--panel-2))">4</span> Possible</span>
+          <span><span class="sum-cell swatch all">7</span> Forced</span>
+          <span><span class="sum-cell swatch none"></span> Impossible</span>
+          <span><span class="sum-cell swatch fixed">A</span> Solved</span>
+          <span><span class="sum-cell swatch pinned" style="background: color-mix(in srgb, var(--yellow) 35%, var(--panel-2))">3</span> Pinned</span>
         </div>
       </div>
     </section>
@@ -1164,19 +1164,19 @@
   <dialog id="gridHelp" class="words-dialog help-dialog" aria-labelledby="gridHelpTitle">
     <h2 id="gridHelpTitle">Where each letter can go</h2>
     <div class="help-body">
-      <p>One row per yellow letter, one column per slot. Each number counts the arrangements that put that letter in that slot. The <b>unknown</b> row counts slots whose letter you don’t know yet; such a slot may hold another copy of a known letter.</p>
+      <p>One row per yellow letter, one column per slot. Each number counts the arrangements that put that letter in that slot. The <b>Unknown</b> row counts slots whose letter you don’t know yet; such a slot may hold another copy of a known letter.</p>
       <p><span class="tap">Tap</span> a number to pin the letter there: the list keeps only the arrangements that agree, and the counts update. <span class="tap">Tap</span> it again, or choose Clear pins, to undo.</p>
       <p><span class="tap">Tap</span> a letter to sort the list by where it goes; <span class="tap">tap</span> it again to go back.</p>
       <dl>
-        <dt>possible</dt>
+        <dt>Possible</dt>
         <dd>Shaded by how many arrangements put the letter there.</dd>
-        <dt>forced</dt>
+        <dt>Forced</dt>
         <dd>Every arrangement puts it there.</dd>
-        <dt>impossible</dt>
+        <dt>Impossible</dt>
         <dd>No arrangement does.</dd>
-        <dt>solved</dt>
+        <dt>Solved</dt>
         <dd>A green slot.</dd>
-        <dt>pinned</dt>
+        <dt>Pinned</dt>
         <dd>A slot you pinned.</dd>
       </dl>
     </div>
@@ -2231,7 +2231,7 @@
 
     function oddsLabel(option, states) {
       if (option.vowel) return option.vowel;
-      return Object.values(states).includes('yellow') ? 'no other vowel' : 'no vowel';
+      return Object.values(states).includes('yellow') ? 'No other vowel' : 'No vowel';
     }
 
     // Closed by default: some players would rather not see odds while they solve.
@@ -2482,7 +2482,7 @@
         label.className = 'sum-label';
         if (letter === '?') {
           label.classList.add('other');
-          label.textContent = 'unknown';
+          label.textContent = 'Unknown';
           label.title = 'An unknown slot, shown as · in the list. It may hold another copy of a known letter.';
         } else {
           const copies = movable.filter(l => l === letter).length;
