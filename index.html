@@ -698,6 +698,32 @@
     /* No word in the dictionary fits: kept visible but dimmed, since the list can miss words. */
     .arr.noword { opacity: .4; text-decoration: line-through; }
 
+    .arr { -webkit-touch-callout: none; user-select: none; }
+
+    .words-dialog {
+      width: min(92vw, 520px);
+      max-height: 80vh;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel);
+      color: var(--text);
+      box-shadow: 0 20px 50px var(--shadow);
+    }
+    .words-dialog[open] { display: flex; flex-direction: column; }
+    .words-dialog::backdrop { background: rgba(0,0,0,.4); }
+    .words-dialog h2 { margin: 0 0 4px; font-family: var(--mono); letter-spacing: .12em; }
+    .words-dialog p { margin: 0; }
+    .words-dialog form { display: flex; gap: 8px; justify-content: flex-end; }
+    .confirm-dialog { width: min(92vw, 400px); }
+    .confirm-dialog p + p { margin: 8px 0 14px; }
+    .words-list {
+      display: flex; flex-wrap: wrap; align-content: flex-start; gap: 4px 12px;
+      min-height: 0; overflow-y: auto; margin: 10px 0 14px; font-family: var(--mono);
+    }
+    .words-list .answer { font-weight: 800; color: var(--accent); }
+    .words-list .out { color: var(--muted); text-decoration: line-through; }
+
     .arr.current {
       border-color: var(--accent);
       box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
@@ -1049,6 +1075,22 @@
     </section>
   </main>
 
+  <dialog id="wordsConfirm" class="words-dialog confirm-dialog" aria-labelledby="wordsConfirmText">
+    <p id="wordsConfirmText"><b>Are you sure you want to see the matching words?</b></p>
+    <p class="hint">They can give the answer away. You won’t be asked again until you close this tab.</p>
+    <form method="dialog">
+      <button value="cancel">Cancel</button>
+      <button value="show" class="primary">Show words</button>
+    </form>
+  </dialog>
+
+  <dialog id="wordsDialog" class="words-dialog" aria-labelledby="wordsTitle">
+    <h2 id="wordsTitle"></h2>
+    <p id="wordsNote" class="hint"></p>
+    <div id="wordsList" class="words-list"></div>
+    <form method="dialog"><button>Close</button></form>
+  </dialog>
+
   <footer class="copyright">Copyright &copy; 2026 Nick Lai. Licensed under the <a href="LICENSE">MIT License</a>. <a href="https://github.com/Tartuffo/wordle-tile-sandbox">View source on GitHub</a>. <a href="https://github.com/Tartuffo/wordle-tile-sandbox/issues">Bugs/Requests</a></footer>
 
   <script>
@@ -1062,6 +1104,7 @@
     const ODDS_SCOPE_KEY = 'wordle-sandbox-odds-scope';
     const RESULTS_ORDER_KEY = 'wordle-sandbox-results-order';
     const ANALYSIS_KEY = 'wordle-sandbox-analysis-open';
+    const WORDS_OK_KEY = 'wordle-sandbox-words-ok';   // sessionStorage: matching words confirmed
     const FLAT_LIST_MAX = 8;      // at or below this, list without group headers
     const COLLAPSE_OVER = 24;     // above this, hide the list until asked or narrowed by pins
 
@@ -1332,33 +1375,34 @@
       return new Set([...grays].filter(l => !seen.includes(l)));
     }
 
-    function findNonWords() {
-      const list = wordList;
-      if (!list?.words) return new Set();
-      const ruledOut = grayLetters();
-
-      // An unknown slot can hold any letter that isn't gray and wasn't yellow there.
-      const fits = (w, a) => {
-        for (let i = 0; i < len; i++) {
-          if (a[i] !== '?' ? w[i] !== a[i] : ruledOut.has(w[i]) || yellows[i].includes(w[i])) return false;
-        }
-        return true;
-      };
-
-      const out = new Set();
-      for (const a of arrangements) {
-        let candidates = null;
-        for (let i = 0; i < len; i++) {
-          if (a[i] === '?') continue;
-          const bucket = list.byPos[i].get(a[i]) || [];
-          if (!candidates || bucket.length < candidates.length) candidates = bucket;
-        }
-        const found = candidates
-          ? candidates.some(wi => fits(list.words[wi], a))
-          : list.words.some(w => fits(w, a));
-        if (!found) out.add(a);
+    // Dictionary words with arrangement a's known letters in place, found through the
+    // rarest of them in the (slot, letter) index. The word list must have loaded.
+    function wordsMatching(a) {
+      let candidates = null;
+      for (let i = 0; i < len; i++) {
+        if (a[i] === '?') continue;
+        const bucket = wordList.byPos[i].get(a[i]) || [];
+        if (!candidates || bucket.length < candidates.length) candidates = bucket;
       }
-      return out;
+      const words = candidates ? candidates.map(wi => wordList.words[wi]) : wordList.words;
+      return words.filter(w => [...a].every((l, i) => l === '?' || w[i] === l));
+    }
+
+    // Why the clues rule out word w in a's unknown slots, or '' if they don't: an unknown
+    // slot can hold any letter that isn't gray and wasn't yellow there.
+    function whyRuledOut(w, a, ruledOut = grayLetters()) {
+      for (let i = 0; i < len; i++) {
+        if (a[i] !== '?') continue;
+        if (ruledOut.has(w[i])) return `${w[i]} is gray`;
+        if (yellows[i].includes(w[i])) return `${w[i]} was yellow in slot ${i + 1}`;
+      }
+      return '';
+    }
+
+    function findNonWords() {
+      if (!wordList?.words) return new Set();
+      const ruledOut = grayLetters();
+      return new Set(arrangements.filter(a => !wordsMatching(a).some(w => !whyRuledOut(w, a, ruledOut))));
     }
 
     function visibleArrangements() {
@@ -1680,13 +1724,18 @@
       el.textContent = known ? `${word} ✓ is in the word list` : `${word} is not in the word list`;
       el.classList.toggle('known', known);
       if (!Array.isArray(answerWords)) return;
-      const used = answerUses.get(word);
       const note = document.createElement('span');
       note.className = 'answer-date';
-      note.textContent = !used ? 'Not a past Wordle answer.'
+      note.textContent = answerNote(word) || 'Not a past Wordle answer.';
+      el.append(' ', note);
+    }
+
+    // When word was a Wordle answer, or '' if it wasn't (or the answer list isn't loaded).
+    function answerNote(word) {
+      const used = answerUses.get(word);
+      return !used ? ''
         : used.uses === 1 ? `Wordle answer on ${formatDate(used.last)}.`
         : `Wordle answer ${used.uses} times, last on ${formatDate(used.last)}.`;
-      el.append(' ', note);
     }
 
     // Drops are never blocked (it's a sandbox), but an illegal target shows red.
@@ -2152,16 +2201,98 @@
         s.textContent = a[i] === '?' ? '·' : a[i];
         btn.appendChild(s);
       }
-      btn.title = 'Put this arrangement on the board';
+      btn.title = 'Put this arrangement on the board; hold to see the matching words';
       if (wordMode === 'dim' && noWord.has(a)) {
         btn.classList.add('noword');
         btn.title = 'No word in the dictionary fits this. Tap to put it on the board anyway.';
       }
       btn.addEventListener('click', () => {
+        if (btn.dataset.held) return;
         board = a;
         refreshResults({ keepBoard: true });
       });
+      addWordsHold(btn, a);
       return btn;
+    }
+
+    // Holding an arrangement (or right-clicking it) lists the dictionary words matching it,
+    // after a once-per-tab check that the player wants that spoiler.
+    function addWordsHold(btn, a) {
+      let timer = null, start = null;
+      const cancel = () => { clearTimeout(timer); timer = null; };
+      btn.addEventListener('pointerdown', e => {
+        if (e.button !== 0) return;
+        start = { x: e.clientX, y: e.clientY };
+        timer = setTimeout(() => {
+          timer = null;
+          btn.dataset.held = '1';  // the release that follows isn't a tap
+          document.addEventListener('pointerup', () => setTimeout(() => delete btn.dataset.held), { once: true });
+          navigator.vibrate?.(15);
+          askThenShowWords(a);
+        }, HOLD_MS);
+      });
+      btn.addEventListener('pointermove', e => {
+        if (timer && Math.hypot(e.clientX - start.x, e.clientY - start.y) > MOVE_PX) cancel();
+      });
+      for (const type of ['pointerup', 'pointerleave', 'pointercancel']) btn.addEventListener(type, cancel);
+      btn.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        askThenShowWords(a);
+      });
+    }
+
+    // sessionStorage, not a cookie: it lasts as long as the tab and is never sent anywhere.
+    function askThenShowWords(a) {
+      if ($('wordsDialog').open || $('wordsConfirm').open) return;
+      let confirmed = false;
+      try { confirmed = sessionStorage.getItem(WORDS_OK_KEY) === 'yes'; } catch {}
+      if (confirmed) {
+        showMatchingWords(a);
+        return;
+      }
+      const dialog = $('wordsConfirm');
+      dialog.returnValue = '';
+      dialog.addEventListener('close', () => {
+        if (dialog.returnValue !== 'show') return;
+        try { sessionStorage.setItem(WORDS_OK_KEY, 'yes'); } catch {}
+        showMatchingWords(a);
+      }, { once: true });
+      dialog.showModal();
+    }
+
+    const WORDS_SHOWN = 2000;
+
+    // Every dictionary word with a's known letters in place: those the clues allow first,
+    // then those they rule out, struck through. Past Wordle answers are bold.
+    function showMatchingWords(a) {
+      $('wordsTitle').textContent = a.replaceAll('?', '·');
+      const list = $('wordsList');
+      list.innerHTML = '';
+      if (!wordList?.words) {
+        $('wordsNote').textContent = wordList === 'loading' ? 'The word list is still loading.' : 'The word list didn’t load.';
+        $('wordsDialog').showModal();
+        return;
+      }
+      const ruledOut = grayLetters();
+      const words = wordsMatching(a).map(w => ({ w, why: whyRuledOut(w, a, ruledOut) }));
+      const fit = words.filter(x => !x.why);
+      const out = words.filter(x => x.why);
+      const used = words.filter(x => answerUses.has(x.w)).length;
+      const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+      $('wordsNote').textContent = !words.length ? 'No word in the dictionary matches this.'
+        : plural(fit.length, 'word fits', 'words fit') + ' your clues' +
+          (out.length ? `; ${plural(out.length, 'more matches', 'more match')} but ${out.length === 1 ? 'is' : 'are'} ruled out (struck through)` : '') +
+          (Array.isArray(answerWords) ? `. ${plural(used, 'was a Wordle answer', 'were Wordle answers')} (bold)` : '') +
+          (words.length > WORDS_SHOWN ? `. Showing the first ${WORDS_SHOWN}.` : '.');
+      for (const { w, why } of [...fit, ...out].slice(0, WORDS_SHOWN)) {
+        const el = document.createElement('span');
+        el.textContent = w;
+        if (why) el.classList.add('out');
+        if (answerUses.has(w)) el.classList.add('answer');
+        el.title = [why && `Ruled out: ${why}.`, answerNote(w)].filter(Boolean).join(' ');
+        list.appendChild(el);
+      }
+      $('wordsDialog').showModal();
     }
 
     function renderSummary(filtered) {
@@ -2243,7 +2374,7 @@
         return;
       }
 
-      $('listCaption').textContent = 'Tap one to put it on the board.';
+      $('listCaption').textContent = 'Tap one to put it on the board. Long tap to see all matching words.';
 
       if (layout.flat) {
         const wrap = document.createElement('div');

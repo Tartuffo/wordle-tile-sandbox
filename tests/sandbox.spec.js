@@ -145,6 +145,53 @@ test('gray letters and Dim / Hide / Off use deterministic dictionary results', a
   await expect(letter(page, 'P')).toBeEnabled();
 });
 
+test('holding an arrangement asks once per tab, then lists matching words with ruled-out ones struck', async ({ page }) => {
+  await page.route('**/words/5.txt', route => route.fulfill({ body: 'APPLE\nAMPLE\nPLANT\n', contentType: 'text/plain' }));
+  await open(page);
+  await yellow(page, 1).fill('P');
+  await page.locator('#grayInput').fill('M');
+  await expect(page.locator('#listCaption')).toHaveText('Tap one to put it on the board. Long tap to see all matching words.');
+  const arr = arrangements(page).filter({ hasText: '··P··' });
+  const confirm = page.locator('#wordsConfirm');
+  const dialog = page.locator('#wordsDialog');
+  const hold = async () => {
+    await arr.hover();
+    await page.mouse.down();
+    await expect(page.locator('dialog[open]')).toBeVisible();
+    await page.mouse.up();
+  };
+
+  // Cancel shows nothing and isn't remembered; the hold wasn't a tap either.
+  await hold();
+  await expect(confirm).toContainText('Are you sure you want to see the matching words?');
+  await confirm.getByRole('button', { name: 'Cancel' }).click();
+  await expect(confirm).toBeHidden();
+  await expect(dialog).toBeHidden();
+  await expect(arr).not.toHaveClass(/current/);
+
+  await hold();
+  await confirm.getByRole('button', { name: 'Show words' }).click();
+  await expect(dialog).toBeVisible();
+  await expect(page.locator('#wordsTitle')).toHaveText('··P··');
+  // APPLE fits; AMPLE matches the pattern but M is gray. Both were answers.
+  await expect(page.locator('#wordsList span')).toHaveText(['APPLE', 'AMPLE']);
+  await expect(page.locator('#wordsList .out')).toHaveText(['AMPLE']);
+  await expect(page.locator('#wordsList .out')).toHaveAttribute('title', /^Ruled out: M is gray\. Wordle answer on /);
+  const used = ['APPLE', 'AMPLE'].filter(w => answerWords.includes(w));
+  await expect(page.locator('#wordsList .answer')).toHaveText(used);
+  await expect(page.locator('#wordsNote')).toHaveText(
+    `1 word fits your clues; 1 more matches but is ruled out (struck through). ${used.length} were Wordle answers (bold).`);
+  await dialog.getByRole('button', { name: 'Close' }).click();
+  await expect(dialog).toBeHidden();
+  await arr.click();
+  await expect(arr).toHaveClass(/current/);
+
+  // Confirmed for this tab: right-click goes straight to the words.
+  await arrangements(page).filter({ hasText: '····P' }).click({ button: 'right' });
+  await expect(confirm).toBeHidden();
+  await expect(page.locator('#wordsNote')).toHaveText('No word in the dictionary matches this.');
+});
+
 test('letters-left taps fill legal blanks; quick tap keeps a trial, hold removes it', async ({ page }) => {
   await open(page, '?len=5&green=B%3F%3F%3F%3F&ban1=E&yellow=E');
   await letter(page, 'E').click();

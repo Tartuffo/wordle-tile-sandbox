@@ -16,6 +16,7 @@ Wordle Tile Sandbox lets you enter what you know from a Wordle puzzle, slot by s
 - **Gray row**: letters that are not in the word. They sharpen the word check, and gray vowels feed the vowel odds.
 - **Double letters**: a yellow letter counts as one tile, or as already placed if it is green elsewhere. Tap its tile to change the count.
 - **Every legal arrangement**, sorted and grouped by where the most constrained letter sits. Tap one to put it on the board.
+- **Matching words**: hold an arrangement (or right-click it) to list every dictionary word with its known letters in place. Words your clues rule out (a gray letter, or a letter in a slot where it was yellow) are struck through and listed last, and past Wordle answers are bold. Since this can give the answer away, it asks first, once per browser tab.
 - **Where each yellow can go**: a letter-by-slot grid counting the arrangements that put each letter in each slot, with forced placements called out and a legend for the cell styles. An "unknown" row covers the letter that isn't one of your yellows. Tap a number to pin that letter there and narrow the list.
 - **List or grid first**: the list comes first; **put grid first**, next to the arrangement count, swaps them, and the order is remembered.
 - **Word check**: arrangements that no English word fits are dimmed and struck through by default; a Dim / Hide / Off switch can instead hide them or show them normally. Unknown slots may hold any letter that is not gray and was not yellow in that slot. The word lists are in [`words/`](words/README.md).
@@ -116,7 +117,7 @@ last HTML report. Failed tests retain a trace and screenshot. GitHub Actions
 runs the suite for pull requests and pushes to main, and uploads reports and
 failure artifacts for 14 days.
 
-Coverage includes clue entry, duplicate yellow counts, old 6/7-letter links, arrangements
+Coverage includes clue entry, duplicate yellow counts, old 6/7-letter links, arrangements, held-arrangement word lists
 and pins, the list/grid order switch, contradictory clues, daily persistence,
 share links, dictionary modes, gray letters, letters-left taps/holds/drags, the
 Rank view, real dictionary lookup, PNG import, guess stepping, cancel/retry,
