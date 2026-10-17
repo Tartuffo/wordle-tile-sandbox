@@ -1965,7 +1965,8 @@
           btn.addEventListener('click', () => addTrial(letter, btn));
         }
         const share = lettersView === 'rank' && letterRanking?.find(r => r.letter === letter);
-        if (share) btn.title += ` (in ${pct(share.p)} of answers)`;
+        if (share) btn.title = `${status === 'out' ? btn.title : `Tap to try ${letter} in the first blank slot`}. ` +
+          `${letter} is in ${pct(share.p)} of all Wordle answers.`;
         return btn;
       };
       const group = (label, letters, extra = '') => {
@@ -2187,7 +2188,7 @@
     function buildRankTable() {
       const top = letterRanking.slice(0, 12).map(r => r.letter).join('');
       $('rankCaption').innerHTML = `Share of answers containing each letter, each word counted once. ` +
-        `In place of etaoin shrdlu, the top 12 are <b>${top.slice(0, 6)} ${top.slice(6)}</b>.`;
+        `In place of <a href="https://en.wikipedia.org/wiki/Etaoin_shrdlu" target="_blank" rel="noopener">Etaoin shrdlu</a>, the top 12 are <b>${top.slice(0, 6)} ${top.slice(6)}</b>.`;
       for (const [from, to] of [[0, 6], [6, 12], [12, 19], [19, 26]]) {
         const row = document.createElement('div');
         row.className = 'rank-row';

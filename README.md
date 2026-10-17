@@ -35,7 +35,7 @@ The tool is intentionally visual. It uses a dictionary only to flag arrangements
 
 ## Letters in Wordle answers
 
-"Etaoin shrdlu" ranks letters by how often they occur in running English text. Ranked instead by the share of Wordle answers that contain each letter (each word counted once, so double letters don't inflate a count), the order is:
+[Etaoin shrdlu](https://en.wikipedia.org/wiki/Etaoin_shrdlu) is an old mnemonic for the twelve most common letters in English, E T A O I N S H R D L U, taken from the order of the keys on Linotype typesetting machines. It ranks letters by how often they occur in running English text, which is a poor guide for Wordle: the answers are a few thousand five-letter words, and what matters is whether a letter is in the answer at all, not how often it turns up in prose. Ranked instead by the share of Wordle answers that contain each letter (each word counted once, so double letters don't inflate a count), the order is:
 
 | | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
