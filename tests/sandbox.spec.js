@@ -14,8 +14,9 @@ const openAnalysis = page => page.getByRole('button', { name: 'More analysis', e
 
 // Expected vowel odds, computed here independently of the app from the real answer list.
 const VOWELS = 'AEIOUY';
-const answerWords = fs.readFileSync(path.join(__dirname, '..', 'words', 'answers.csv'), 'utf8')
-  .trim().split('\n').slice(1).map(line => line.split(',')[0]);
+const answerRows = fs.readFileSync(path.join(__dirname, '..', 'words', 'answers.csv'), 'utf8')
+  .trim().split('\n').slice(1).map(line => line.split(','));
+const answerWords = answerRows.map(row => row[0]);
 const percent = (n, total) => `${Math.round(100 * n / total)}%`;
 // yellow and gray are vowels; have and lack are consonants the word must or mustn't contain.
 function expectedOdds(yellow, gray, have = '', lack = '') {
@@ -72,19 +73,24 @@ test('contradictory green/yellow clues are reported and recover after editing', 
   await expect(page.locator('#clueStatus')).toHaveText('');
 });
 
-test('duplicate yellow counts and 5–7 letter lengths', async ({ page }) => {
+test('duplicate yellow counts', async ({ page }) => {
   await open(page);
+  await expect(page.locator('#board .slot')).toHaveCount(5);
   await yellow(page, 1).fill('E');
   await yellow(page, 2).fill('E');
   await page.locator('#tileChips button').click();
   await expect(page.locator('#board .tile.yellow')).toHaveCount(2);
   await expect(arrangements(page)).toHaveCount(3);
-  for (const length of [6, 7, 5]) {
-    await page.locator('#wordLength').selectOption(String(length));
-    await expect(page.locator('#board .slot')).toHaveCount(length);
-    await expect(page.locator('.green-cell')).toHaveCount(length);
-    await expect(page.locator('.yellow-cell')).toHaveCount(length);
-  }
+});
+
+test('links from the 6- and 7-letter versions are ignored; 5-letter ones still open', async ({ page }) => {
+  await open(page, '?len=6&green=B%3F%3F%3F%3F%3F&gray=FX');
+  await expect(green(page, 1)).toHaveValue('');
+  await expect(page.locator('#grayInput')).toHaveValue('');
+  expect(new URL(page.url()).search).toBe('');
+  await page.goto('/?green=B%3F%3F%3F%3F&gray=FX');
+  await expect(green(page, 1)).toHaveValue('B');
+  await expect(page.locator('#grayInput')).toHaveValue('FX');
 });
 
 test('same-day clues survive reload, copy link round-trips, yesterday expires', async ({ page, context }) => {
@@ -173,12 +179,34 @@ test('trial drag swaps letters, preserves fixed greens and flags banned destinat
 test('full board checks the real word list; changing arrangement clears displaced trials', async ({ page }) => {
   await open(page);
   for (const value of 'APPLE') await letter(page, value).click();
-  await expect(page.locator('#boardWord')).toHaveText('APPLE ✓ is in the word list');
+  await expect(page.locator('#boardWord')).toHaveText(/^APPLE ✓ is in the word list/);
   await letter(page, 'Z').click();
   await expect(page.locator('#board .trial')).toHaveCount(5);
   await yellow(page, 1).fill('Z');
   await expect(page.locator('#board .yellow')).toHaveText('Z');
   await expect(page.locator('#board .trial')).toHaveCount(4);
+});
+
+test('a full board says when the word was last a Wordle answer', async ({ page }) => {
+  // Expected from answers.csv: word,source,first_used,last_used,nyt_uses.
+  const row = word => answerRows.find(r => r[0] === word);
+  const date = iso => new Date(iso + 'T00:00:00Z')
+    .toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+  const [once, twice, never] = ['APPLE', 'CIGAR', 'GAFFE'].map(row);
+  expect([once[4], twice[4], never[4]]).toEqual(['1', '2', '0']);
+  const note = page.locator('#boardWord .answer-date');
+  const type = async word => {
+    await page.getByRole('button', { name: 'Clear', exact: true }).click();
+    for (const value of word) await letter(page, value).click();
+  };
+
+  await open(page);
+  await type('APPLE');
+  await expect(note).toHaveText(`Wordle answer on ${date(once[3])}.`);
+  await type('CIGAR');
+  await expect(page.locator('#boardWord')).toHaveText(`CIGAR ✓ is in the word list Wordle answer 2 times, last on ${date(twice[3])}.`);
+  await type('GAFFE');
+  await expect(note).toHaveText('Not a past Wordle answer.');
 });
 
 test('PNG import reads colors/letters, omits solved row, steps guesses and ends on manual edit', async ({ page }) => {
@@ -402,10 +430,6 @@ test('vowel odds panel starts from the clues, cycles vowels and matches the answ
   await page.getByRole('button', { name: 'Clear', exact: true }).click();
   await check('', '');
   await expect(oddsChips(page).last()).toHaveText('no vowel 0%');
-
-  await page.locator('#wordLength').selectOption('6');
-  await expect(page.locator('#oddsNote')).toContainText('switch to 5 letters');
-  await expect(page.locator('#oddsBody')).toBeHidden();
 });
 
 test('Rank letters view orders letters by share of answers; grays stay in place, disabled', async ({ page }) => {

@@ -142,9 +142,9 @@ function buildAnswers(original, archive) {
   const rows = words.map(w => {
     const source = origSet.has(w) ? (nyt.has(w) ? 'both' : 'original') : 'nyt-used';
     const n = nyt.get(w);
-    return [w, source, n?.first || '', n?.uses || 0].join(',');
+    return [w, source, n?.first || '', n?.last || '', n?.uses || 0].join(',');
   });
-  writeFileSync(ANSWERS_CSV, ['word,source,first_used,nyt_uses', ...rows].join('\n') + '\n');
+  writeFileSync(ANSWERS_CSV, ['word,source,first_used,last_used,nyt_uses', ...rows].join('\n') + '\n');
   const count = s => rows.filter(r => r.split(',')[1] === s).length;
   return { total: words.length, original: count('original'), both: count('both'), nytUsed: count('nyt-used') };
 }
@@ -173,7 +173,7 @@ sources.nyt = {
 };
 const counts = buildAnswers(original, archive);
 sources.answers = {
-  description: 'answers.csv: union of original-answers.txt and nyt-archive.csv; source is original, nyt-used or both; first_used and nyt_uses come from the NYT archive',
+  description: 'answers.csv: union of original-answers.txt and nyt-archive.csv; source is original, nyt-used or both; first_used, last_used and nyt_uses come from the NYT archive',
   built: localToday(),
   ...counts,
 };

@@ -1,6 +1,6 @@
 # Word lists
 
-`5.txt`, `6.txt` and `7.txt` hold the words the sandbox uses to flag arrangements that no word fits. Each is the union of:
+`5.txt` holds the words the sandbox uses to flag arrangements that no word fits. It is the union of:
 
 - **ENABLE** (Enhanced North American Benchmark Lexicon), public domain.
 - **SCOWL** (Spell Checker Oriented Word Lists) 2020.12.07, size 80: the English, American, British and Canadian word lists plus spelling variants 1 and 2. Copyright Kevin Atkinson and others; see `SCOWL-Copyright.txt` for the full notice and permissions.
@@ -19,6 +19,7 @@ Against the original 2,309 Wordle answers, this set contains all of them, and no
 | `word` | the answer, uppercase |
 | `source` | `original` (original list only, not yet played by NYT), `nyt-used` (played by NYT, not on the original list) or `both` |
 | `first_used` | first date NYT's archive lists it as the answer, if any |
+| `last_used` | last date NYT's archive lists it as the answer, if any; the app shows it when the word is on the board |
 | `nyt_uses` | how many dates NYT has used it (NYT began reusing answers in February 2026) |
 
 It is built from two cached sources, with provenance and fetch dates in `answers-sources.json`:
