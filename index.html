@@ -612,6 +612,12 @@
       font-weight: 900;
     }
 
+    button.sum-label { border: 0; }
+    .sum-label[aria-pressed="true"] {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+
     .sum-label.other {
       background: none;
       color: var(--muted);
@@ -1164,6 +1170,7 @@
     let movable = [];             // derived multiset of movable yellow letters
     let arrangements = [];        // every legal arrangement, '?' marks an unknown slot
     let pins = new Map();         // slot -> letter ('?' pins an unknown)
+    let groupLetter = null;       // yellow letter tapped in the grid to group the list by, or null
     let board = '';               // arrangement currently on the board
     let trials = [];              // per slot: a letter being tried in a blank board slot
     let lettersView = 'keyboard'; // letters panel: 'keyboard' (default), 'vc', 'rank' or 'hide'
@@ -1340,15 +1347,16 @@
       return out;
     }
 
-    // Group by where the most constrained letter sits: fewest groups, each a hypothesis
-    // the user can pin. Letters with only one possible place are skipped (they'd form a
-    // single group); ties break alphabetically so the order is stable while typing.
+    // Group by where the letter tapped in the grid sits, else by where the most constrained
+    // letter sits: fewest groups, each a hypothesis the user can pin. Letters with only one
+    // possible place are skipped (they'd form a single group); ties break alphabetically
+    // so the order is stable while typing.
     function layoutList(filtered) {
       const sorted = [...filtered].sort(compareArrangements);
-      if (sorted.length <= FLAT_LIST_MAX) return { flat: sorted, order: sorted };
+      if (!groupLetter && sorted.length <= FLAT_LIST_MAX) return { flat: sorted, order: sorted };
 
-      let best = null;
-      for (const letter of new Set(movable)) {
+      let best = groupLetter && { letter: groupLetter };
+      if (!best) for (const letter of new Set(movable)) {
         const keys = new Set(sorted.map(a => positionsOf(a, letter).join()));
         if (keys.size < 2) continue;
         if (!best || keys.size < best.size) best = { letter, size: keys.size };
@@ -2347,7 +2355,8 @@
       wrap.innerHTML = '';
       const n = filtered.length;
       $('summaryCaption').innerHTML =
-        `<b>Where each letter can go:</b> how many of the ${n} arrangement${n === 1 ? '' : 's'} put it in each slot. Tap a number to pin it.`;
+        `<b>Where each letter can go:</b> how many of the ${n} arrangement${n === 1 ? '' : 's'} put it in each slot. ` +
+        'Tap a number to pin it, or a letter to group the list by where it goes.';
       const rows = [...new Set(movable)];
       if (openSlots().length > movable.length) rows.push('?');
 
@@ -2355,7 +2364,7 @@
         const row = document.createElement('div');
         row.className = 'row-grid';
 
-        const label = document.createElement('div');
+        const label = document.createElement(letter === '?' ? 'div' : 'button');
         label.className = 'sum-label';
         if (letter === '?') {
           label.classList.add('other');
@@ -2363,7 +2372,16 @@
           label.title = 'A letter that isn’t one of your yellows (shown as · in the list)';
         } else {
           const copies = movable.filter(l => l === letter).length;
+          const chosen = groupLetter === letter;
+          label.type = 'button';
           label.textContent = copies > 1 ? `${letter}×${copies}` : letter;
+          label.setAttribute('aria-pressed', String(chosen));
+          label.title = chosen ? `Stop grouping the list by ${letter}` : `Show all the arrangements, grouped by where ${letter} goes`;
+          label.addEventListener('click', () => {
+            groupLetter = chosen ? null : letter;
+            listExpanded = true;
+            refreshResults({ keepBoard: true });
+          });
         }
         row.appendChild(label);
 
@@ -2421,7 +2439,8 @@
         return;
       }
 
-      $('listCaption').textContent = 'Tap one to put it on the board. Long tap to see all matching words.';
+      $('listCaption').textContent = 'Tap one to put it on the board. ' +
+        (matchMedia('(any-pointer: fine)').matches ? 'Long tap / right click' : 'Long tap') + ' to see all matching words.';
 
       if (layout.flat) {
         const wrap = document.createElement('div');
@@ -2464,6 +2483,7 @@
     }
 
     function refreshResults({ keepBoard = false } = {}) {
+      if (!movable.includes(groupLetter)) groupLetter = null;  // its yellow was removed
       const base = visibleArrangements();
       const filtered = base.filter(matchesPins);
       const layout = layoutList(filtered);

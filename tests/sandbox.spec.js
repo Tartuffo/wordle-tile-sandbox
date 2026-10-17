@@ -150,7 +150,8 @@ test('holding an arrangement asks once per tab, then lists matching words with r
   await open(page);
   await yellow(page, 1).fill('P');
   await page.locator('#grayInput').fill('M');
-  await expect(page.locator('#listCaption')).toHaveText('Tap one to put it on the board. Long tap to see all matching words.');
+  // Desktop Chrome has a mouse, so the caption mentions right-click.
+  await expect(page.locator('#listCaption')).toHaveText('Tap one to put it on the board. Long tap / right click to see all matching words.');
   const arr = arrangements(page).filter({ hasText: '··P··' });
   const confirm = page.locator('#wordsConfirm');
   const dialog = page.locator('#wordsDialog');
@@ -558,6 +559,35 @@ test('vowel odds use consonant clues only when switched to All clues, and rememb
   await check('A', 'E', 'M', 'RST');
   await scope('Vowels only').click();
   await check('A', 'E');
+});
+
+test('tapping a letter in the grid groups the whole list by where it goes', async ({ page }) => {
+  // A, E and R each yellow in one slot: 3 movable tiles in 5 slots.
+  await open(page, '?len=5&green=%3F%3F%3F%3F%3F&ban0=A&ban1=E&ban2=R&yellow=AER');
+  const label = l => page.locator('#summary .sum-label', { hasText: new RegExp(`^${l}$`) });
+  const heads = page.locator('#list .group-head');
+  const total = await page.locator('#summary .row-grid').first().locator('.sum-cell')
+    .evaluateAll(cells => cells.reduce((n, c) => n + (Number(c.textContent) || 0), 0));
+  expect(total).toBeGreaterThan(24);  // collapsed until shown
+  await expect(page.locator('#list .arr')).toHaveCount(0);
+
+  await label('E').click();
+  await expect(label('E')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#list .arr')).toHaveCount(total);
+  const texts = await heads.allTextContents();
+  expect(texts.length).toBeGreaterThan(1);
+  for (const t of texts) expect(t).toMatch(/^E in slot \d · \d+$/);
+  // A group heading still pins.
+  await heads.first().click();
+  await expect(page.locator('#list .arr')).toHaveCount(Number(texts[0].split('· ')[1]));
+  await heads.first().click();
+
+  await label('R').click();
+  await expect(label('E')).toHaveAttribute('aria-pressed', 'false');
+  for (const t of await heads.allTextContents()) expect(t).toMatch(/^R in /);
+  await label('R').click();
+  await expect(label('R')).toHaveAttribute('aria-pressed', 'false');
+  for (const t of await heads.allTextContents()) expect(t).not.toMatch(/^R in /);
 });
 
 test('arrangement list comes before the grid; the swap link reverses that and is remembered', async ({ page }) => {
