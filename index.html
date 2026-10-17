@@ -2365,8 +2365,8 @@
       wrap.innerHTML = '';
       const n = filtered.length;
       $('summaryCaption').innerHTML =
-        `<b>Where each letter can go:</b> how many of the ${n} arrangement${n === 1 ? '' : 's'} put it in each slot. ` +
-        'Tap a number to show only arrangements with that letter there, or a letter to group the list by where it goes.';
+        `<b>Where each letter can go</b> in ${n === 1 ? 'the one arrangement' : `the ${n} arrangements`}. ` +
+        'Tap a number to pin the letter there; tap a letter to sort the list by it.';
       const rows = [...new Set(movable)];
       if (openSlots().length > movable.length) rows.push('?');
 
@@ -2386,7 +2386,7 @@
           label.type = 'button';
           label.textContent = copies > 1 ? `${letter}×${copies}` : letter;
           label.setAttribute('aria-pressed', String(chosen));
-          label.title = chosen ? `Stop grouping the list by ${letter}` : `Group the list by where ${letter} goes`;
+          label.title = chosen ? `Stop sorting the list by ${letter}` : `Sort the list by where ${letter} goes`;
           label.addEventListener('click', () => {
             groupLetter = chosen ? null : letter;
             listExpanded = true;
@@ -2607,7 +2607,7 @@
     }
 
     // Finds the guess rows: solid, square blobs of a tile color, of one dominant size,
-    // grouped into rows of 5-7. Keyboard keys aren't square and empty tiles are hollow,
+    // grouped into rows of five. Keyboard keys aren't square and empty tiles are hollow,
     // so both drop out. Returns full-resolution boxes, rows top to bottom.
     function findTileRows(img) {
       const { width: W, height: H, data } = img;

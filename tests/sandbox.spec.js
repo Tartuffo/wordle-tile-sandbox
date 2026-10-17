@@ -573,6 +573,8 @@ test('tapping a letter in the grid groups the whole list by where it goes', asyn
   const total = await page.locator('#summary .row-grid').first().locator('.sum-cell')
     .evaluateAll(cells => cells.reduce((n, c) => n + (Number(c.textContent) || 0), 0));
   expect(total).toBeGreaterThan(24);  // collapsed until shown
+  await expect(page.locator('#summaryCaption')).toHaveText(
+    `Where each letter can go in the ${total} arrangements. Tap a number to pin the letter there; tap a letter to sort the list by it.`);
   await expect(page.locator('#list .arr')).toHaveCount(0);
 
   // Screen readers get each cell's letter, slot and count.

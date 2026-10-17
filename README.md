@@ -21,7 +21,7 @@ Wordle Tile Sandbox lets you enter what you know from a Wordle puzzle, slot by s
 - **Drag tiles on the board** to try arrangements by hand; a tile in a slot where it was yellow is flagged.
 - **Every legal arrangement**, sorted and grouped by where the most constrained letter sits. Tap one to put it on the board; tap a group heading to pin its letter there.
 - **Matching words**: hold an arrangement (or right-click it) to list the dictionary words with its known letters in place. Words your clues rule out (a gray letter, or a letter in a slot where it was yellow) are struck through and listed last, and past Wordle answers are bold. Since this can give the answer away, it asks first, once per browser tab.
-- **Where each letter can go**: a letter-by-slot grid counting the arrangements that put each letter in each slot, with forced placements called out and a legend for the cell styles. An "unknown" row counts the slots shown as · in the list; an unknown slot may hold another copy of a known letter. Tap a number to pin that letter there and narrow the list. Tap a yellow letter at the left of the grid to group the list by where that letter goes (pins still apply); tap it again to go back.
+- **Where each letter can go**: a letter-by-slot grid counting the arrangements that put each letter in each slot, with forced placements called out and a legend for the cell styles. An "unknown" row counts the slots shown as · in the list; an unknown slot may hold another copy of a known letter. Tap a number to pin that letter there and narrow the list. Tap a yellow letter at the left of the grid to sort the list by where that letter goes (pins still apply); tap it again to go back.
 - **List or grid first**: the list comes first; **put grid first**, next to the arrangement count, swaps them, and the order is remembered.
 - **Word check**: arrangements that no word in the word list fits, given your gray and yellow clues, are dimmed and struck through by default; a Dim / Hide / Show switch can instead hide them or show them normally. Unknown slots may hold any letter that is not gray and was not yellow in that slot. The word list is in [`words/`](words/README.md).
 - **More analysis**: closed by default; the choice is remembered. Inside:
@@ -90,7 +90,7 @@ wordle-tile-sandbox/
 
 ### Browser regression tests
 
-The app still has no runtime dependencies or build step. Development tests use
+Development tests use
 Node.js 22+ and Playwright Chromium:
 
 ```bash
