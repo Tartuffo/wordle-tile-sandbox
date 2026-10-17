@@ -33,7 +33,7 @@ Wordle Tile Sandbox lets you enter what you know from a Wordle puzzle, slot by s
   - Odds count Wordle answer words, not letters, and ignore position.
 - **Help**: each section has a **?** that explains it. Instructions say "click" on a device with a mouse or trackpad and "tap" on a touch screen.
 - **Light and dark themes**: follows your device's light or dark setting; the sun/moon switch by the title overrides it, and that choice is remembered in the browser.
-- **Copy link** shares the current clues. Your clues are also saved in the browser and come back if you reopen the app the same day.
+- **Copy link**, the link icon at the top right of the clues, shares the current clues. Your clues are also saved in the browser and come back if you reopen the app the same day.
 
 The tool is intentionally visual: it helps you reason about the puzzle by moving tiles around. It uses a word list to flag arrangements no word fits, and the answer list for letter and vowel odds and to say when a word on the board was an answer. Matching words stay hidden unless you hold an arrangement and choose Show words.
 

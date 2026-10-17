@@ -105,7 +105,7 @@ test('same-day clues survive reload, copy link round-trips, yesterday expires', 
   await expect(page.locator('#grayInput')).toHaveValue('FX');
   await expect(page.locator('#board .tile.yellow')).toHaveCount(2);
   await page.getByRole('button', { name: 'Copy link', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Copied!', exact: true })).toBeVisible();
+  await expect(page.locator('#shareNote')).toHaveText('Copied');
   const shared = await page.evaluate(() => window.copiedLink);
   const fresh = await context.browser().newContext();
   const recipient = await fresh.newPage();
