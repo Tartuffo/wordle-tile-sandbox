@@ -320,12 +320,18 @@
       font-size: 13px;
     }
 
+    /* Two rows on every device: where clues come from, then the guess stepper, Clear and Copy link. */
     .toolbar {
+      display: grid;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .toolbar-row {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
       align-items: center;
-      margin-top: 14px;
     }
 
     .toolbar label {
@@ -968,6 +974,12 @@
     @media (max-width: 480px) {
       :root { --label-w: 50px; --gap: 5px; }
       .odds-entry .pc { display: none; }
+      /* The subtitle says "paste or import a screenshot", so the short labels are enough. */
+      .toolbar .wide { display: none; }
+      .toolbar-row { gap: 6px; }
+      .guess-nav { gap: 4px; }
+      .toolbar button:not(.help-btn) { padding-left: 10px; padding-right: 10px; }
+      .toolbar .guess-nav button { padding-left: 8px; padding-right: 8px; }
       .panel { padding: 12px; }
       .subtitle { font-size: 14px; }
     }
@@ -1013,18 +1025,22 @@
       <div id="clueStatus" class="status" role="status"></div>
 
       <div class="toolbar">
-        <button id="pasteBtn" title="Read your clues from a screenshot on the clipboard">Paste screenshot</button>
-        <button id="importBtn" title="Read your clues from a saved Wordle screenshot">Import file</button>
-        <input id="importFile" type="file" accept="image/*" hidden>
-        <button id="randomBtn" title="Make up a puzzle: one or two guesses against a past Wordle answer" disabled>Random</button>
-        <span id="guessNav" class="guess-nav" hidden>
-          <button id="guessPrevBtn" aria-label="Previous guess" title="Show the clues one guess earlier">‹</button>
-          <span id="guessStep"></span>
-          <button id="guessNextBtn" aria-label="Next guess" title="Show the clues one guess later">›</button>
-        </span>
-        <button id="clearBtn">Clear</button>
-        <button id="shareBtn">Copy link</button>
-        <button type="button" class="help-btn" data-help="cluesHelp" aria-label="About entering clues" title="About entering clues">?</button>
+        <div class="toolbar-row">
+          <button id="pasteBtn" aria-label="Paste screenshot" title="Read your clues from a screenshot on the clipboard">Paste<span class="wide"> screenshot</span></button>
+          <button id="importBtn" aria-label="Import file" title="Read your clues from a saved Wordle screenshot">Import<span class="wide"> file</span></button>
+          <input id="importFile" type="file" accept="image/*" hidden>
+          <button id="randomBtn" title="Make up a puzzle: one or two guesses against a past Wordle answer" disabled>Random</button>
+          <button type="button" class="help-btn" data-help="cluesHelp" aria-label="About entering clues" title="About entering clues">?</button>
+        </div>
+        <div class="toolbar-row">
+          <span id="guessNav" class="guess-nav" hidden>
+            <button id="guessPrevBtn" aria-label="Previous guess" title="Show the clues one guess earlier">‹</button>
+            <span id="guessStep"></span>
+            <button id="guessNextBtn" aria-label="Next guess" title="Show the clues one guess later">›</button>
+          </span>
+          <button id="clearBtn">Clear</button>
+          <button id="shareBtn">Copy link</button>
+        </div>
       </div>
     </section>
 
