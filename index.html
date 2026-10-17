@@ -1133,8 +1133,9 @@
   <dialog id="cluesHelp" class="words-dialog help-dialog" aria-labelledby="cluesHelpTitle">
     <h2 id="cluesHelpTitle">Entering clues</h2>
     <div class="help-body">
-      <p><b>From a screenshot:</b> Paste screenshot reads one you’ve copied, and Import file opens a saved one; on a computer, Ctrl/⌘+V also works. Check the letters, fix any that were misread, then choose Use these clues. Afterwards, ‹ and › step through your guesses; editing a clue by hand ends the stepping.</p>
-      <p><b>Random</b> makes up a puzzle to practice on: one or two guesses against a past Wordle answer, which stays hidden. It’s chosen so that from a few to a few dozen arrangements fit a word; ‹ and › step through the guesses.</p>
+      <p><b>From a screenshot:</b> Paste screenshot reads one you’ve copied, and Import file opens a saved one; on a computer, Ctrl/⌘+V also works. Check the letters, fix any that were misread, then choose Use these clues.</p>
+      <p><b>Random</b> makes up a puzzle to practice on: one or two guesses against a past Wordle answer, which stays hidden. It’s chosen so that from a few to a few dozen arrangements fit a word.</p>
+      <p><b>‹ Guess 2/3 ›</b> appears after a screenshot or Random: the clues as they stood after each guess, here after the second of three. ‹ and › step back and forth, say to see how much one guess narrowed things down. Editing a clue by hand ends the stepping and keeps the clues shown.</p>
       <p><b>By hand:</b></p>
       <dl>
         <dt>Green</dt>
@@ -3011,7 +3012,7 @@
       $('guessNav').hidden = !importHistory;
       if (!importHistory) return;
       const { step, rows } = importHistory;
-      $('guessStep').textContent = `${step}/${rows.length}`;
+      $('guessStep').textContent = `Guess ${step}/${rows.length}`;
       $('guessStep').title = `Clues after guess ${step} of ${rows.length}`;
       $('guessPrevBtn').disabled = step <= 1;
       $('guessNextBtn').disabled = step >= rows.length;

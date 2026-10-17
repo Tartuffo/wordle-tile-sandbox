@@ -268,7 +268,7 @@ test('PNG import reads colors/letters, omits solved row, steps guesses and ends 
   await expect(page.locator('#importRows .yellow')).toHaveCount(2);
   await expect(page.locator('#importNote')).toContainText('The solved row was left out');
   await page.getByRole('button', { name: 'Use these clues' }).click();
-  await expect(page.locator('#guessStep')).toHaveText('2/2');
+  await expect(page.locator('#guessStep')).toHaveText('Guess 2/2');
   await expect(green(page, 1)).toHaveValue('B');
   await expect(green(page, 2)).toHaveValue('E');
   await expect(green(page, 5)).toHaveValue('Y');
@@ -276,7 +276,7 @@ test('PNG import reads colors/letters, omits solved row, steps guesses and ends 
   await expect(page.locator('#grayInput')).toHaveValue('ACEFN');
   await expect(page.getByRole('button', { name: 'Next guess' })).toBeDisabled();
   await page.getByRole('button', { name: 'Previous guess' }).click();
-  await expect(page.locator('#guessStep')).toHaveText('1/2');
+  await expect(page.locator('#guessStep')).toHaveText('Guess 1/2');
   await expect(page.getByRole('button', { name: 'Previous guess' })).toBeDisabled();
   await expect(green(page, 1)).toHaveValue('');
   await expect(yellow(page, 2)).toHaveValue('R');
@@ -354,7 +354,7 @@ test('Random makes up one or two guesses against an answer, with a few to a few 
       total: arrangements.length, fitting: arrangements.length - noWord.size, tiles: movable.length,
     }));
     expect([1, 2]).toContain(rows.length);
-    await expect(page.locator('#guessStep')).toHaveText(`${rows.length}/${rows.length}`);
+    await expect(page.locator('#guessStep')).toHaveText(`Guess ${rows.length}/${rows.length}`);
     await expect(page.locator('#resultsTitle')).toHaveText(`${total} legal arrangements`);
     expect(total).toBeLessThanOrEqual(80);
     expect(fitting).toBeGreaterThanOrEqual(3);
@@ -367,7 +367,7 @@ test('Random makes up one or two guesses against an answer, with a few to a few 
   // A two-guess puzzle steps back to its first guess.
   for (let n = 0; n < 100 && await page.evaluate(() => importHistory.rows.length) < 2; n++) await page.locator('#randomBtn').click();
   await page.getByRole('button', { name: 'Previous guess' }).click();
-  await expect(page.locator('#guessStep')).toHaveText('1/2');
+  await expect(page.locator('#guessStep')).toHaveText('Guess 1/2');
 });
 
 test('theme follows the system until the switch is used', async ({ page }) => {
