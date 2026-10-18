@@ -2,7 +2,7 @@
 
 A simple visual sandbox for experimenting with possible Wordle solutions.
 
-**Use it here: https://tartuffo.github.io/wordle-tile-sandbox/** It runs in your browser; there is nothing to install.
+**Use it here: https://tartuffo.github.io/wordle-tile-sandbox/** It runs in your browser; there is nothing to install. Page views are counted anonymously with [GoatCounter](https://www.goatcounter.com/) (no cookies, nothing personal stored).
 
 I built this because I used to work through Wordle possibilities on paper, and sometimes with actual Scrabble tiles. That worked, but it was a little clumsy: I wanted an easy WYSIWYG tool where I could drag letters around, keep green tiles fixed, and see possible arrangements without constantly rewriting them.
 
