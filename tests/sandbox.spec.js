@@ -801,6 +801,10 @@ test('steps: 2 and 3 open as clues arrive; a link folds step 1 to a summary that
   await expect(page.locator('#clueChips .mini').nth(1).locator('span')).toHaveText(['E', 'R']);
   await expect(page.locator('#clueChips .mini').nth(2).locator('span')).toHaveText(['S', 'T', 'L', 'N']);
   await expect(page.locator('#clueChips .mini').nth(1).locator('span').first()).toHaveAttribute('title', 'E was yellow in slot 2');
+  // With no green letter, the pattern is left out rather than shown as five dots.
+  await open(page, '?green=%3F%3F%3F%3F%3F&ban1=E&yellow=E&gray=ST');
+  await expect(page.locator('#clueChips .mini')).toHaveCount(2);
+  await expect(page.locator('#clueChips .mini').first().locator('span')).toHaveText(['E']);
   await expect(body('boardBody')).toBeVisible();
   await expect(body('resultsBody')).toBeVisible();
   await editClues(page);

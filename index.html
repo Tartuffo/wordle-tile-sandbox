@@ -3637,8 +3637,8 @@
       offerTips();
     }
 
-    // The clues in miniature, for the folded step 1: the green pattern, then the yellow
-    // letters (with the slots they can't take), then the gray ones.
+    // The clues in miniature, for the folded step 1: the green pattern (if any letter is
+    // green), then the yellow letters (with the slots they can't take), then the gray ones.
     function renderClueChips() {
       const wrap = $('clueChips');
       wrap.innerHTML = '';
@@ -3655,8 +3655,10 @@
         wrap.appendChild(el);
         return el;
       };
-      mini('', greens.map((g, i) => ({ text: g || '·', kind: g ? 'g' : '', title: `Slot ${i + 1}: ${g ? `${g} is green` : 'unknown'}` })))
-        .setAttribute('aria-label', `Green: ${greens.map(g => g || '?').join('')}`);
+      if (greens.some(Boolean)) {   // five dots would say nothing
+        mini('', greens.map((g, i) => ({ text: g || '·', kind: g ? 'g' : '', title: `Slot ${i + 1}: ${g ? `${g} is green` : 'unknown'}` })))
+          .setAttribute('aria-label', `Green: ${greens.map(g => g || '?').join('')}`);
+      }
       if (tileInfo.length) {
         mini('', tileInfo.map(t => ({
           text: t.count > 1 ? `${t.letter}×${t.count}` : t.letter,
