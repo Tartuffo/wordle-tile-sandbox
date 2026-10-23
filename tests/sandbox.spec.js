@@ -862,6 +862,7 @@ test('first-time tips show one at a time, in order, and are remembered; help can
   await open(page, '?green=B%3F%3F%3F%3F&ban1=E&yellow=E');
   await expect(tip).toHaveAttribute('data-tip', 'board');
   await expect(tip).toContainText('This is one way your yellow letters could fit');
+  await expect(tip).toContainText('Cycle through the legal arrangements with the ‹ and › arrows below.');
 });
 
 test('board: a chosen slot takes the next letter, × removes a tried one, and the note says which arrangement is showing', async ({ page }) => {
