@@ -1314,7 +1314,7 @@
       <div class="step-head">
         <button id="resultsToggle" type="button" class="step-toggle" aria-expanded="true" aria-controls="resultsBody">
           <span class="step-num" aria-hidden="true">3</span>
-          <h2 class="step-title">Browse every arrangement</h2>
+          <h2 class="step-title">Browse every legal arrangement</h2>
           <span class="step-chev" aria-hidden="true"></span>
         </button>
         <button type="button" class="help-btn" data-help="arrangementsHelp" aria-label="About the arrangements" title="About the arrangements">?</button>
@@ -3058,7 +3058,7 @@
       } else if (pins.size) {
         title = `${filtered.length} of ${total} arrangement${total === 1 ? '' : 's'} match your pins`;
       } else {
-        title = `${total} legal arrangement${total === 1 ? '' : 's'}`;
+        title = `${total} legal arrangement${total === 1 ? '' : 's'} of your yellow tiles`;
       }
       $('resultsTitle').textContent = title;
       $('resultsTitle').classList.toggle('muted', !movable.length);
