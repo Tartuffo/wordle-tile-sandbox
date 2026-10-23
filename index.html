@@ -521,7 +521,6 @@
       .letters-tools .seg button { padding: 3px 7px; }
     }
     .letters-hint { margin: 8px 0 0; font-size: 12px; }
-    .letters-hint[hidden], #lettersBody[hidden] { display: none; }
 
     .kb { display: grid; gap: 5px; }
 
@@ -711,12 +710,25 @@
     .tile-x:hover { color: var(--bad); border-color: var(--bad); }
 
     .board-note {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px 8px;
       margin: 8px 0 0;
       color: var(--muted);
       font-size: 14px;
     }
 
-    .board-note:empty { display: none; }
+    .board-note.empty { display: none; }
+
+    /* ‹ Arrangement 3 of 12 ›: steps through the list in the order it is shown. */
+    .arr-nav { display: inline-flex; align-items: center; gap: 4px; }
+    .arr-nav[hidden] { display: none; }
+    .arr-nav button { padding: 0 8px 3px; font-size: 20px; line-height: 1.2; }
+    .arr-nav button:disabled { opacity: .35; cursor: default; }
+    #arrPrevBtn::before { content: '‹'; }
+    #arrNextBtn::before { content: '›'; }
+    #arrIndex { font-variant-numeric: tabular-nums; }
 
     .results-head {
       display: flex;
@@ -1288,7 +1300,14 @@
       <p id="boardPlaceholder" class="step-placeholder" hidden>Enter a clue above and the board appears here, or <button type="button" id="boardAnywayBtn" class="link">open it now</button> to try a word without clues.</p>
       <div id="boardBody" class="step-body">
         <div id="board" class="row-grid" aria-label="Tile board"></div>
-        <p id="boardNote" class="board-note" role="status"></p>
+        <p id="boardNote" class="board-note">
+          <span id="arrNav" class="arr-nav" hidden>
+            <button type="button" id="arrPrevBtn" aria-label="Previous arrangement" title="Put the previous arrangement on the board"></button>
+            <span id="arrIndex" role="status"></span>
+            <button type="button" id="arrNextBtn" aria-label="Next arrangement" title="Put the next arrangement on the board"></button>
+          </span>
+          <span id="boardNoteText" role="status"></span>
+        </p>
         <p id="boardWord" class="board-word" role="status"></p>
         <div id="boardStatus" class="status" role="status"></div>
         <div class="letters" aria-label="Letters still possible">
@@ -1296,7 +1315,6 @@
             <span id="lettersTitle" class="letters-title"></span>
             <span class="letters-tools">
               <span id="lettersSeg" class="seg" role="group" aria-label="Letters view">
-                <button data-view="hide" title="Hide the letters">Hide</button>
                 <button data-view="keyboard" title="Keyboard layout">Keyboard</button>
                 <button data-view="vc" title="Vowels and consonants" aria-label="Vowels and consonants (V/C)">V/C</button>
                 <button data-view="rank" title="Most common letters in Wordle answers first">Rank</button>
@@ -1482,7 +1500,7 @@
     <div class="help-body">
       <p>The letters that could still be in the word, under the board. Green and yellow keys are from your clues. Gray letters don’t go on the board: Keyboard and Rank keep them in place, and V/C leaves them out.</p>
       <p><b><span class="tap">Tap</span> a letter</b> to try it on the board: in the slot you chose (<span class="tap">tap</span> an empty slot first), or else in the first blank slot that allows it. <b>Hold</b> a letter (or right-click it) to mark it gray without going back to the clues; hold a gray one to let it back in.</p>
-      <p>On the board, <b>drag</b> a tile to move or swap it, and remove a tried letter with its × or by holding it. Green tiles stay fixed. Under the board, a line says which of the listed arrangements is showing.</p>
+      <p>On the board, <b>drag</b> a tile to move or swap it, and remove a tried letter with its × or by holding it. Green tiles stay fixed. Under the board, ‹ Arrangement 3 of 12 › says which of the listed arrangements is showing, and its arrows step through them in the list’s order.</p>
       <p>Fill the board to see whether the word is in the word list and whether it has been a Wordle answer.</p>
       <dl>
         <dt>Keyboard</dt>
@@ -1537,7 +1555,7 @@
     let groupLetter = null;       // yellow letter tapped in the grid to group the list by, or null
     let board = '';               // arrangement currently on the board
     let trials = [];              // per slot: a letter being tried in a blank board slot
-    let lettersView = 'keyboard'; // letters panel: 'keyboard' (default), 'vc', 'rank' or 'hide'
+    let lettersView = 'keyboard'; // letters panel: 'keyboard' (default), 'vc' or 'rank'
     let listExpanded = false;
     let draggedPos = null;
     let touchOverPos = null;
@@ -2220,7 +2238,7 @@
 
       $('boardStatus').textContent = [...new Set(conflicts.map(pos => slotConflict(pos)))].join(' ');
       renderBoardWord();
-      renderBoardNote(conflicts.length > 0);
+      renderBoardNote();
     }
 
     function toggleSelected(pos) {
@@ -2229,23 +2247,43 @@
     }
 
     // What the board is showing, so a change there is seen to do something: which of the
-    // listed arrangements it is, why it isn't one, or that the blanks are still to fill.
-    function renderBoardNote(conflict) {
+    // listed arrangements it is (with ‹ › to step through them), why it isn't one, or that
+    // the blanks are still to fill. A conflict is reported separately, in red.
+    function renderBoardNote() {
       const letters = Array.from({ length: len }, (_, pos) => slotLetter(pos));
       const full = letters.every(Boolean);
-      const fill = full ? '' : ` ${TAP} an empty slot, then a letter below, to fill it.`;
+      const fill = full ? '' : `${TAP} an empty slot, then a letter below, to fill it.`;
+      const i = shownOrder.indexOf(board);
+      const nav = movable.length > 0 && shownOrder.length > 1;
       let note = '';
-      if (conflict) {
-        note = '';
-      } else if (movable.length && shownOrder.length) {
-        const i = shownOrder.indexOf(board);
-        if (i >= 0) note = `Arrangement ${i + 1} of ${shownOrder.length}.${fill}`;
-        else if (wordMode !== 'off' && noWord.has(board)) note = `No word in the word list fits this arrangement.${fill}`;
-        else if (pins.size) note = `This arrangement doesn’t match your pins.${fill}`;
+      if (movable.length && shownOrder.length) {
+        if (i >= 0) note = nav ? fill : `Arrangement 1 of 1. ${fill}`.trim();
+        else if (wordMode !== 'off' && noWord.has(board)) note = `No word in the word list fits this arrangement. ${fill}`.trim();
+        else if (pins.size) note = `This arrangement doesn’t match your pins. ${fill}`.trim();
+        else note = fill;
       } else if (!full && letters.some(l => l) && !greens.every(Boolean)) {
-        note = `Fill the blanks to check the word.${fill}`;
+        note = `Fill the blanks to check the word. ${fill}`.trim();
       }
-      $('boardNote').textContent = note;
+      $('arrNav').hidden = !nav;
+      if (nav) {
+        $('arrIndex').textContent = i >= 0 ? `Arrangement ${i + 1} of ${shownOrder.length}` : `${shownOrder.length} arrangements`;
+        $('arrPrevBtn').disabled = i === 0;
+        $('arrNextBtn').disabled = i === shownOrder.length - 1;
+      }
+      $('boardNoteText').textContent = note;
+      $('boardNote').classList.toggle('empty', !nav && !note);
+    }
+
+    // ‹ and › put the previous or next listed arrangement on the board; from one that isn't
+    // listed (hidden as a non-word, or outside the pins), they start at either end.
+    function stepArrangement(delta) {
+      if (!shownOrder.length) return;
+      const i = shownOrder.indexOf(board);
+      const next = i < 0 ? (delta > 0 ? 0 : shownOrder.length - 1) : Math.max(0, Math.min(shownOrder.length - 1, i + delta));
+      board = shownOrder[next];
+      countOnce('arrangement-step');
+      refreshResults({ keepBoard: true });
+      document.querySelector('#list .arr.current')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
 
     // Once every slot holds a letter, say whether the word is in the list and, once the
@@ -2474,9 +2512,6 @@
 
       const body = $('lettersBody');
       body.innerHTML = '';
-      body.hidden = lettersView === 'hide';
-      $('lettersHint').hidden = lettersView === 'hide';
-      if (lettersView === 'hide') return;
 
       const key = letter => {
         const status = letterStatus(letter, ruledOut);
@@ -3086,7 +3121,7 @@
         renderList(layout, filtered.length);
       }
       shownOrder = showResults ? layout.order : [];
-      renderBoardNote(boardConflicts().length > 0);
+      renderBoardNote();
     }
 
     // ── Screenshot import ─────────────────────────────────────────────────────
@@ -3939,6 +3974,8 @@
     $('importCancelBtn').addEventListener('click', closeImport);
     $('guessPrevBtn').addEventListener('click', () => stepGuess(-1));
     $('guessNextBtn').addEventListener('click', () => stepGuess(1));
+    $('arrPrevBtn').addEventListener('click', () => stepArrangement(-1));
+    $('arrNextBtn').addEventListener('click', () => stepArrangement(1));
 
     // A pasted image (e.g. a screenshot copied on desktop) imports directly.
     document.addEventListener('paste', e => {
@@ -3981,7 +4018,7 @@
       localStorage.setItem(WORD_MODE_KEY, wordMode);
       localStorage.removeItem(HIDE_KEY);
       const view = localStorage.getItem(LETTERS_VIEW_KEY);
-      if (['vc', 'rank', 'keyboard', 'hide'].includes(view)) lettersView = view;
+      if (['vc', 'rank', 'keyboard'].includes(view)) lettersView = view;   // 'hide', once offered, falls back to the keyboard
       if (localStorage.getItem(ODDS_SCOPE_KEY) === 'all') oddsScope = 'all';
       gridFirst = localStorage.getItem(RESULTS_ORDER_KEY) === 'grid';
       analysisOpen = localStorage.getItem(ANALYSIS_KEY) === 'open';

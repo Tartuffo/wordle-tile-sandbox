@@ -853,7 +853,22 @@ test('first-time tips show one at a time, in order, and are remembered; help can
 
 test('board: a chosen slot takes the next letter, × removes a tried one, and the note says which arrangement is showing', async ({ page }) => {
   await open(page, '?green=B%3F%3F%3F%3F&ban1=E&ban2=R&yellow=ER');
-  await expect(page.locator('#boardNote')).toHaveText('Arrangement 1 of 7. Click an empty slot, then a letter below, to fill it.');
+  await expect(page.locator('#boardNote')).toHaveText('Arrangement 1 of 7 Click an empty slot, then a letter below, to fill it.');
+  // ‹ › step through the list in its order, outlining the one on the board; ‹ is off at the start, › at the end.
+  const prev = page.getByRole('button', { name: 'Previous arrangement', exact: true });
+  const next = page.getByRole('button', { name: 'Next arrangement', exact: true });
+  await expect(prev).toBeDisabled();
+  await next.click();
+  await expect(page.locator('#arrIndex')).toHaveText('Arrangement 2 of 7');
+  await expect(page.locator('#list .arr.current')).toHaveText(await page.evaluate(() => shownOrder[1].replaceAll('?', '·')));
+  await expect(prev).toBeEnabled();
+  for (let n = 0; n < 5; n++) await next.click();
+  await expect(page.locator('#arrIndex')).toHaveText('Arrangement 7 of 7');
+  await expect(next).toBeDisabled();
+  await prev.click();
+  await expect(page.locator('#arrIndex')).toHaveText('Arrangement 6 of 7');
+  for (let n = 0; n < 5; n++) await prev.click();
+  await expect(page.locator('#arrIndex')).toHaveText('Arrangement 1 of 7');
   // Two blank slots, wherever the first arrangement leaves them: choose the last one.
   const blanks = await page.locator('#board .slot.choosable').evaluateAll(els => els.map(el => Number(el.dataset.pos) + 1));
   expect(blanks).toHaveLength(2);
@@ -882,7 +897,7 @@ test('board: a chosen slot takes the next letter, × removes a tried one, and th
     .observe($('board'), { childList: true, subtree: true }); });
   await page.locator('#board .yellow').first().dragTo(boardSlot(page, last));
   await expect(current).not.toHaveText(before);
-  await expect(page.locator('#boardNote')).toContainText(/^Arrangement \d of \d+\./);
+  await expect(page.locator('#arrIndex')).toHaveText(/^Arrangement \d of \d+$/);
   expect(await page.evaluate(() => window.landedSeen)).toBe(1);
 
   // A chosen slot takes the letter even where it was yellow; the conflict is shown.
@@ -892,7 +907,8 @@ test('board: a chosen slot takes the next letter, × removes a tried one, and th
   await letter(page, 'E').click();
   await expect(boardSlot(page, 2).locator('.conflict')).toHaveText('E');
   await expect(page.locator('#boardStatus')).toContainText("E can't go in slot 2");
-  await expect(page.locator('#boardNote')).toHaveText('');
+  // One tile, three places: the index stays, next to the conflict.
+  await expect(page.locator('#arrIndex')).toHaveText(/^Arrangement \d of 3$/);
 });
 
 test('holding or right-clicking a letter marks it gray; a gray letter can be let back in', async ({ page }) => {
