@@ -57,7 +57,7 @@
       --trial-border: #878a8c;
       --trial-text: #1a1a1b;
       --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      --label-w: 52px;
+      --label-w: 58px;
       --gap: 6px;
       --cols: 5;
     }
@@ -216,11 +216,22 @@
     }
 
     .row-grid + .row-grid { margin-top: var(--gap); }
+    .row-grid[hidden] { display: none; }
 
     .row-label {
       color: var(--muted);
       font-size: 12px;
       font-weight: 700;
+      line-height: 1.15;
+    }
+
+    /* What each clue row means, for players who don't know Wordle's colors by heart. */
+    .row-label small {
+      display: block;
+      font-size: 10px;
+      font-weight: 600;
+      opacity: .8;
+      white-space: nowrap;
     }
 
     .slot-nums div:not(.row-label) {
@@ -315,8 +326,21 @@
       cursor: default;
     }
 
-    .tile-chip.adjustable { cursor: pointer; }
     .tile-chip .count { font-size: 12px; margin-left: 1px; }
+
+    .tile-chip-group { display: inline-flex; align-items: center; gap: 2px; }
+
+    .chip-btn {
+      width: 26px;
+      height: 30px;
+      padding: 0;
+      border-radius: 7px;
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .chip-btn:disabled { opacity: .35; cursor: default; }
+    .tile-chips .hint { flex-basis: 100%; }
 
     /* A yellow letter that is already green somewhere: assumed placed, zero movable tiles. */
     .tile-chip.placed {
@@ -331,18 +355,6 @@
       font-size: 13px;
     }
 
-    /* One line where it fits; on a phone, two rows: where clues come from, then the guess
-       stepper and Clear. */
-    .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 14px;
-    }
-    @media (max-width: 559px) {
-      .toolbar { display: grid; }
-    }
-
     .toolbar-row {
       display: flex;
       flex-wrap: wrap;
@@ -350,13 +362,122 @@
       align-items: center;
     }
 
-    .toolbar label {
+    /* Each panel is a numbered step: a header that folds the body, and a footer for what
+       must stay reachable while it is folded (the guess stepper and Start over). */
+    .step-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .step-toggle {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: inherit;
+      text-align: left;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .step-num {
+      flex: none;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--accent);
+      color: var(--on-accent);
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    /* A step that isn't reachable yet (no clues, no yellow tiles) is dimmed; a done step is ticked. */
+    .step.pending .step-num { background: var(--panel-2); color: var(--muted); border: 1px solid var(--border); }
+    .step.done .step-num::before { content: '✓'; }
+    .step.done .step-num { font-size: 0; }
+    .step.done .step-num::before { font-size: 14px; }
+
+    .step-title {
+      margin: 0;
+      font-size: 17px;
+      letter-spacing: -0.01em;
+    }
+
+    .step-chev::before {
+      content: '';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border: solid var(--muted);
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+      margin: 0 2px 4px;
+      transition: transform .15s;
+    }
+
+    .step-toggle[aria-expanded="false"] .step-chev::before { transform: rotate(-45deg); margin-bottom: 0; }
+    .step-head .help-btn { margin-left: auto; }
+    .step-head .help-btn ~ .help-btn, .step-head .clue-link-btn ~ .help-btn { margin-left: 0; }
+    .step-body { margin-top: 14px; }
+    .step-body[hidden], .step-placeholder[hidden], .clue-summary[hidden] { display: none; }
+
+    .step-placeholder {
+      margin: 10px 0 0 36px;
       color: var(--muted);
       font-size: 14px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+      line-height: 1.4;
     }
+
+    .step-foot {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .step-foot .guess-nav { margin-right: auto; }
+    .clue-intro { margin: 0 0 8px; }
+    .clue-intro + .toolbar-row { margin-bottom: 12px; }
+    .clue-note { margin: 8px 0 0 36px; font-size: 14px; }
+    .clue-note:empty { display: none; }
+
+    /* Step 1 folded: the clues in miniature, and a way back in. */
+    .clue-summary {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 14px;
+      margin: 10px 0 0 36px;
+    }
+
+    .clue-chips { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+    .mini { display: inline-flex; gap: 3px; }
+
+    .mini span {
+      min-width: 22px;
+      height: 22px;
+      padding: 0 4px;
+      border-radius: 4px;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--muted);
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+    }
+
+    .mini span.g { background: var(--green); border-color: var(--green); color: #fff; }
+    .mini span.y { background: var(--yellow); border-color: var(--yellow); color: #fff; }
+    .mini span.x { background: var(--gray); border-color: var(--gray); color: #fff; }
 
     .guess-nav {
       display: inline-flex;
@@ -378,7 +499,7 @@
       font-variant-numeric: tabular-nums;
     }
 
-    .letters { margin-bottom: 12px; }
+    .letters { margin-top: 14px; }
 
     .letters-head {
       display: flex;
@@ -400,8 +521,6 @@
     @media (max-width: 420px) {
       .letters-tools .seg button { padding: 3px 7px; }
     }
-    .letters-hint { margin: 8px 0 0; font-size: 12px; }
-    .letters-hint[hidden], #lettersBody[hidden] { display: none; }
 
     .kb { display: grid; gap: 5px; }
 
@@ -464,8 +583,8 @@
       opacity: 1;
     }
 
-    .key { -webkit-tap-highlight-color: transparent; }
-    .key:active:not(:disabled) { filter: brightness(.88); }
+    .key { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none; touch-action: manipulation; }
+    .key:active:not(.out) { filter: brightness(.88); }
     .key.shake { animation: shake .3s; }
 
     @keyframes shake {
@@ -474,7 +593,7 @@
     }
 
     .board-word {
-      margin: 8px 0 0;
+      margin: 4px 0 0;
       color: var(--muted);
       font-size: 14px;
     }
@@ -502,6 +621,15 @@
     }
 
     .slot.occupied { border-style: solid; border-color: transparent; background: none; }
+    .slot.choosable { cursor: pointer; }
+
+    /* The slot the next letter goes in: chosen by a tap, or still by a key in it. */
+    .slot.selected {
+      border: 2px solid var(--accent);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
+    }
+
+    .slot:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
     .slot.drag-over {
       border: 2px solid var(--accent);
@@ -528,6 +656,7 @@
     }
 
     .tile.yellow { background: var(--yellow); cursor: grab; }
+    .tile.yellow, .tile.trial { -webkit-user-drag: element; }   /* Safari: user-select: none alone blocks the drag */
 
     /* A letter being tried, styled like a typed but unsubmitted Wordle tile. */
     .tile.trial {
@@ -550,21 +679,71 @@
       transform: scale(.96);
     }
 
+    .tile.landed { animation: land .25s ease-out; }
+
+    @keyframes land {
+      from { transform: scale(1.14); }
+      to { transform: none; }
+    }
+
+    /* A tried letter can be removed with the × in its corner, as well as by holding it. */
+    .tile { position: relative; }
+
+    .tile-x {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      width: 20px;
+      height: 20px;
+      padding: 0;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 2px 6px var(--shadow);
+    }
+
+    .tile-x::before { content: '×'; }
+    .tile-x:hover { color: var(--bad); border-color: var(--bad); }
+
+    .board-note {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px 8px;
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .board-note.empty { display: none; }
+
+    /* ‹ Arrangement 3 of 12 ›: steps through the list in the order it is shown. */
+    .arr-nav { display: inline-flex; align-items: center; gap: 4px; }
+    .arr-nav[hidden] { display: none; }
+    .arr-nav button { padding: 0 8px 3px; font-size: 20px; line-height: 1.2; }
+    #arrPrevBtn::before { content: '‹'; }
+    #arrNextBtn::before { content: '›'; }
+    #arrIndex { font-variant-numeric: tabular-nums; }
+
     .results-head {
       display: flex;
       flex-wrap: wrap;
       gap: 4px 12px;
       align-items: baseline;
-      margin-top: 16px;
     }
 
-    .results-head h2 {
+    .results-title {
       margin: 0;
-      font-size: 17px;
-      letter-spacing: -0.01em;
+      font-size: 16px;
+      font-weight: 800;
     }
 
-    .results-head h2.muted {
+    .results-title.muted {
       color: var(--muted);
       font-size: 15px;
       font-weight: 600;
@@ -769,18 +948,9 @@
       line-height: 1;
     }
     .help-btn:hover { color: var(--accent); border-color: var(--accent); }
-    .toolbar .help-btn, .results-head .help-btn, .odds-head .help-btn { margin-left: auto; align-self: center; }
-    /* The clues help covers the whole panel, so where the grid leaves room at its right
-       it sits there, centered on the panel's height; narrower, it ends the toolbar. */
-    .clues-panel { position: relative; }
-    @media (min-width: 560px) {
-      .clues-panel .toolbar .help-btn { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); }
-    }
-    /* Copy link: an icon in the clues panel's top right corner, with a brief note beside it. */
+    .odds-head .help-btn { margin-left: auto; align-self: center; }
+    /* Copy link: an icon in the step 1 header, with a brief note beside it. */
     .clue-link-btn {
-      position: absolute;
-      top: 12px;
-      right: 14px;
       width: 28px;
       height: 28px;
       padding: 0;
@@ -790,21 +960,44 @@
     }
     .clue-link-btn:hover { color: var(--accent); border-color: var(--accent); }
     .clue-link-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .clue-link-note {
-      position: absolute;
-      top: 15px;
-      right: 50px;
-      padding: 1px 6px;
-      border-radius: 6px;
-      background: var(--panel);
-      color: var(--muted);
-      font-size: 13px;
-    }
+    .clue-link-note { color: var(--muted); font-size: 13px; }
     .clue-link-btn[hidden], .clue-link-note:empty { display: none; }
-    /* Where the grid fills the width, the corner is taken: end the toolbar's second row instead. */
-    @media (max-width: 559px) {
-      .clue-link-btn { top: auto; bottom: 20px; right: 14px; }
-      .clue-link-note { top: auto; bottom: 24px; right: 50px; }
+
+    /* First-time tips: one speech bubble at a time, in the flow right under what it explains,
+       so it never covers anything. */
+    .tip {
+      position: relative;
+      max-width: 420px;
+      margin: 12px 0;
+      font-weight: 500;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: var(--accent);
+      color: var(--on-accent);
+      font-size: 14px;
+      line-height: 1.45;
+      box-shadow: 0 12px 30px var(--shadow);
+      animation: tip-in .2s ease-out;
+    }
+
+    .tip::before {
+      content: '';
+      position: absolute;
+      top: -6px;
+      left: 24px;
+      width: 12px;
+      height: 12px;
+      background: inherit;
+      transform: rotate(45deg);
+      border-radius: 2px;
+    }
+
+    .tip p { margin: 0 0 8px; }
+    .subtitle + .tip { margin: -4px 0 16px; }
+    .tip button.link { color: inherit; font-weight: 800; }
+
+    @keyframes tip-in {
+      from { opacity: 0; transform: translateY(-4px); }
     }
     .caption-row { display: flex; align-items: flex-start; gap: 10px; }
     .caption-row .caption { flex: 1; }
@@ -1018,12 +1211,10 @@
     }
 
     @media (max-width: 480px) {
-      :root { --label-w: 50px; --gap: 5px; }
+      :root { --label-w: 54px; --gap: 5px; }
       .odds-entry .pc { display: none; }
-      /* The subtitle says "paste or import a screenshot", so the short labels are enough. */
-      .toolbar .wide { display: none; }
-      .clue-link-btn { bottom: 16px; right: 10px; }
-      .clue-link-note { bottom: 20px; right: 46px; }
+      /* The line above the buttons says "paste or import a screenshot", so the short labels are enough. */
+      .toolbar-row .wide { display: none; }
       .panel { padding: 12px; }
       .subtitle { font-size: 14px; }
     }
@@ -1039,11 +1230,7 @@
         <span aria-hidden="true">☾</span>
       </button>
     </header>
-    <p class="subtitle">
-      Work out where your yellow letters can go and try your next guess.<br>
-      Paste or import a screenshot of your game. Manual setup: type each green and yellow tile in the same slot as in
-      your game, then list all grays. Or choose Random for a practice puzzle.
-    </p>
+    <p id="subtitle" class="subtitle">Work out where your yellow letters can go, and try your next guess before you play it.</p>
 
     <section id="importPanel" class="panel" aria-label="Import screenshot" hidden>
       <p id="importNote" class="hint" role="status"></p>
@@ -1054,96 +1241,138 @@
       </div>
     </section>
 
-    <section class="panel clues-panel" aria-label="Clues">
-      <button id="clueLinkBtn" class="clue-link-btn" hidden aria-label="Copy link" title="Copy a link to these clues"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
-      <span id="clueLinkNote" class="clue-link-note" role="status"></span>
-      <div id="slotNums" class="row-grid slot-nums"></div>
-      <div id="greenRow" class="row-grid"></div>
-      <div id="yellowRow" class="row-grid"></div>
-      <div class="row-grid">
-        <div class="row-label">Gray</div>
-        <input id="grayInput" type="text" class="cell gray-cell" autocomplete="off" spellcheck="false"
-               autocapitalize="characters" autocorrect="off" enterkeyhint="done" aria-label="Gray letters: not in the word">
+    <section id="cluesPanel" class="panel step" aria-label="Clues">
+      <div class="step-head">
+        <button id="cluesToggle" type="button" class="step-toggle" aria-expanded="true" aria-controls="cluesBody">
+          <span class="step-num" aria-hidden="true">1</span>
+          <h2 class="step-title">Enter your clues</h2>
+          <span class="step-chev" aria-hidden="true"></span>
+        </button>
+        <span id="clueLinkNote" class="clue-link-note" role="status"></span>
+        <button id="clueLinkBtn" class="clue-link-btn" hidden aria-label="Copy link" title="Copy a link to these clues"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
+        <button type="button" class="help-btn" data-help="cluesHelp" aria-label="About entering clues" title="About entering clues">?</button>
       </div>
-      <div class="row-grid">
-        <div class="row-label">Tiles</div>
-        <div id="tileChips" class="tile-chips"></div>
+      <p id="clueNote" class="hint clue-note" role="status"></p>
+      <div id="cluesSummary" class="clue-summary" hidden>
+        <span id="clueChips" class="clue-chips" aria-label="Your clues"></span>
+        <button id="editCluesBtn" type="button" class="link">Edit clues</button>
+        <button id="newPuzzleBtn" type="button" class="link" hidden>New puzzle</button>
       </div>
-      <div id="clueStatus" class="status" role="status"></div>
-
-      <div class="toolbar">
-        <div class="toolbar-row">
+      <div id="cluesBody" class="step-body">
+        <p class="hint clue-intro">Paste or import a screenshot of your game, or let Random make up a practice puzzle.</p>
+        <div id="cluesToolbar" class="toolbar-row">
           <button id="pasteBtn" aria-label="Paste screenshot" title="Read your clues from a screenshot on the clipboard">Paste<span class="wide"> screenshot</span></button>
           <button id="importBtn" aria-label="Import file" title="Read your clues from a saved Wordle screenshot">Import<span class="wide"> file</span></button>
           <input id="importFile" type="file" accept="image/*" hidden>
           <button id="randomBtn" title="Make up a puzzle: one or two guesses against a past Wordle answer" disabled>Random</button>
-          <button type="button" class="help-btn" data-help="cluesHelp" aria-label="About entering clues" title="About entering clues">?</button>
         </div>
-        <div class="toolbar-row">
-          <span id="guessNav" class="guess-nav" hidden>
-            <button id="guessPrevBtn" aria-label="Previous guess" title="Show the clues one guess earlier">‹</button>
-            <span id="guessStep"></span>
-            <button id="guessNextBtn" aria-label="Next guess" title="Show the clues one guess later">›</button>
+        <p id="typeIntro" class="hint clue-intro">Or copy your colors by hand: each green and yellow letter in its slot, then the grays.</p>
+        <div id="slotNums" class="row-grid slot-nums"></div>
+        <div id="greenRow" class="row-grid"></div>
+        <div id="yellowRow" class="row-grid"></div>
+        <div class="row-grid">
+          <div class="row-label">Gray<small>ruled out</small></div>
+          <input id="grayInput" type="text" class="cell gray-cell" autocomplete="off" spellcheck="false"
+                 autocapitalize="characters" autocorrect="off" enterkeyhint="done" aria-label="Gray letters: not in the word">
+        </div>
+        <div id="doublesRow" class="row-grid" hidden>
+          <div class="row-label">Double<small>letters</small></div>
+          <div id="tileChips" class="tile-chips"></div>
+        </div>
+        <div id="clueStatus" class="status" role="status"></div>
+      </div>
+      <div class="step-foot">
+        <span id="guessNav" class="guess-nav" hidden>
+          <button id="guessPrevBtn" aria-label="Previous guess" title="Show the clues one guess earlier">‹</button>
+          <span id="guessStep"></span>
+          <button id="guessNextBtn" aria-label="Next guess" title="Show the clues one guess later">›</button>
+        </span>
+        <button id="clearBtn" title="Clear every clue and the board">Start over</button>
+      </div>
+    </section>
+
+    <section id="boardPanel" class="panel step" aria-label="Board">
+      <div class="step-head">
+        <button id="boardToggle" type="button" class="step-toggle" aria-expanded="true" aria-controls="boardBody">
+          <span class="step-num" aria-hidden="true">2</span>
+          <h2 class="step-title">Try letters on the board</h2>
+          <span class="step-chev" aria-hidden="true"></span>
+        </button>
+      </div>
+      <p id="boardPlaceholder" class="step-placeholder" hidden>Enter a clue above and the board appears here, or <button type="button" id="boardAnywayBtn" class="link">open it now</button> to try a word without clues.</p>
+      <div id="boardBody" class="step-body">
+        <div id="board" class="row-grid" aria-label="Tile board"></div>
+        <p id="boardNote" class="board-note">
+          <span id="arrNav" class="arr-nav" hidden>
+            <button type="button" id="arrPrevBtn" aria-label="Previous arrangement" title="Put the previous arrangement on the board"></button>
+            <span id="arrIndex" role="status"></span>
+            <button type="button" id="arrNextBtn" aria-label="Next arrangement" title="Put the next arrangement on the board"></button>
           </span>
-          <button id="clearBtn">Clear</button>
+          <span id="boardNoteText" role="status"></span>
+        </p>
+        <p id="boardWord" class="board-word" role="status"></p>
+        <div id="boardStatus" class="status" role="status"></div>
+        <div class="letters" aria-label="Letters still possible">
+          <div class="letters-head">
+            <span id="lettersTitle" class="letters-title"></span>
+            <span class="letters-tools">
+              <span id="lettersSeg" class="seg" role="group" aria-label="Letters view">
+                <button data-view="keyboard" title="Keyboard layout">Keyboard</button>
+                <button data-view="vc" title="Vowels and consonants" aria-label="Vowels and consonants (V/C)">V/C</button>
+                <button data-view="rank" title="Most common letters in Wordle answers first">Rank</button>
+              </span>
+              <button type="button" class="help-btn" data-help="lettersHelp" aria-label="About the board and the letters" title="About the board and the letters">?</button>
+            </span>
+          </div>
+          <div id="lettersBody"></div>
         </div>
       </div>
     </section>
 
-    <section class="panel" aria-label="Arrangements">
-      <div class="letters" aria-label="Letters still possible">
-        <div class="letters-head">
-          <span id="lettersTitle" class="letters-title"></span>
-          <span class="letters-tools">
-            <span id="lettersSeg" class="seg" role="group" aria-label="Letters view">
-              <button data-view="hide" title="Hide the letters">Hide</button>
-              <button data-view="keyboard" title="Keyboard layout">Keyboard</button>
-              <button data-view="vc" title="Vowels and consonants" aria-label="Vowels and consonants (V/C)">V/C</button>
-              <button data-view="rank" title="Most common letters in Wordle answers first">Rank</button>
-            </span>
-            <button type="button" class="help-btn" data-help="lettersHelp" aria-label="About the letters" title="About the letters">?</button>
-          </span>
-        </div>
-        <div id="lettersBody"></div>
-        <p id="lettersHint" class="hint letters-hint"><span class="tap">Tap</span> a letter to try it. On the board, drag a tile to move or swap it; hold a tried one to remove it.</p>
-      </div>
-      <div id="board" class="row-grid" aria-label="Tile board"></div>
-      <p id="boardWord" class="board-word" role="status"></p>
-      <div id="boardStatus" class="status" role="status"></div>
-
-      <div class="results-head">
-        <h2 id="resultsTitle"></h2>
-        <button id="swapResultsBtn" class="link" hidden></button>
-        <button id="clearPinsBtn" class="link" hidden>Clear pins</button>
+    <section id="resultsPanel" class="panel step" aria-label="Arrangements">
+      <div class="step-head">
+        <button id="resultsToggle" type="button" class="step-toggle" aria-expanded="true" aria-controls="resultsBody">
+          <span class="step-num" aria-hidden="true">3</span>
+          <h2 class="step-title">Browse every legal arrangement</h2>
+          <span class="step-chev" aria-hidden="true"></span>
+        </button>
         <button type="button" class="help-btn" data-help="arrangementsHelp" aria-label="About the arrangements" title="About the arrangements">?</button>
       </div>
-      <p id="forced" class="forced"></p>
-      <div id="wordNote" class="word-note" hidden>
-        <span id="wordNoteText"></span>
-        <span class="seg" role="group" aria-label="How to show arrangements no word fits">
-          <button data-mode="dim" title="Dim and strike them through">Dim</button>
-          <button data-mode="hide" title="Leave them out of the list and counts">Hide</button>
-          <button data-mode="off" title="Show them like any other arrangement">Show</button>
-        </span>
-      </div>
-
-      <div id="listWrap" hidden>
-        <p class="caption" id="listCaption"></p>
-        <div id="list"></div>
-      </div>
-
-      <div id="summaryWrap" hidden>
-        <div class="caption-row">
-          <p class="caption" id="summaryCaption"></p>
-          <button type="button" class="help-btn" data-help="gridHelp" aria-label="About the grid" title="About the grid">?</button>
+      <p id="resultsPlaceholder" class="step-placeholder" hidden></p>
+      <div id="resultsBody" class="step-body">
+        <div class="results-head">
+          <p id="resultsTitle" class="results-title"></p>
+          <button id="swapResultsBtn" class="link" hidden></button>
+          <button id="clearPinsBtn" class="link" hidden>Clear pins</button>
         </div>
-        <div id="summary"></div>
-        <div class="legend" aria-label="Legend">
-          <span><span class="sum-cell swatch" style="background: color-mix(in srgb, var(--yellow) 35%, var(--panel-2))">4</span> Possible</span>
-          <span><span class="sum-cell swatch all">7</span> Forced</span>
-          <span><span class="sum-cell swatch none"></span> Impossible</span>
-          <span><span class="sum-cell swatch fixed">A</span> Solved</span>
-          <span><span class="sum-cell swatch pinned" style="background: color-mix(in srgb, var(--yellow) 35%, var(--panel-2))">3</span> Pinned</span>
+        <p id="forced" class="forced"></p>
+        <div id="wordNote" class="word-note" hidden>
+          <span id="wordNoteText"></span>
+          <span class="seg" role="group" aria-label="How to show arrangements no word fits">
+            <button data-mode="dim" title="Dim and strike them through">Dim</button>
+            <button data-mode="hide" title="Leave them out of the list and counts">Hide</button>
+            <button data-mode="off" title="Show them like any other arrangement">Show</button>
+          </span>
+        </div>
+
+        <div id="listWrap" hidden>
+          <p class="caption" id="listCaption"></p>
+          <div id="list"></div>
+        </div>
+
+        <div id="summaryWrap" hidden>
+          <div class="caption-row">
+            <p class="caption" id="summaryCaption"></p>
+            <button type="button" class="help-btn" data-help="gridHelp" aria-label="About the grid" title="About the grid">?</button>
+          </div>
+          <div id="summary"></div>
+          <div class="legend" aria-label="Legend">
+            <span><span class="sum-cell swatch" style="background: color-mix(in srgb, var(--yellow) 35%, var(--panel-2))">4</span> Possible</span>
+            <span><span class="sum-cell swatch all">7</span> Forced</span>
+            <span><span class="sum-cell swatch none"></span> Impossible</span>
+            <span><span class="sum-cell swatch fixed">A</span> Solved</span>
+            <span><span class="sum-cell swatch pinned" style="background: color-mix(in srgb, var(--yellow) 35%, var(--panel-2))">3</span> Pinned</span>
+          </div>
         </div>
       </div>
     </section>
@@ -1161,7 +1390,7 @@
           <span id="oddsScopeWrap" class="odds-scope">
             <span class="hint">Use:</span>
             <span id="oddsScope" class="seg" role="group" aria-label="Clues the odds use">
-              <button data-scope="vowels" title="Use only what you know about the vowels">Vowels only</button>
+              <button data-scope="vowels" title="Use only what you know about the vowels; ignore the consonants">Vowel clues</button>
               <button data-scope="all" title="Also use your consonants: gray ones are out, green and yellow ones are in">All clues</button>
             </span>
           </span>
@@ -1202,31 +1431,32 @@
     <h2 id="cluesHelpTitle">Entering clues</h2>
     <div class="help-body">
       <p><b>From a screenshot:</b> Paste screenshot reads one you’ve copied, and Import file opens a saved one; on a computer, Ctrl/⌘+V also works. Check the letters, fix any that were misread, then choose Use these clues. If the puzzle was solved, the all-green row is left out, so the clues are as they stood just before the answer.</p>
-      <p><b>Random</b> makes up a puzzle to practice on: one or two guesses against a past Wordle answer, which stays hidden. It’s chosen so that from a few to a few dozen arrangements fit a word.</p>
+      <p><b>Random</b> makes up a puzzle to practice on: one or two guesses against a past Wordle answer, which stays hidden. It’s chosen so that from a few to a few dozen arrangements fit a word. A line under the heading says which guesses were made up, and New puzzle draws another.</p>
       <p><b>‹ Guess 2/3 ›</b> appears after a screenshot or Random: the clues as they stood after each guess, here after the second of three. ‹ and › step back and forth, say to see how much one guess narrowed things down. Editing a clue by hand ends the stepping and keeps the clues shown.</p>
-      <p><b>By hand:</b></p>
+      <p><b>By hand</b>, copy the colors Wordle gave your letters:</p>
       <dl>
-        <dt>Green</dt>
+        <dt>Green (right spot)</dt>
         <dd>The letter in each slot you’ve solved. Typing moves to the next slot; space skips one.</dd>
-        <dt>Yellow</dt>
-        <dd>Under each slot, every letter that turned yellow there, across all your guesses.</dd>
-        <dt>Gray</dt>
+        <dt>Yellow (wrong spot)</dt>
+        <dd>Under each slot, every letter that turned yellow there, across all your guesses. Each becomes a tile on the board.</dd>
+        <dt>Gray (ruled out)</dt>
         <dd>Letters that aren’t in the word. If a letter turned gray in one place but green or yellow in another, enter it here too: the word then has no more copies of it than your green and yellow ones.</dd>
-        <dt>Tiles</dt>
-        <dd>The yellow letters still to place, one tile each; a letter that’s already green starts with none. If a single guess showed a letter twice in green or yellow, <span class="tap">tap</span> it here to add a tile.</dd>
+        <dt>Double letters</dt>
+        <dd>A yellow letter is one tile on the board, or none if it’s already green. When a letter could be in the word twice (yellow in two slots, or green in one and yellow in another), this row appears: press + to add a tile for the second copy, and − to take it away again.</dd>
       </dl>
-      <p>Clear starts over. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day.</p>
+      <p>After a screenshot, Random or a shared link, this step folds to a summary of the clues; Edit clues or the step’s heading opens it again. Start over clears everything, board included. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day.</p>
+      <p><button type="button" id="tipsAgainBtn" class="link">Show the first-time tips again</button></p>
     </div>
     <form method="dialog"><button>Close</button></form>
   </dialog>
 
   <dialog id="arrangementsHelp" class="words-dialog help-dialog" aria-labelledby="arrangementsHelpTitle">
-    <h2 id="arrangementsHelpTitle">Arrangements</h2>
+    <h2 id="arrangementsHelpTitle">Legal arrangements</h2>
     <div class="help-body">
-      <p>Every way your yellow tiles can fill the open slots without going where they were yellow. A · marks a slot whose letter you don’t know yet.</p>
+      <p>Every way your yellow tiles can fill the open slots without going where they were yellow. A · marks a slot whose letter you don’t know yet. The one on the board is outlined, and the ‹ › arrows under the board cycle through the list in this order.</p>
       <p><span class="tap">Tap</span> an arrangement to put it on the board. Hold it (or right-click it) to see the dictionary words that match it; since that can give the answer away, you’re asked first, once per tab.</p>
       <p>A line such as “E must go in slot 4” means every arrangement agrees. Longer lists are sorted into groups by where one letter goes; <span class="tap">tap</span> a group heading to pin that letter there. Lists of more than 24 stay folded until you narrow them with pins or choose Show all.</p>
-      <p>An arrangement is dimmed and struck through when no word in the word list fits it and your clues. When some don’t fit, Dim, Hide and Show choose how they appear.</p>
+      <p>Arrangements that no word in the word list fits, given your clues, are left out by default. When there are some, Dim, Hide and Show choose whether they are shown dimmed and struck through, left out, or shown like the rest.</p>
       <p>Put grid first moves the grid of where each letter can go above the list.</p>
     </div>
     <form method="dialog"><button>Close</button></form>
@@ -1267,10 +1497,11 @@
   </dialog>
 
   <dialog id="lettersHelp" class="words-dialog help-dialog" aria-labelledby="lettersHelpTitle">
-    <h2 id="lettersHelpTitle">Letters left</h2>
+    <h2 id="lettersHelpTitle">The board and the letters</h2>
     <div class="help-body">
-      <p>The letters that could still be in the word. Green and yellow keys are from your clues. Gray letters can’t be tapped: Keyboard and Rank keep them in place, and V/C leaves them out.</p>
-      <p><b><span class="tap">Tap</span> a letter</b> to try it in the first blank board slot that allows it. On the board, <b>drag</b> a tile to move or swap it, and <b>hold</b> a tried letter to remove it. Green tiles stay fixed.</p>
+      <p><b>The board</b> shows one legal arrangement of your yellow tiles, with green letters fixed. <b>Drag</b> a yellow tile to another slot to move or swap it; a tile in a slot where it was yellow is flagged. ‹ Arrangement 3 of 12 › says which of the listed arrangements is showing, and ‹ › cycle through them in the list’s order, round and round.</p>
+      <p><b>Available letters</b>, under the board, are the ones that could still be in the word; green and yellow keys are from your clues. <b><span class="tap">Tap</span> a letter</b> to try it on the board: in the empty slot you chose (<span class="tap">tap</span> one first), or else in the first blank slot that allows it. A tried letter can be dragged too, and its × removes it (on a touch screen, holding it works as well).</p>
+      <p><b>Hold</b> a letter (or right-click it) to mark it gray without going back to the clues; hold a gray one to let it back in. Gray letters don’t go on the board: Keyboard and Rank keep them in place, dimmed, and V/C leaves them out.</p>
       <p>Fill the board to see whether the word is in the word list and whether it has been a Wordle answer.</p>
       <dl>
         <dt>Keyboard</dt>
@@ -1278,7 +1509,7 @@
         <dt>V/C</dt>
         <dd>Vowels, then Y (in five-letter words it mostly acts as one), then consonants.</dd>
         <dt>Rank</dt>
-        <dd>Letters by how many Wordle answers contain them, most common first. The order doesn’t change with your clues, so it’s the same every game. On a computer, hover over a letter to see its share. The More Analysis section has the full table.</dd>
+        <dd>Letters by how many Wordle answers contain them, most common first. The order doesn’t change with your clues, so it’s the same every game. On a computer, hover over a letter to see its share. More analysis, at the bottom, has the full table.</dd>
       </dl>
     </div>
     <form method="dialog"><button>Close</button></form>
@@ -1298,13 +1529,16 @@
 
     const STATE_KEY = 'wordle-sandbox-v2';
     const OLD_STATE_KEY = 'wordle-sandbox-state';
-    const HIDE_KEY = 'wordle-sandbox-hide-nonwords';   // earlier on/off setting, read once
-    const WORD_MODE_KEY = 'wordle-sandbox-nonword-mode';
+    // The key changed when the default became Hide: a stored Dim was mostly the old default
+    // written back, so it is read no more. A choice made since is stored under the new key.
+    const OLD_WORD_MODE_KEYS = ['wordle-sandbox-hide-nonwords', 'wordle-sandbox-nonword-mode'];
+    const WORD_MODE_KEY = 'wordle-sandbox-nonword-mode-2';
     const LETTERS_VIEW_KEY = 'wordle-sandbox-letters-view';
     const ODDS_SCOPE_KEY = 'wordle-sandbox-odds-scope';
     const RESULTS_ORDER_KEY = 'wordle-sandbox-results-order';
     const ANALYSIS_KEY = 'wordle-sandbox-analysis-open';
     const WORDS_OK_KEY = 'wordle-sandbox-words-ok';   // sessionStorage: matching words confirmed
+    const TIPS_KEY = 'wordle-sandbox-tips-seen';      // first-time tips already dismissed
     const FLAT_LIST_MAX = 8;      // at or below this, list without group headers
     const COLLAPSE_OVER = 24;     // above this, hide the list until asked or narrowed by pins
 
@@ -1324,13 +1558,13 @@
     let groupLetter = null;       // yellow letter tapped in the grid to group the list by, or null
     let board = '';               // arrangement currently on the board
     let trials = [];              // per slot: a letter being tried in a blank board slot
-    let lettersView = 'keyboard'; // letters panel: 'keyboard' (default), 'vc', 'rank' or 'hide'
+    let lettersView = 'keyboard'; // letters panel: 'keyboard' (default), 'vc' or 'rank'
     let listExpanded = false;
     let draggedPos = null;
     let touchOverPos = null;
     let wordList = 'loading';     // words/5.txt as { words, byPos } once loaded, or 'failed'
     let noWord = new Set();       // arrangements that no dictionary word fits
-    let wordMode = 'dim';         // non-word treatment: 'dim', 'hide' or 'off'
+    let wordMode = 'hide';        // non-word treatment: 'hide' (default), 'dim' or 'off'
     let answerWords = 'loading';  // Wordle answers (words/answers.csv) once loaded, or 'loading' / 'failed'
     let answerUses = new Map();   // answer -> { uses, last }: how often NYT used it and the last date
     let answersThrough = '';      // the answer list's last puzzle date, formatted, once loaded
@@ -1339,6 +1573,12 @@
     let oddsScope = 'vowels';     // odds use 'vowels' only (default) or 'all' clue letters
     let gridFirst = false;        // the where-each-letter-can-go grid above the arrangement list
     let analysisOpen = false;     // vowel odds and letter ranking shown (closed by default)
+    let cluesCollapsed = false;   // step 1 folded to a summary line, after an import, Random or a link
+    let stepOverride = { board: null, results: null };  // a step the user opened or closed by hand
+    let selectedPos = null;       // board slot chosen for the next letter, or null for the first blank
+    let shownOrder = [];          // the arrangements in the order the list shows them
+    let justMoved = [];           // slots whose tile just moved, for the landing animation
+    let suppressClick = false;    // a hold just removed a tile, so the click that follows is not a tap
 
     // ── Utilities ─────────────────────────────────────────────────────────────
 
@@ -1668,7 +1908,7 @@
       }
 
       const greenRow = $('greenRow');
-      greenRow.innerHTML = '<div class="row-label">Green</div>';
+      greenRow.innerHTML = '<div class="row-label">Green<small>right spot</small></div>';
       for (let pos = 0; pos < len; pos++) {
         const input = makeCell('green', pos);
         input.value = greens[pos];
@@ -1680,7 +1920,7 @@
       }
 
       const yellowRow = $('yellowRow');
-      yellowRow.innerHTML = '<div class="row-label">Yellow</div>';
+      yellowRow.innerHTML = '<div class="row-label">Yellow<small>wrong spot</small></div>';
       for (let pos = 0; pos < len; pos++) {
         const input = makeCell('yellow', pos);
         input.value = yellows[pos];
@@ -1704,51 +1944,62 @@
       $('clueStatus').textContent = errors.join(' ');
     }
 
+    // The tiles themselves are on the board; this row is only for their counts, so it shows
+    // just the letters whose count can change (yellow in two slots, or green elsewhere too).
     function renderTileChips() {
       const wrap = $('tileChips');
       wrap.innerHTML = '';
+      const doubles = tileInfo.filter(t => t.max > t.min);
+      $('doublesRow').hidden = !doubles.length;
+      if (!doubles.length) return;
 
-      if (!tileInfo.length) {
-        wrap.innerHTML = '<span class="hint">Yellow tiles appear here as you type them.</span>';
-        return;
-      }
+      const stepBtn = (label, name, enabled, onClick) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'chip-btn';
+        btn.textContent = label;
+        btn.setAttribute('aria-label', name);
+        btn.title = name;
+        btn.disabled = !enabled;
+        btn.addEventListener('click', onClick);
+        return btn;
+      };
 
-      for (const t of tileInfo) {
-        const chip = document.createElement('button');
-        chip.type = 'button';
+      const fits = movable.length < openSlots().length;
+      for (const t of doubles) {
+        const group = document.createElement('span');
+        group.className = 'tile-chip-group';
+        const chip = document.createElement('span');
         chip.className = 'tile-chip';
         chip.textContent = t.letter;
-
         if (t.count === 0) {
           chip.classList.add('placed');
-          chip.title = `${t.letter} is already green. Click if the word has another ${t.letter}.`;
+          chip.title = `${t.letter} is already green: no tile unless the word has another`;
         } else {
-          chip.title = t.max > t.min ? `Click to change how many ${t.letter} tiles` : `${t.letter} tile`;
+          chip.title = `${t.count} ${t.letter} tile${t.count === 1 ? '' : 's'} on the board`;
         }
-        if (t.count > 1) {
-          const c = document.createElement('span');
-          c.className = 'count';
-          c.textContent = `×${t.count}`;
-          chip.appendChild(c);
-        }
-
-        if (t.max > t.min) {
-          chip.classList.add('adjustable');
-          chip.addEventListener('click', () => {
-            const fits = movable.length < openSlots().length;
-            countOverrides[t.letter] = t.count < t.max && fits ? t.count + 1 : t.min;
+        const c = document.createElement('span');
+        c.className = 'count';
+        c.textContent = `×${t.count}`;
+        chip.appendChild(c);
+        group.append(chip,
+          stepBtn('−', `Remove a ${t.letter} tile`, t.count > t.min, () => {
+            countOverrides[t.letter] = t.count - 1;
             userEdit();
-          });
-        }
-        wrap.appendChild(chip);
+          }),
+          stepBtn('+', `Add another ${t.letter} tile`, t.count < t.max && fits, () => {
+            countOverrides[t.letter] = t.count + 1;
+            userEdit();
+          }));
+        wrap.appendChild(group);
       }
 
-      if (tileInfo.some(t => t.max > t.min)) {
-        const hint = document.createElement('span');
-        hint.className = 'hint';
-        hint.textContent = `${TAP} a letter here to change its tile count.`;
-        wrap.appendChild(hint);
-      }
+      const hint = document.createElement('span');
+      hint.className = 'hint';
+      hint.textContent = doubles.some(t => t.green)
+        ? 'Use + if the word has another copy of a letter that is already green.'
+        : 'Use + when one guess showed the letter twice.';
+      wrap.appendChild(hint);
     }
 
     // ── Clue input handlers ───────────────────────────────────────────────────
@@ -1879,9 +2130,14 @@
       // Tried letters only live in blank slots; one displaced by a tile is dropped.
       trials = trials.map((t, pos) => t && !greens[pos] && board[pos] === '?' ? t : '');
 
+      // The chosen slot must still be one a letter can go in.
+      if (selectedPos !== null && (greens[selectedPos] || board[selectedPos] !== '?')) selectedPos = null;
+
       const el = $('board');
-      el.innerHTML = '<div class="row-label">Board</div>';
+      el.innerHTML = '<div class="row-label">Board<small>try here</small></div>';
       const conflicts = boardConflicts();
+      const landed = justMoved;
+      justMoved = [];
 
       for (let pos = 0; pos < len; pos++) {
         const slot = document.createElement('div');
@@ -1893,18 +2149,43 @@
         slot.setAttribute('aria-label', letter
           ? `Slot ${pos + 1}: ${letter}, ${kind === 'trial' ? 'tried' : kind}` : `Slot ${pos + 1}: empty`);
 
+        // A blank slot, or one with a tried letter, can be chosen for the next letter.
+        if (!greens[pos] && board[pos] === '?') {
+          slot.classList.add('choosable');
+          slot.setAttribute('role', 'button');
+          slot.tabIndex = 0;
+          if (selectedPos === pos) {
+            slot.classList.add('selected');
+            slot.setAttribute('aria-pressed', 'true');
+          }
+          slot.addEventListener('click', e => {
+            if (suppressClick || e.target.closest('.tile-x')) return;
+            toggleSelected(pos);
+          });
+          slot.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              toggleSelected(pos);
+            } else if (e.key === 'Backspace' || e.key === 'Delete') {
+              trials[pos] = '';
+              renderBoard();
+            }
+          });
+        }
+
         if (letter) {
           slot.classList.add('occupied');
           const tile = document.createElement('div');
           tile.className = `tile ${kind}`;
           tile.textContent = letter;
           tile.dataset.pos = String(pos);
+          if (landed.includes(pos)) tile.classList.add('landed');
 
           if (kind === 'green') {
             tile.title = 'Green tile (fixed)';
           } else {
             if (conflicts.includes(pos)) tile.classList.add('conflict');
-            tile.title = kind === 'trial' ? 'Your letter: drag to move, hold to remove' : 'Drag to move or swap';
+            tile.title = kind === 'trial' ? 'Your letter: drag to move, × to remove' : 'Drag to move or swap';
             tile.draggable = true;
             tile.addEventListener('dragstart', e => {
               cancelHold();
@@ -1918,7 +2199,19 @@
               renderBoard();
             });
             if (kind === 'trial') {
-              tile.addEventListener('mousedown', e => startHold(pos, e.clientX, e.clientY));
+              const x = document.createElement('button');
+              x.type = 'button';
+              x.className = 'tile-x';
+              x.setAttribute('aria-label', `Remove ${letter} from slot ${pos + 1}`);
+              x.title = `Remove ${letter}`;
+              x.addEventListener('mousedown', e => e.stopPropagation());
+              x.addEventListener('click', e => {
+                e.stopPropagation();
+                trials[pos] = '';
+                selectedPos = pos;
+                renderBoard();
+              });
+              tile.appendChild(x);
             }
           }
           slot.appendChild(tile);
@@ -1940,6 +2233,50 @@
 
       $('boardStatus').textContent = [...new Set(conflicts.map(pos => slotConflict(pos)))].join(' ');
       renderBoardWord();
+      renderBoardNote();
+    }
+
+    function toggleSelected(pos) {
+      selectedPos = selectedPos === pos ? null : pos;
+      renderBoard();
+    }
+
+    // What the board is showing, so a change there is seen to do something: which of the
+    // listed arrangements it is (with ‹ › to step through them), why it isn't one, or that
+    // the blanks are still to fill. A conflict is reported separately, in red.
+    function renderBoardNote() {
+      const letters = Array.from({ length: len }, (_, pos) => slotLetter(pos));
+      const full = letters.every(Boolean);
+      const fill = full ? '' : `${TAP} an empty slot, then a letter below, to fill it.`;
+      const i = shownOrder.indexOf(board);
+      const nav = movable.length > 0 && shownOrder.length > 1;
+      let note = '';
+      if (movable.length && shownOrder.length) {
+        if (i >= 0) note = nav ? fill : `Arrangement 1 of 1. ${fill}`.trim();
+        else if (wordMode !== 'off' && noWord.has(board)) note = `No word in the word list fits this arrangement. ${fill}`.trim();
+        else if (pins.size) note = `This arrangement doesn’t match your pins. ${fill}`.trim();
+        else note = fill;
+      } else if (!full && letters.some(l => l) && !greens.every(Boolean)) {
+        note = `Fill the blanks to check the word. ${fill}`.trim();
+      }
+      $('arrNav').hidden = !nav;
+      if (nav) $('arrIndex').textContent = i >= 0 ? `Arrangement ${i + 1} of ${shownOrder.length}` : `${shownOrder.length} arrangements`;
+      $('boardNoteText').textContent = note;
+      $('boardNote').classList.toggle('empty', !nav && !note);
+    }
+
+    // ‹ and › put the previous or next listed arrangement on the board, wrapping at the ends
+    // so a cycle through them needs no pointer movement; from one that isn't listed (hidden
+    // as a non-word, or outside the pins), they start at either end.
+    function stepArrangement(delta) {
+      const n = shownOrder.length;
+      if (!n) return;
+      const i = shownOrder.indexOf(board);
+      const next = i < 0 ? (delta > 0 ? 0 : n - 1) : (i + delta + n) % n;
+      board = shownOrder[next];
+      countOnce('arrangement-step');
+      refreshResults({ keepBoard: true });
+      document.querySelector('#list .arr.current')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
 
     // Once every slot holds a letter, say whether the word is in the list and, once the
@@ -1990,11 +2327,15 @@
       [cur[from], cur[to]] = [cur[to], cur[from]];
       [trials[from], trials[to]] = [trials[to], trials[from]];
       board = cur.join('');
+      justMoved = [from, to];
       refreshResults({ keepBoard: true });
+      document.querySelector('#list .arr.current')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      countOnce('board-move');
     }
 
-    // Holding a tried letter still for HOLD_MS removes it; moving more than MOVE_PX
-    // first makes it a drag instead, and a quick tap does nothing.
+    // On a touch screen, holding a tried letter still for HOLD_MS removes it; moving more
+    // than MOVE_PX first makes it a drag instead, and a quick tap chooses its slot. With a
+    // mouse the × removes it, so a slow press before a drag never takes the tile away.
     const HOLD_MS = 500;
     const MOVE_PX = 8;
     let hold = null;              // { pos, x, y, timer } while a press may become a hold
@@ -2009,6 +2350,7 @@
           draggedPos = null;
           touchOverPos = null;
           trials[p] = '';
+          suppressClick = true;
           navigator.vibrate?.(15);
           renderBoard();
         }, HOLD_MS),
@@ -2021,22 +2363,23 @@
       hold = null;
     }
 
-    document.addEventListener('mousemove', e => {
-      if (hold && Math.hypot(e.clientX - hold.x, e.clientY - hold.y) > MOVE_PX) cancelHold();
-    });
-    document.addEventListener('mouseup', cancelHold);
-
     // Touch drag: HTML5 drag events don't fire on iOS Safari, so mirror them with touch
     // events. touchmove fires on the element where the touch started, so elementFromPoint
     // finds what's under the finger. A touch only becomes a drag after moving MOVE_PX.
     let touchStart = null;        // { x, y, dragging }
 
     document.addEventListener('touchstart', e => {
+      const x = e.target.closest('#board .tile-x');
+      if (x) {
+        e.preventDefault();
+        x.click();
+        return;
+      }
       const tileEl = e.target.closest('#board .tile.yellow, #board .tile.trial');
       if (!tileEl) return;
       const touch = e.touches[0];
       draggedPos = Number(tileEl.dataset.pos);
-      touchStart = { x: touch.clientX, y: touch.clientY, dragging: false };
+      touchStart = { x: touch.clientX, y: touch.clientY, dragging: false, held: false };
       if (tileEl.classList.contains('trial')) startHold(draggedPos, touch.clientX, touch.clientY);
       e.preventDefault();
     }, { passive: false });
@@ -2068,6 +2411,7 @@
 
     document.addEventListener('touchend', () => {
       cancelHold();
+      suppressClick = false;
       if (draggedPos === null) return;
       const from = draggedPos;
       const to = touchOverPos;
@@ -2076,6 +2420,7 @@
       touchOverPos = null;
       touchStart = null;
       if (dragged && to !== null) moveTile(from, to);
+      else if (!dragged && trials[from]) toggleSelected(from);   // a plain tap on a tried letter
       else renderBoard();
     });
 
@@ -2102,17 +2447,43 @@
       return '';
     }
 
+    function shake(el) {
+      el.classList.remove('shake');
+      void el.offsetWidth;    // restart the animation
+      el.classList.add('shake');
+    }
+
+    // The letter goes in the chosen slot if there is one (even where it was yellow: the
+    // conflict is then shown), else in the first blank slot that allows it. After a chosen
+    // slot is filled, the choice moves on to the next blank one, like typing.
     function addTrial(letter, keyEl) {
-      const pos = [...Array(len).keys()].find(p =>
-        !greens[p] && board[p] === '?' && !trials[p] && !yellows[p].includes(letter));
-      if (pos === undefined) {
-        keyEl.classList.remove('shake');
-        void keyEl.offsetWidth;    // restart the animation
-        keyEl.classList.add('shake');
-        return;
+      let pos = selectedPos;
+      if (pos === null) {
+        pos = [...Array(len).keys()].find(p =>
+          !greens[p] && board[p] === '?' && !trials[p] && !yellows[p].includes(letter));
+        if (pos === undefined) {
+          shake(keyEl);
+          return;
+        }
       }
       trials[pos] = letter;
+      if (selectedPos !== null) {
+        selectedPos = [...Array(len).keys()].find(p => p > pos && !greens[p] && board[p] === '?' && !trials[p]) ?? null;
+      }
+      countOnce('letter-tap');
       renderBoard();
+    }
+
+    // Holding a key (or right-clicking it) marks the letter gray, or lets a gray one back in.
+    function toggleGray(letter, keyEl) {
+      if (greens.includes(letter) || yellows.some(cell => cell.includes(letter))) {
+        shake(keyEl);
+        return;
+      }
+      grays = grays.includes(letter) ? grays.replace(letter, '') : normalizeLetters(grays + letter);
+      $('grayInput').value = grays;
+      navigator.vibrate?.(15);
+      userEdit();
     }
 
     function renderLetters() {
@@ -2120,15 +2491,13 @@
       document.querySelectorAll('#lettersSeg button').forEach(btn => {
         btn.setAttribute('aria-pressed', String(btn.dataset.view === lettersView));
       });
+      const exclude = CLICK ? 'hold or right-click to exclude' : 'hold to exclude';
       $('lettersTitle').innerHTML = ruledOut.size
-        ? `<b>${26 - ruledOut.size}</b> letters left`
-        : 'Letters <span class="hint">(add gray letters to narrow these)</span>';
+        ? `<b>${26 - ruledOut.size}</b> available letters <span class="hint">(${exclude})</span>`
+        : `Available letters <span class="hint">(${exclude})</span>`;
 
       const body = $('lettersBody');
       body.innerHTML = '';
-      body.hidden = lettersView === 'hide';
-      $('lettersHint').hidden = lettersView === 'hide';
-      if (lettersView === 'hide') return;
 
       const key = letter => {
         const status = letterStatus(letter, ruledOut);
@@ -2137,14 +2506,17 @@
         btn.className = `key ${status}`;
         btn.textContent = letter;
         if (status === 'out') {
-          btn.disabled = true;
-          btn.title = `${letter} is gray`;
+          // Not disabled, so that a hold can let it back in; it just doesn't go on the board.
+          btn.setAttribute('aria-disabled', 'true');
+          btn.title = `${letter} is gray; ${exclude.replace('to exclude', 'to let it back in')}`;
+          btn.addEventListener('click', () => { if (!btn.dataset.held) shake(btn); });
         } else {
-          btn.title = `Try ${letter} in the first blank slot that allows it`;
-          btn.addEventListener('click', () => addTrial(letter, btn));
+          btn.title = `Try ${letter} in the chosen slot, or the first blank one that allows it`;
+          btn.addEventListener('click', () => { if (!btn.dataset.held) addTrial(letter, btn); });
         }
+        addHold(btn, () => toggleGray(letter, btn));
         const share = lettersView === 'rank' && letterRanking?.find(r => r.letter === letter);
-        if (share) btn.title = `${status === 'out' ? btn.title : `Click to try ${letter} in the first blank slot that allows it`}. ` +
+        if (share) btn.title = `${status === 'out' ? btn.title : `Click to try ${letter} in the chosen slot, or the first blank one that allows it`}. ` +
           `${letter} is in ${pct(share.p)} of all Wordle answers.`;
         return btn;
       };
@@ -2452,15 +2824,16 @@
       btn.addEventListener('click', () => {
         if (btn.dataset.held) return;
         board = a;
+        countOnce('arrangement-tap');
         refreshResults({ keepBoard: true });
       });
       addWordsHold(btn, a);
       return btn;
     }
 
-    // Holding an arrangement (or right-clicking it) lists the dictionary words matching it,
-    // after a once-per-tab check that the player wants that spoiler.
-    function addWordsHold(btn, a) {
+    // Holding a button still for HOLD_MS, or right-clicking it, runs action; the release
+    // after a hold is not a click (btn.dataset.held says so until it has passed).
+    function addHold(btn, action) {
       let timer = null, start = null;
       const cancel = () => { clearTimeout(timer); timer = null; };
       btn.addEventListener('pointerdown', e => {
@@ -2468,10 +2841,10 @@
         start = { x: e.clientX, y: e.clientY };
         timer = setTimeout(() => {
           timer = null;
-          btn.dataset.held = '1';  // the release that follows isn't a tap
+          btn.dataset.held = '1';
           document.addEventListener('pointerup', () => setTimeout(() => delete btn.dataset.held), { once: true });
           navigator.vibrate?.(15);
-          askThenShowWords(a);
+          action();
         }, HOLD_MS);
       });
       btn.addEventListener('pointermove', e => {
@@ -2480,8 +2853,14 @@
       for (const type of ['pointerup', 'pointerleave', 'pointercancel']) btn.addEventListener(type, cancel);
       btn.addEventListener('contextmenu', e => {
         e.preventDefault();
-        askThenShowWords(a);
+        action();
       });
+    }
+
+    // Holding an arrangement (or right-clicking it) lists the dictionary words matching it,
+    // after a once-per-tab check that the player wants that spoiler.
+    function addWordsHold(btn, a) {
+      addHold(btn, () => askThenShowWords(a));
     }
 
     // sessionStorage, not a cookie: it lasts as long as the tab and is never sent anywhere.
@@ -2696,11 +3075,11 @@
       } else if (hiddenAll) {
         title = 'None of the legal arrangements fits a known word.';
       } else if (!total) {
-        title = 'No legal arrangement fits these clues. Check the Green, Yellow and Tiles rows.';
+        title = 'No legal arrangement fits these clues. Check the Green and Yellow rows.';
       } else if (pins.size) {
         title = `${filtered.length} of ${total} arrangement${total === 1 ? '' : 's'} match your pins`;
       } else {
-        title = `${total} legal arrangement${total === 1 ? '' : 's'}`;
+        title = `${total} legal arrangement${total === 1 ? '' : 's'} of your yellow tiles`;
       }
       $('resultsTitle').textContent = title;
       $('resultsTitle').classList.toggle('muted', !movable.length);
@@ -2727,6 +3106,8 @@
         renderSummary(filtered);
         renderList(layout, filtered.length);
       }
+      shownOrder = showResults ? layout.order : [];
+      renderBoardNote();
     }
 
     // ── Screenshot import ─────────────────────────────────────────────────────
@@ -3032,6 +3413,8 @@
 
     function applyImportedGuesses() {
       importHistory = { rows: importRows.map(row => row.map(t => ({ ...t }))), step: importRows.length };
+      cluesCollapsed = true;
+      countOnce('import');
       closeImport();
       showGuessStep();
     }
@@ -3078,12 +3461,20 @@
 
     function renderGuessNav() {
       $('guessNav').hidden = !importHistory;
-      if (!importHistory) return;
-      const { step, rows } = importHistory;
+      if (!importHistory) {
+        $('clueNote').textContent = '';
+        return;
+      }
+      const { step, rows, random } = importHistory;
       $('guessStep').textContent = `Guess ${step}/${rows.length}`;
       $('guessStep').title = `Clues after guess ${step} of ${rows.length}`;
       $('guessPrevBtn').disabled = step <= 1;
       $('guessNextBtn').disabled = step >= rows.length;
+      const words = rows.slice(0, step).map(r => r.map(t => t.letter).join('')).join(', ');
+      const sofar = step < rows.length ? ` (after guess ${step} of ${rows.length})` : '';
+      $('clueNote').textContent = random
+        ? `Practice puzzle. Your guess${step === 1 ? '' : 'es'}: ${words}${sofar}. The answer is hidden.`
+        : `From your screenshot. Your guess${step === 1 ? '' : 'es'}: ${words}${sofar}.`;
     }
 
     function stepGuess(delta) {
@@ -3100,6 +3491,7 @@
         renderGuessNav();
       }
       update();
+      if (hasClues()) countOnce('first-clue');
     }
 
     function closeImport() {
@@ -3167,8 +3559,12 @@
         const fitting = arrangements.length - findNonWords().size;
         if (fitting < lo || fitting > hi) continue;
 
-        importHistory = { rows, step: rows.length };
+        importHistory = { rows, step: rows.length, random: true };
         vowelOverrides = {};
+        cluesCollapsed = true;
+        trials = Array(len).fill('');
+        selectedPos = null;
+        countOnce('random');
         closeImport();
         showGuessStep();
         return;
@@ -3191,7 +3587,161 @@
       renderOdds();
       refreshResults();
       renderClueLink();
+      renderSteps();
       saveState();
+    }
+
+    // ── Steps ─────────────────────────────────────────────────────────────────
+
+    function hasClues() {
+      return greens.some(Boolean) || yellows.some(Boolean) || !!grays;
+    }
+
+    // Each panel is a numbered step. Step 1 folds to a summary once the clues came in whole
+    // (an import, Random or a link), never while they are being typed. Steps 2 and 3 open
+    // once there is something to show, or when opened by hand.
+    function renderSteps() {
+      const clues = hasClues();
+      const results = movable.length > 0;
+
+      const folded = cluesCollapsed && clues;
+      $('cluesBody').hidden = folded;
+      $('cluesSummary').hidden = !folded;
+      $('cluesToggle').setAttribute('aria-expanded', String(!folded));
+      $('cluesPanel').classList.toggle('done', clues);
+      if (folded) renderClueChips();
+      $('newPuzzleBtn').hidden = !(folded && importHistory?.random);
+
+      const boardOpen = stepOverride.board ?? clues;
+      $('boardBody').hidden = !boardOpen;
+      $('boardPlaceholder').hidden = boardOpen;
+      $('boardToggle').setAttribute('aria-expanded', String(boardOpen));
+      $('boardPanel').classList.toggle('pending', !clues);
+
+      const resultsOpen = stepOverride.results ?? results;
+      $('resultsBody').hidden = !resultsOpen;
+      $('resultsPlaceholder').hidden = resultsOpen;
+      $('resultsPlaceholder').textContent = clues
+        ? 'Add a yellow letter above and every legal way it can go is listed here.'
+        : 'Enter your clues above and every legal way the yellow letters can go is listed here.';
+      $('resultsToggle').setAttribute('aria-expanded', String(resultsOpen));
+      $('resultsPanel').classList.toggle('pending', !results);
+
+      offerTips();
+    }
+
+    // The clues in miniature, for the folded step 1: the green pattern (if any letter is
+    // green), then the yellow letters (with the slots they can't take), then the gray ones.
+    function renderClueChips() {
+      const wrap = $('clueChips');
+      wrap.innerHTML = '';
+      const mini = (cls, items) => {
+        const el = document.createElement('span');
+        el.className = 'mini';
+        for (const { text, kind, title } of items) {
+          const cell = document.createElement('span');
+          cell.textContent = text;
+          if (kind) cell.className = kind;
+          if (title) cell.title = title;
+          el.appendChild(cell);
+        }
+        wrap.appendChild(el);
+        return el;
+      };
+      if (greens.some(Boolean)) {   // five dots would say nothing
+        mini('', greens.map((g, i) => ({ text: g || '·', kind: g ? 'g' : '', title: `Slot ${i + 1}: ${g ? `${g} is green` : 'unknown'}` })))
+          .setAttribute('aria-label', `Green: ${greens.map(g => g || '?').join('')}`);
+      }
+      if (tileInfo.length) {
+        mini('', tileInfo.map(t => ({
+          text: t.count > 1 ? `${t.letter}×${t.count}` : t.letter,
+          kind: 'y',
+          title: `${t.letter} was yellow in ${slotList(yellows.map((cell, i) => cell.includes(t.letter) ? i : -1).filter(i => i >= 0))}`,
+        }))).setAttribute('aria-label', `Yellow: ${tileInfo.map(t => t.letter).join(', ')}`);
+      }
+      if (grays) {
+        mini('', [...grays].map(g => ({ text: g, kind: 'x', title: `${g} is gray` })))
+          .setAttribute('aria-label', `Gray: ${grays}`);
+      }
+    }
+
+    // ── First-time tips ───────────────────────────────────────────────────────
+
+    // One speech bubble at a time, each shown once per browser: what the tool is for, how to
+    // enter clues, what the board is for, and what the list is. The next shows when the one
+    // before is dismissed.
+    const TIPS = {
+      intro: () => 'Stuck on a Wordle? Enter your guesses and this sandbox shows every way your yellow letters ' +
+        'can still fit, and lets you try words on a board before you spend a guess. Three steps, top to bottom.',
+      clues: () => 'Copy your colors by hand: green letters in their slot, yellow letters under each slot where ' +
+        'they were yellow, gray letters in the gray row. Or paste a screenshot, or press Random to practice.',
+      board: () => movable.length
+        ? `This is one way your yellow letters could fit. Drag a yellow tile to another slot. ${TAP} an empty slot, then a letter below, to try one there. Cycle through the legal arrangements with the ‹ and › arrows below.`
+        : `Your green letters are in place. ${TAP} an empty slot, then a letter below, to try one there.`,
+      list: () => `Every legal way the yellow letters can go. ${TAP} one to put it on the board. Struck-through ones match no real word.`,
+    };
+    let tipsSeen = new Set();
+    try { tipsSeen = new Set(JSON.parse(localStorage.getItem(TIPS_KEY) || '[]')); } catch {}
+    let openTip = null;    // { id, el, anchor }
+
+    function saveTips() {
+      try { localStorage.setItem(TIPS_KEY, JSON.stringify([...tipsSeen])); } catch {}
+    }
+
+    function offerTips() {
+      if (openTip) {
+        // The clues tip is moot once there are clues; a tip whose anchor went away waits.
+        if (openTip.id === 'clues' && hasClues()) closeTip(true);
+        else if (!openTip.anchor.offsetParent) closeTip(false);
+        if (openTip) return;
+      }
+      const clues = hasClues();
+      const visible = el => !!el.offsetParent;
+      let id = null, anchor = null;
+      if (!tipsSeen.has('intro')) [id, anchor] = ['intro', $('subtitle')];
+      else if (!clues && visible($('typeIntro'))) [id, anchor] = ['clues', $('typeIntro')];
+      else if (clues && visible($('board')) && !tipsSeen.has('board')) [id, anchor] = ['board', $('board')];
+      else if (movable.length && visible($('list')) && $('list').querySelector('.arr') && !tipsSeen.has('list')) [id, anchor] = ['list', $('listCaption')];
+      if (!id || tipsSeen.has(id)) return;
+
+      const el = document.createElement('div');
+      el.className = 'tip';
+      el.setAttribute('role', 'note');
+      el.dataset.tip = id;
+      const text = document.createElement('p');
+      text.textContent = TIPS[id]();
+      const ok = document.createElement('button');
+      ok.type = 'button';
+      ok.className = 'link';
+      ok.textContent = 'Got it';
+      ok.addEventListener('click', () => {
+        closeTip(true);
+        offerTips();
+      });
+      el.append(text, ok);
+      anchor.insertAdjacentElement('afterend', el);
+      openTip = { id, el, anchor };
+    }
+
+    function closeTip(seen) {
+      if (!openTip) return;
+      if (seen) {
+        tipsSeen.add(openTip.id);
+        saveTips();
+      }
+      openTip.el.remove();
+      openTip = null;
+    }
+
+    // ── Counting ──────────────────────────────────────────────────────────────
+
+    // Anonymous event counts on the published site, where GoatCounter is loaded, once per
+    // page view each: enough to see where first-time visitors stop.
+    const counted = new Set();
+    function countOnce(name) {
+      if (counted.has(name)) return;
+      counted.add(name);
+      try { window.goatcounter?.count?.({ path: name, title: name, event: true }); } catch {}
     }
 
     // A link to no clues shares nothing, so the link icon shows once there is a clue.
@@ -3293,9 +3843,41 @@
       vowelOverrides = {};
       pins.clear();
       listExpanded = false;
+      cluesCollapsed = false;
+      stepOverride = { board: null, results: null };
+      selectedPos = null;
       renderClueInputs();
       userEdit();
       focusCell('green', 0);
+    });
+
+    // Step headers fold and unfold their step; Edit clues and "open it now" unfold one.
+    $('cluesToggle').addEventListener('click', () => {
+      cluesCollapsed = !cluesCollapsed;
+      renderSteps();
+    });
+    $('editCluesBtn').addEventListener('click', () => {
+      cluesCollapsed = false;
+      renderSteps();
+    });
+    $('boardToggle').addEventListener('click', () => {
+      stepOverride.board = $('boardBody').hidden;
+      renderSteps();
+    });
+    $('boardAnywayBtn').addEventListener('click', () => {
+      stepOverride.board = true;
+      renderSteps();
+    });
+    $('resultsToggle').addEventListener('click', () => {
+      stepOverride.results = $('resultsBody').hidden;
+      renderSteps();
+    });
+    $('tipsAgainBtn').addEventListener('click', () => {
+      tipsSeen.clear();
+      saveTips();
+      closeTip(false);
+      $('cluesHelp').close();
+      offerTips();
     });
 
     $('grayInput').addEventListener('input', e => {
@@ -3377,12 +3959,15 @@
     $('importBtn').addEventListener('click', () => $('importFile').click());
     $('pasteBtn').addEventListener('click', pasteScreenshot);
     $('randomBtn').addEventListener('click', randomExample);
+    $('newPuzzleBtn').addEventListener('click', randomExample);
     $('pasteBtn').hidden = !navigator.clipboard?.read;
     $('importFile').addEventListener('change', e => importScreenshot(e.target.files[0]));
     $('importUseBtn').addEventListener('click', applyImportedGuesses);
     $('importCancelBtn').addEventListener('click', closeImport);
     $('guessPrevBtn').addEventListener('click', () => stepGuess(-1));
     $('guessNextBtn').addEventListener('click', () => stepGuess(1));
+    $('arrPrevBtn').addEventListener('click', () => stepArrangement(-1));
+    $('arrNextBtn').addEventListener('click', () => stepArrangement(1));
 
     // A pasted image (e.g. a screenshot copied on desktop) imports directly.
     document.addEventListener('paste', e => {
@@ -3414,17 +3999,17 @@
 
     fitSlots();
     if (loadFromURL()) {
+      cluesCollapsed = true;
       saveState();
     } else {
       loadSavedState();
     }
     try {
-      const saved = localStorage.getItem(WORD_MODE_KEY) || (localStorage.getItem(HIDE_KEY) ? 'hide' : '');
+      const saved = localStorage.getItem(WORD_MODE_KEY);
       if (['dim', 'hide', 'off'].includes(saved)) wordMode = saved;
-      localStorage.setItem(WORD_MODE_KEY, wordMode);
-      localStorage.removeItem(HIDE_KEY);
+      OLD_WORD_MODE_KEYS.forEach(key => localStorage.removeItem(key));
       const view = localStorage.getItem(LETTERS_VIEW_KEY);
-      if (['vc', 'rank', 'keyboard', 'hide'].includes(view)) lettersView = view;
+      if (['vc', 'rank', 'keyboard'].includes(view)) lettersView = view;   // 'hide', once offered, falls back to the keyboard
       if (localStorage.getItem(ODDS_SCOPE_KEY) === 'all') oddsScope = 'all';
       gridFirst = localStorage.getItem(RESULTS_ORDER_KEY) === 'grid';
       analysisOpen = localStorage.getItem(ANALYSIS_KEY) === 'open';

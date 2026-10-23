@@ -2,8 +2,9 @@ const { test, expect } = require('@playwright/test');
 const path = require('node:path');
 const fs = require('node:fs');
 
-const green = (page, slot) => page.getByRole('textbox', { name: `Green letter, slot ${slot}`, exact: true });
-const yellow = (page, slot) => page.getByRole('textbox', { name: `Letters that were yellow in slot ${slot}`, exact: true });
+// includeHidden: the clue rows fold away once the clues are in, but their values still matter.
+const green = (page, slot) => page.getByRole('textbox', { name: `Green letter, slot ${slot}`, exact: true, includeHidden: true });
+const yellow = (page, slot) => page.getByRole('textbox', { name: `Letters that were yellow in slot ${slot}`, exact: true, includeHidden: true });
 const boardSlot = (page, slot) => page.locator(`#board .slot[data-pos="${slot - 1}"]`);
 const letter = (page, value) => page.locator('#lettersBody').getByRole('button', { name: value, exact: true });
 const arrangements = page => page.locator('#list .arr');
@@ -11,6 +12,10 @@ const fixture = name => path.join(__dirname, 'fixtures', name);
 const vowelKey = (page, vowel) => page.locator(`#oddsVowels [data-vowel="${vowel}"]`);
 const oddsChips = page => page.locator('#oddsOptions .odds-opt');
 const openAnalysis = page => page.getByRole('button', { name: 'More analysis', exact: true }).click();
+const editClues = page => page.getByRole('button', { name: 'Edit clues', exact: true }).click();
+const openBoard = page => page.getByRole('button', { name: 'open it now', exact: true }).click();
+const startOver = page => page.getByRole('button', { name: 'Start over', exact: true }).click();
+const TIPS = ['intro', 'clues', 'board', 'list'];
 
 // Expected vowel odds, computed here independently of the app from the real answer list.
 const VOWELS = 'AEIOUY';
@@ -43,6 +48,13 @@ async function values(locator) {
 
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-10-02T12:00:00Z'));
+  // The first-time tips have their own test, which opts out of this; elsewhere they would only get in the way.
+  await page.addInitScript(tips => {
+    if (!sessionStorage.getItem('test-tips')) localStorage.setItem('wordle-sandbox-tips-seen', JSON.stringify(tips));
+    // Most tests count arrangements with the non-words dimmed, as the default once was; the
+    // Hide default has its own test, which opts out of this.
+    if (!sessionStorage.getItem('test-wordmode')) localStorage.setItem('wordle-sandbox-nonword-mode-2', 'dim');
+  }, TIPS);
 });
 
 test('green typing advances, space skips, yellow arrangements can be pinned and cleared', async ({ page }) => {
@@ -61,7 +73,7 @@ test('green typing advances, space skips, yellow arrangements can be pinned and 
   await expect(boardSlot(page, 3)).toHaveText('E');
   await page.getByRole('button', { name: 'Clear pins', exact: true }).click();
   await expect(arrangements(page)).toHaveCount(3);
-  await page.getByRole('button', { name: 'Clear', exact: true }).click();
+  await startOver(page);
   await expect(page.locator('#board .tile')).toHaveCount(0);
   await expect(green(page, 1)).toHaveValue('');
   await expect(page.getByRole('button', { name: 'Copy link', exact: true })).toBeHidden();
@@ -80,10 +92,18 @@ test('duplicate yellow counts', async ({ page }) => {
   await open(page);
   await expect(page.locator('#board .slot')).toHaveCount(5);
   await yellow(page, 1).fill('E');
+  await expect(page.locator('#doublesRow')).toBeHidden();   // one slot: nothing to decide
   await yellow(page, 2).fill('E');
-  await page.locator('#tileChips button').click();
+  await expect(page.locator('#doublesRow')).toBeVisible();
+  const plus = page.getByRole('button', { name: 'Add another E tile', exact: true });
+  const minus = page.getByRole('button', { name: 'Remove a E tile', exact: true });
+  await expect(minus).toBeDisabled();
+  await plus.click();
   await expect(page.locator('#board .tile.yellow')).toHaveCount(2);
   await expect(arrangements(page)).toHaveCount(3);
+  await expect(plus).toBeDisabled();  // two yellows in one guess at most
+  await minus.click();
+  await expect(page.locator('#board .tile.yellow')).toHaveCount(1);
 });
 
 test('links from the 6- and 7-letter versions are ignored; 5-letter ones still open', async ({ page }) => {
@@ -196,19 +216,39 @@ test('holding an arrangement asks once per tab, then lists matching words with r
   await expect(page.locator('#wordsNote')).toHaveText('No word in the dictionary matches this.');
 });
 
-test('letters-left taps fill legal blanks; quick tap keeps a trial, hold removes it', async ({ page }) => {
+test('letters-left taps fill legal blanks; a mouse press keeps a trial, × removes it, a touch hold removes it', async ({ page, browser }) => {
   await open(page, '?len=5&green=B%3F%3F%3F%3F&ban1=E&yellow=E');
   await letter(page, 'E').click();
   await expect(boardSlot(page, 2).locator('.trial')).toHaveCount(0);
   await expect(page.locator('#board .trial')).toHaveCount(1);
   await page.locator('#board .trial').click();
   await expect(page.locator('#board .trial')).toHaveCount(1);
+  // A long press with a mouse is the start of a slow drag, never a removal.
   const trial = page.locator('#board .trial');
   await trial.hover();
   await page.mouse.down();
-  await expect(page.locator('#board .trial')).toHaveCount(0);
+  await page.waitForTimeout(700);
   await page.mouse.up();
+  await expect(page.locator('#board .trial')).toHaveCount(1);
+  await page.getByRole('button', { name: /^Remove E from slot/ }).click();
+  await expect(page.locator('#board .trial')).toHaveCount(0);
   await expect(boardSlot(page, 1).locator('.green')).toHaveText('B');
+
+  // On a touch screen, holding a tried letter still removes it.
+  const context = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 800 } });
+  const phone = await context.newPage();
+  await phone.goto('http://127.0.0.1:4173/?len=5&green=B%3F%3F%3F%3F&ban1=E&yellow=E');
+  await phone.locator('.tip button').tap();
+  await letter(phone, 'E').tap();
+  await expect(phone.locator('#board .trial')).toHaveCount(1);
+  const box = await phone.locator('#board .trial').boundingBox();
+  await phone.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);   // a quick tap keeps it
+  await expect(phone.locator('#board .trial')).toHaveCount(1);
+  const client = await context.newCDPSession(phone);
+  await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: box.x + box.width / 2, y: box.y + box.height / 2 }] });
+  await expect(phone.locator('#board .trial')).toHaveCount(0);
+  await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await context.close();
 });
 
 test('trial drag swaps letters, preserves fixed greens and flags banned destinations', async ({ page }) => {
@@ -229,6 +269,7 @@ test('trial drag swaps letters, preserves fixed greens and flags banned destinat
 
 test('full board checks the real word list; changing arrangement clears displaced trials', async ({ page }) => {
   await open(page);
+  await openBoard(page);
   for (const value of 'APPLE') await letter(page, value).click();
   await expect(page.locator('#boardWord')).toHaveText(/^APPLE ✓ is in the word list\./);
   await expect(boardSlot(page, 1)).toHaveAttribute('aria-label', 'Slot 1: A, tried');
@@ -248,7 +289,8 @@ test('a full board says when the word was last a Wordle answer', async ({ page }
   expect([once[4], twice[4], never[4]]).toEqual(['1', '2', '0']);
   const note = page.locator('#boardWord .answer-date');
   const type = async word => {
-    await page.getByRole('button', { name: 'Clear', exact: true }).click();
+    await startOver(page);
+    await openBoard(page);
     for (const value of word) await letter(page, value).click();
   };
 
@@ -286,8 +328,11 @@ test('PNG import reads colors/letters, omits solved row, steps guesses and ends 
   await expect(yellow(page, 5)).toHaveValue('E');
   await page.getByRole('button', { name: 'Next guess' }).click();
   await expect(green(page, 1)).toHaveValue('B');
+  await expect(page.locator('#clueNote')).toHaveText('From your screenshot. Your guesses: CRANE, BEEFY.');
+  await editClues(page);
   await yellow(page, 3).fill('R');
   await expect(page.locator('#guessNav')).toBeHidden();
+  await expect(page.locator('#clueNote')).toHaveText('');
 });
 
 test('import cancel preserves clues and invalid images can be retried', async ({ page }) => {
@@ -316,7 +361,7 @@ test('a gray duplicate caps the count: BEEFY against BERRY rules out BEERY', asy
   // The gray E is kept: it is what caps the count.
   await expect(page.locator('#grayInput')).toHaveValue('AEFNST');
   await expect(page.locator('#clueStatus')).toHaveText('');
-  await expect(page.locator('#lettersTitle')).toContainText('21 letters left');  // E isn't counted as gray
+  await expect(page.locator('#lettersTitle')).toContainText('21 available letters');  // E isn't counted as gray
   await expect(page.locator('#list .arr.noword')).toHaveCount(2);
   await arrangements(page).filter({ hasText: 'BE·RY' }).click({ button: 'right' });
   await page.locator('#wordsConfirm').getByRole('button', { name: 'Show words' }).click();
@@ -350,15 +395,19 @@ test('Random makes up one or two guesses against an answer, with a few to a few 
   };
   await open(page);
   await expect(page.locator('#randomBtn')).toBeEnabled();
+  // Step 1 folds after the first puzzle; New puzzle in its summary draws the next.
+  const next = () => page.getByRole('button', { name: /^(Random|New puzzle)$/ }).click();
   for (let n = 0; n < 12; n++) {
-    await page.locator('#randomBtn').click();
+    await next();
     const { rows, total, fitting, tiles } = await page.evaluate(() => ({
       rows: importHistory.rows.map(r => ({ word: r.map(t => t.letter).join(''), colors: r.map(t => t.color).join() })),
       total: arrangements.length, fitting: arrangements.length - noWord.size, tiles: movable.length,
     }));
     expect([1, 2]).toContain(rows.length);
     await expect(page.locator('#guessStep')).toHaveText(`Guess ${rows.length}/${rows.length}`);
-    await expect(page.locator('#resultsTitle')).toHaveText(`${total} legal arrangements`);
+    await expect(page.locator('#clueNote')).toHaveText(
+      `Practice puzzle. Your guess${rows.length === 1 ? '' : 'es'}: ${rows.map(r => r.word).join(', ')}. The answer is hidden.`);
+    await expect(page.locator('#resultsTitle')).toHaveText(`${total} legal arrangements of your yellow tiles`);
     expect(total).toBeLessThanOrEqual(80);
     expect(fitting).toBeGreaterThanOrEqual(3);
     expect(fitting).toBeLessThanOrEqual(40);
@@ -368,7 +417,7 @@ test('Random makes up one or two guesses against an answer, with a few to a few 
     if (rows.length === 2) expect(colors(rows[0].word, rows[1].word)).toBe(rows[0].colors);
   }
   // A two-guess puzzle steps back to its first guess.
-  for (let n = 0; n < 100 && await page.evaluate(() => importHistory.rows.length) < 2; n++) await page.locator('#randomBtn').click();
+  for (let n = 0; n < 100 && await page.evaluate(() => importHistory.rows.length) < 2; n++) await next();
   await page.getByRole('button', { name: 'Previous guess' }).click();
   await expect(page.locator('#guessStep')).toHaveText('Guess 1/2');
 });
@@ -440,18 +489,19 @@ test('keyboard paste of an image imports it', async ({ page, context }) => {
 
 test('the letters help button opens a dialog explaining the views', async ({ page }) => {
   await open(page);
+  await openBoard(page);
   const help = page.locator('#lettersHelp');
   await expect(help).toBeHidden();
-  await page.getByRole('button', { name: 'About the letters' }).click();
+  await page.getByRole('button', { name: 'About the board and the letters' }).click();
   await expect(help).toBeVisible();
-  await expect(help.getByRole('heading')).toHaveText('Letters left');
+  await expect(help.getByRole('heading')).toHaveText('The board and the letters');
   await expect(help.locator('dt')).toHaveText(['Keyboard', 'V/C', 'Rank']);
   await help.getByRole('button', { name: 'Close' }).click();
   await expect(help).toBeHidden();
-  await page.getByRole('button', { name: 'About the letters' }).click();
+  await page.getByRole('button', { name: 'About the board and the letters' }).click();
   await page.mouse.click(5, 5);  // the backdrop
   await expect(help).toBeHidden();
-  await page.getByRole('button', { name: 'About the letters' }).click();
+  await page.getByRole('button', { name: 'About the board and the letters' }).click();
   await page.keyboard.press('Escape');
   await expect(help).toBeHidden();
 });
@@ -461,8 +511,8 @@ test('every section has a help button that opens its own popup', async ({ page }
   await openAnalysis(page);
   const helps = [
     ['About entering clues', 'Entering clues'],
-    ['About the letters', 'Letters left'],
-    ['About the arrangements', 'Arrangements'],
+    ['About the board and the letters', 'The board and the letters'],
+    ['About the arrangements', 'Legal arrangements'],
     ['About the grid', 'Where each letter can go'],
     ['About More analysis', 'More analysis'],
   ];
@@ -482,7 +532,7 @@ test('on a touch screen, instructions say Tap and the list caption says Long tap
   const context = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 800 } });
   const phone = await context.newPage();
   await phone.goto('http://127.0.0.1:4173/?green=B%3F%3F%3F%3F&ban1=E&yellow=E');
-  await expect(phone.locator('#lettersHint')).toHaveText(/^Tap a letter to try it\./);
+  await expect(phone.locator('#boardNote')).toContainText('Tap an empty slot, then a letter below, to fill it.');
   await expect(phone.locator('#listCaption')).toHaveText('Tap one to put it on the board. Long tap to see all matching words.');
   await expect(phone.locator('#summaryCaption')).toContainText('Tap a number to pin the letter there; tap a letter');
   await expect(phone.locator('#gridHelp')).toContainText('Tap a number to pin the letter there');
@@ -491,12 +541,14 @@ test('on a touch screen, instructions say Tap and the list caption says Long tap
 
 test('letters panel defaults to the keyboard view and remembers a change', async ({ page }) => {
   await open(page);
+  await openBoard(page);
   const pressed = page.locator('#lettersSeg [aria-pressed="true"]');
   await expect(pressed).toHaveText('Keyboard');
   await expect(page.locator('#lettersBody .kb-row')).toHaveCount(3);
   await page.locator('#lettersSeg').getByRole('button', { name: 'Vowels and consonants (V/C)', exact: true }).click();
   await expect(page.locator('#lettersBody .vc-label')).toHaveCount(2);
   await open(page);
+  await openBoard(page);
   await expect(pressed).toHaveText('V/C');
 });
 
@@ -576,7 +628,8 @@ test('vowel odds panel starts from the clues, cycles vowels and matches the answ
   await page.locator('#oddsResetBtn').click();
   await check('A', 'E');
 
-  // The panel follows clue edits; Clear empties both.
+  // The panel follows clue edits; Start over empties both.
+  await editClues(page);
   await page.locator('#grayInput').fill('ESTU');
   await check('A', 'EU');
   // A green vowel counts as present (position is ignored), even if a duplicate of it was gray.
@@ -584,7 +637,7 @@ test('vowel odds panel starts from the clues, cycles vowels and matches the answ
   await expect(vowelKey(page, 'U')).toHaveAttribute('data-state', 'yellow');
   await check('AU', 'E');
   await vowelKey(page, 'Y').click();
-  await page.getByRole('button', { name: 'Clear', exact: true }).click();
+  await startOver(page);
   await check('', '');
   await expect(oddsChips(page).last()).toHaveText('No vowel 0%');
 });
@@ -598,7 +651,7 @@ test('Rank letters view orders letters by share of answers; grays stay in place,
   await expect(page.locator('#lettersBody .vc-label')).toHaveText(['Top 12', '', 'Then']);
   await expect(letter(page, 'E')).toBeDisabled();
   await expect(letter(page, expected[1])).toHaveAttribute('title',
-    `Click to try ${expected[1]} in the first blank slot that allows it. ${expected[1]} is in ${percent(share(expected[1]), answerWords.length)} of all Wordle answers.`);
+    `Click to try ${expected[1]} in the chosen slot, or the first blank one that allows it. ${expected[1]} is in ${percent(share(expected[1]), answerWords.length)} of all Wordle answers.`);
   await letter(page, expected[1]).click();
   await expect(page.locator('#board .trial')).toHaveCount(1);
 
@@ -621,6 +674,7 @@ test('without the answer list, vowel odds explain and Rank falls back to the bui
   await expect(page.locator('#oddsNote')).toHaveText('Vowel odds need the answer list, which didn’t load.');
   await expect(page.locator('#oddsBody')).toBeHidden();
   await expect(page.locator('#randomBtn')).toBeHidden();
+  await openBoard(page);
   await page.locator('#lettersSeg').getByRole('button', { name: 'Rank', exact: true }).click();
   await expect(page.locator('#lettersBody .key').first()).toHaveText('E');
   await expect(page.locator('#lettersBody .key')).toHaveCount(26);
@@ -636,7 +690,7 @@ test('vowel odds use consonant clues only when switched to All clues, and rememb
     await expect(page.locator('#oddsCount')).toHaveText(`${count} of ${answerWords.length} answers left`);
     await expect(oddsChips(page)).toHaveText(chips);
   };
-  await expect(scope('Vowels only')).toHaveAttribute('aria-pressed', 'true');
+  await expect(scope('Vowel clues')).toHaveAttribute('aria-pressed', 'true');
   await check('A', 'E');
   await expect(page.locator('#oddsTable .odds-cell.current')).toHaveCount(1);
 
@@ -644,13 +698,14 @@ test('vowel odds use consonant clues only when switched to All clues, and rememb
   await check('A', 'E', 'M', 'ST');
   // The table is vowels only, so no cell matches the panel now.
   await expect(page.locator('#oddsTable .odds-cell.current')).toHaveCount(0);
+  await editClues(page);
   await page.locator('#grayInput').fill('ESTR');
   await check('A', 'E', 'M', 'RST');
 
   await page.reload();
   await expect(scope('All clues')).toHaveAttribute('aria-pressed', 'true');
   await check('A', 'E', 'M', 'RST');
-  await scope('Vowels only').click();
+  await scope('Vowel clues').click();
   await check('A', 'E');
 });
 
@@ -729,4 +784,215 @@ test('more analysis starts closed, opens and closes, and remembers the choice', 
   await expect(page.locator('#analysisBody')).toBeHidden();
   await page.reload();
   await expect(page.locator('#analysisBody')).toBeHidden();
+});
+
+test('steps: 2 and 3 open as clues arrive; a link folds step 1 to a summary that Edit clues reopens', async ({ page }) => {
+  await open(page);
+  const body = id => page.locator(`#${id}`);
+  const toggle = name => page.getByRole('button', { name, exact: true });
+  await expect(body('cluesBody')).toBeVisible();
+  await expect(body('boardBody')).toBeHidden();
+  await expect(body('resultsBody')).toBeHidden();
+  await expect(page.locator('#boardPlaceholder')).toContainText('Enter a clue above and the board appears here');
+  await expect(toggle('Try letters on the board')).toHaveAttribute('aria-expanded', 'false');
+
+  // Typing never folds step 1; the board opens with the first clue, the list with the first yellow.
+  await green(page, 1).fill('B');
+  await expect(body('cluesBody')).toBeVisible();
+  await expect(body('boardBody')).toBeVisible();
+  await expect(body('resultsBody')).toBeHidden();
+  await expect(page.locator('#resultsPlaceholder')).toHaveText('Add a yellow letter above and every legal way it can go is listed here.');
+  await yellow(page, 2).fill('E');
+  await expect(body('resultsBody')).toBeVisible();
+  await expect(arrangements(page)).toHaveCount(3);
+
+  // A heading folds its step by hand and unfolds it again.
+  await toggle('Browse every legal arrangement').click();
+  await expect(body('resultsBody')).toBeHidden();
+  await toggle('Browse every legal arrangement').click();
+  await expect(body('resultsBody')).toBeVisible();
+  await toggle('Enter your clues').click();
+  await expect(body('cluesBody')).toBeHidden();
+  await expect(page.locator('#cluesSummary')).toBeVisible();
+  await editClues(page);
+  await expect(body('cluesBody')).toBeVisible();
+
+  // Opened from a link, the clues came in whole: step 1 is a summary of them.
+  await open(page, '?green=B%3F%3F%3F%3F&ban1=E&ban2=R&yellow=ER&gray=STLN');
+  await expect(body('cluesBody')).toBeHidden();
+  await expect(page.locator('#clueChips .mini').nth(0).locator('span')).toHaveText(['B', '·', '·', '·', '·']);
+  await expect(page.locator('#clueChips .mini').nth(1).locator('span')).toHaveText(['E', 'R']);
+  await expect(page.locator('#clueChips .mini').nth(2).locator('span')).toHaveText(['S', 'T', 'L', 'N']);
+  await expect(page.locator('#clueChips .mini').nth(1).locator('span').first()).toHaveAttribute('title', 'E was yellow in slot 2');
+  // With no green letter, the pattern is left out rather than shown as five dots.
+  await open(page, '?green=%3F%3F%3F%3F%3F&ban1=E&yellow=E&gray=ST');
+  await expect(page.locator('#clueChips .mini')).toHaveCount(2);
+  await expect(page.locator('#clueChips .mini').first().locator('span')).toHaveText(['E']);
+  await expect(body('boardBody')).toBeVisible();
+  await expect(body('resultsBody')).toBeVisible();
+  await editClues(page);
+  await expect(body('cluesBody')).toBeVisible();
+  await expect(page.locator('#cluesSummary')).toBeHidden();
+  await startOver(page);
+  await expect(body('boardBody')).toBeHidden();
+  await openBoard(page);
+  await expect(body('boardBody')).toBeVisible();
+});
+
+test('first-time tips show one at a time, in order, and are remembered; help can bring them back', async ({ page }) => {
+  // Once, on the first load: after that the app's own record of seen tips must survive reloads.
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem('test-tips')) return;
+    sessionStorage.setItem('test-tips', 'on');
+    localStorage.removeItem('wordle-sandbox-tips-seen');
+  });
+  await open(page);
+  const tip = page.locator('.tip');
+  const gotIt = () => tip.getByRole('button', { name: 'Got it' }).click();
+  // First, what the tool is for, right under the subtitle.
+  await expect(tip).toHaveAttribute('data-tip', 'intro');
+  await expect(tip).toContainText('Stuck on a Wordle?');
+  expect(await page.evaluate(() => $('subtitle').nextElementSibling.classList.contains('tip'))).toBe(true);
+  await gotIt();
+  await expect(tip).toHaveAttribute('data-tip', 'clues');
+  await expect(tip).toContainText('Copy your colors by hand');
+  // In the flow under the "type them" line, covering nothing.
+  expect(await page.evaluate(() => $('typeIntro').nextElementSibling.classList.contains('tip'))).toBe(true);
+  await gotIt();
+  await expect(tip).toHaveCount(0);
+
+  await green(page, 1).fill('B');
+  await expect(tip).toHaveAttribute('data-tip', 'board');
+  await expect(tip).toContainText('Your green letters are in place');
+  await yellow(page, 2).fill('E');
+  await expect(tip).toHaveCount(1);  // still the board tip: one at a time
+  await gotIt();
+  await expect(tip).toHaveAttribute('data-tip', 'list');
+  await expect(tip).toContainText('Click one to put it on the board');
+  await gotIt();
+  await expect(tip).toHaveCount(0);
+
+  await page.reload();
+  await expect(tip).toHaveCount(0);
+  await page.getByRole('button', { name: 'About entering clues', exact: true }).click();
+  await page.getByRole('button', { name: 'Show the first-time tips again' }).click();
+  await expect(page.locator('dialog[open]')).toHaveCount(0);
+  await expect(tip).toHaveAttribute('data-tip', 'intro');
+  await gotIt();
+  await expect(tip).toHaveAttribute('data-tip', 'board');   // there are clues, so the clues tip is skipped
+
+  // A fresh visit with clues already in (a link): the intro was dismissed above, the clues tip is moot.
+  await open(page, '?green=B%3F%3F%3F%3F&ban1=E&yellow=E');
+  await expect(tip).toHaveAttribute('data-tip', 'board');
+  await expect(tip).toContainText('This is one way your yellow letters could fit');
+  await expect(tip).toContainText('Cycle through the legal arrangements with the ‹ and › arrows below.');
+});
+
+test('board: a chosen slot takes the next letter, × removes a tried one, and the note says which arrangement is showing', async ({ page }) => {
+  await open(page, '?green=B%3F%3F%3F%3F&ban1=E&ban2=R&yellow=ER');
+  await expect(page.locator('#boardNote')).toHaveText('Arrangement 1 of 7 Click an empty slot, then a letter below, to fill it.');
+  // ‹ › cycle through the list in its order, wrapping at the ends, outlining the one on the board.
+  const prev = page.getByRole('button', { name: 'Previous arrangement', exact: true });
+  const next = page.getByRole('button', { name: 'Next arrangement', exact: true });
+  await next.click();
+  await expect(page.locator('#arrIndex')).toHaveText('Arrangement 2 of 7');
+  await expect(page.locator('#list .arr.current')).toHaveText(await page.evaluate(() => shownOrder[1].replaceAll('?', '·')));
+  for (let n = 0; n < 5; n++) await next.click();
+  await expect(page.locator('#arrIndex')).toHaveText('Arrangement 7 of 7');
+  await next.click();
+  await expect(page.locator('#arrIndex')).toHaveText('Arrangement 1 of 7');
+  await prev.click();
+  await expect(page.locator('#arrIndex')).toHaveText('Arrangement 7 of 7');
+  for (let n = 0; n < 6; n++) await prev.click();
+  await expect(page.locator('#arrIndex')).toHaveText('Arrangement 1 of 7');
+  // Two blank slots, wherever the first arrangement leaves them: choose the last one.
+  const blanks = await page.locator('#board .slot.choosable').evaluateAll(els => els.map(el => Number(el.dataset.pos) + 1));
+  expect(blanks).toHaveLength(2);
+  const [first, last] = blanks;
+  await boardSlot(page, last).click();
+  await expect(boardSlot(page, last)).toHaveClass(/selected/);
+  await letter(page, 'A').click();
+  await expect(boardSlot(page, last)).toHaveText('A');
+  await expect(boardSlot(page, last)).not.toHaveClass(/selected/);
+  // The choice moves on to the next blank slot after it; there is none, so the next letter takes the first blank.
+  await letter(page, 'O').click();
+  await expect(boardSlot(page, first)).toHaveText('O');
+  await page.getByRole('button', { name: `Remove A from slot ${last}` }).click();
+  await expect(page.locator('#board .trial')).toHaveText(['O']);
+  await expect(boardSlot(page, last)).toHaveClass(/selected/);  // ready for another letter there
+  // A chosen slot takes the letter even where it was yellow; the conflict is shown.
+  await boardSlot(page, last).click();  // unchoose
+  await page.getByRole('button', { name: `Remove O from slot ${first}` }).click();
+
+  // Moving a tile keeps the list's outline on the arrangement now on the board.
+  const current = page.locator('#list .arr.current');
+  const before = await current.textContent();
+  // The dragged tile lands with a short animation (the class is on the tile the move rendered).
+  await page.evaluate(() => { window.landedSeen = 0; new MutationObserver(() =>
+    { window.landedSeen = Math.max(window.landedSeen, document.querySelectorAll('#board .tile.landed').length); })
+    .observe($('board'), { childList: true, subtree: true }); });
+  await page.locator('#board .yellow').first().dragTo(boardSlot(page, last));
+  await expect(current).not.toHaveText(before);
+  await expect(page.locator('#arrIndex')).toHaveText(/^Arrangement \d of \d+$/);
+  expect(await page.evaluate(() => window.landedSeen)).toBe(1);
+
+  // A chosen slot takes the letter even where it was yellow; the conflict is shown.
+  await open(page, '?green=B%3F%3F%3F%3F&ban1=E&yellow=E');
+  await boardSlot(page, 2).click();   // E was yellow here, so it is blank
+  await expect(boardSlot(page, 2)).toHaveClass(/selected/);
+  await letter(page, 'E').click();
+  await expect(boardSlot(page, 2).locator('.conflict')).toHaveText('E');
+  await expect(page.locator('#boardStatus')).toContainText("E can't go in slot 2");
+  // One tile, three places: the index stays, next to the conflict.
+  await expect(page.locator('#arrIndex')).toHaveText(/^Arrangement \d of 3$/);
+});
+
+test('holding or right-clicking a letter marks it gray; a gray letter can be let back in', async ({ page }) => {
+  await open(page, '?green=B%3F%3F%3F%3F&ban1=E&yellow=E&gray=S');
+  await expect(page.locator('#lettersTitle')).toHaveText('25 available letters (hold or right-click to exclude)');
+  await letter(page, 'T').click({ button: 'right' });
+  await expect(page.locator('#grayInput')).toHaveValue('ST');
+  await expect(letter(page, 'T')).toHaveAttribute('aria-disabled', 'true');
+  await expect(page.locator('#lettersTitle')).toContainText('24 available letters');
+  // Holding works too, and the release after it isn't a tap.
+  await letter(page, 'A').hover();
+  await page.mouse.down();
+  await expect(page.locator('#grayInput')).toHaveValue('STA');
+  await page.mouse.up();
+  await expect(page.locator('#board .trial')).toHaveCount(0);
+  // A gray key doesn't go on the board, but a hold lets it back in.
+  await letter(page, 'T').click({ force: true });  // force: it is aria-disabled
+  await expect(page.locator('#board .trial')).toHaveCount(0);
+  await letter(page, 'T').click({ button: 'right', force: true });
+  await expect(page.locator('#grayInput')).toHaveValue('SA');
+  await expect(letter(page, 'T')).not.toHaveAttribute('aria-disabled', 'true');
+  // A green or yellow letter can't be excluded.
+  await letter(page, 'E').click({ button: 'right' });
+  await expect(page.locator('#grayInput')).toHaveValue('SA');
+});
+
+test('arrangements no word fits are hidden by default; Dim is remembered; the old key is ignored', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem('test-wordmode')) return;
+    sessionStorage.setItem('test-wordmode', 'on');
+    localStorage.removeItem('wordle-sandbox-nonword-mode-2');
+    localStorage.setItem('wordle-sandbox-nonword-mode', 'dim');   // from before Hide was the default
+  });
+  await page.route('**/words/5.txt', route => route.fulfill({ body: 'APPLE\nAMPLE\n', contentType: 'text/plain' }));
+  await open(page);
+  await yellow(page, 1).fill('P');
+  const mode = name => page.locator('#wordNote').getByRole('button', { name, exact: true });
+  await expect(mode('Hide')).toHaveAttribute('aria-pressed', 'true');
+  await expect(arrangements(page)).toHaveCount(2);
+  await expect(page.locator('#wordNoteText')).toHaveText('2 of 4 fit no known word:');
+  await expect(page.locator('#resultsTitle')).toHaveText('2 legal arrangements of your yellow tiles');
+  await expect(page.locator('#arrIndex')).toHaveText('Arrangement 1 of 2');
+  expect(await page.evaluate(() => localStorage.getItem('wordle-sandbox-nonword-mode'))).toBeNull();
+
+  await mode('Dim').click();
+  await expect(arrangements(page)).toHaveCount(4);
+  await expect(page.locator('#list .arr.noword')).toHaveCount(2);
+  await page.reload();
+  await expect(mode('Dim')).toHaveAttribute('aria-pressed', 'true');
+  await expect(arrangements(page)).toHaveCount(4);
 });
