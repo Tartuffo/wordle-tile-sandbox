@@ -1252,7 +1252,7 @@
           <input id="importFile" type="file" accept="image/*" hidden>
           <button id="randomBtn" title="Make up a puzzle: one or two guesses against a past Wordle answer" disabled>Random</button>
         </div>
-        <p id="typeIntro" class="hint clue-intro">Or type what Wordle showed you, slot by slot:</p>
+        <p id="typeIntro" class="hint clue-intro">Or copy your colors by hand: each green and yellow letter in its slot, then the grays.</p>
         <div id="slotNums" class="row-grid slot-nums"></div>
         <div id="greenRow" class="row-grid"></div>
         <div id="yellowRow" class="row-grid"></div>
@@ -3601,8 +3601,8 @@
       $('resultsBody').hidden = !resultsOpen;
       $('resultsPlaceholder').hidden = resultsOpen;
       $('resultsPlaceholder').textContent = clues
-        ? 'Add a yellow letter above and every way it can go is listed here.'
-        : 'Enter your clues above and every way the yellow letters can go is listed here.';
+        ? 'Add a yellow letter above and every legal way it can go is listed here.'
+        : 'Enter your clues above and every legal way the yellow letters can go is listed here.';
       $('resultsToggle').setAttribute('aria-expanded', String(resultsOpen));
       $('resultsPanel').classList.toggle('pending', !results);
 
@@ -3647,12 +3647,12 @@
     // One speech bubble at a time, each shown once per browser: how to enter clues, what the
     // board is for, and what the list is. The next shows when the one before is dismissed.
     const TIPS = {
-      clues: () => 'Type what Wordle told you: green letters in their slot, yellow letters under each slot where ' +
+      clues: () => 'Copy your colors by hand: green letters in their slot, yellow letters under each slot where ' +
         'they were yellow, gray letters in the gray row. Or paste a screenshot, or press Random to practice.',
       board: () => movable.length
         ? `This is one way your yellow letters could fit. Drag a yellow tile to another slot. ${TAP} an empty slot, then a letter below, to try one there.`
         : `Your green letters are in place. ${TAP} an empty slot, then a letter below, to try one there.`,
-      list: () => `Every way the yellow letters can go. ${TAP} one to put it on the board. Struck-through ones match no real word.`,
+      list: () => `Every legal way the yellow letters can go. ${TAP} one to put it on the board. Struck-through ones match no real word.`,
     };
     let tipsSeen = new Set();
     try { tipsSeen = new Set(JSON.parse(localStorage.getItem(TIPS_KEY) || '[]')); } catch {}

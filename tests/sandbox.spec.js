@@ -776,7 +776,7 @@ test('steps: 2 and 3 open as clues arrive; a link folds step 1 to a summary that
   await expect(body('cluesBody')).toBeVisible();
   await expect(body('boardBody')).toBeVisible();
   await expect(body('resultsBody')).toBeHidden();
-  await expect(page.locator('#resultsPlaceholder')).toHaveText('Add a yellow letter above and every way it can go is listed here.');
+  await expect(page.locator('#resultsPlaceholder')).toHaveText('Add a yellow letter above and every legal way it can go is listed here.');
   await yellow(page, 2).fill('E');
   await expect(body('resultsBody')).toBeVisible();
   await expect(arrangements(page)).toHaveCount(3);
@@ -821,7 +821,7 @@ test('first-time tips show one at a time, in order, and are remembered; help can
   const tip = page.locator('.tip');
   const gotIt = () => tip.getByRole('button', { name: 'Got it' }).click();
   await expect(tip).toHaveAttribute('data-tip', 'clues');
-  await expect(tip).toContainText('Type what Wordle told you');
+  await expect(tip).toContainText('Copy your colors by hand');
   // In the flow under the "type them" line, covering nothing.
   expect(await page.evaluate(() => $('typeIntro').nextElementSibling.classList.contains('tip'))).toBe(true);
   await gotIt();
