@@ -382,7 +382,7 @@ test('Random makes up one or two guesses against an answer, with a few to a few 
     await expect(page.locator('#guessStep')).toHaveText(`Guess ${rows.length}/${rows.length}`);
     await expect(page.locator('#clueNote')).toHaveText(
       `Practice puzzle. Your guess${rows.length === 1 ? '' : 'es'}: ${rows.map(r => r.word).join(', ')}. The answer is hidden.`);
-    await expect(page.locator('#resultsTitle')).toHaveText(`${total} legal arrangements`);
+    await expect(page.locator('#resultsTitle')).toHaveText(`${total} legal arrangements of your yellow tiles`);
     expect(total).toBeLessThanOrEqual(80);
     expect(fitting).toBeGreaterThanOrEqual(3);
     expect(fitting).toBeLessThanOrEqual(40);
@@ -782,9 +782,9 @@ test('steps: 2 and 3 open as clues arrive; a link folds step 1 to a summary that
   await expect(arrangements(page)).toHaveCount(3);
 
   // A heading folds its step by hand and unfolds it again.
-  await toggle('Browse every arrangement').click();
+  await toggle('Browse every legal arrangement').click();
   await expect(body('resultsBody')).toBeHidden();
-  await toggle('Browse every arrangement').click();
+  await toggle('Browse every legal arrangement').click();
   await expect(body('resultsBody')).toBeVisible();
   await toggle('Enter your clues').click();
   await expect(body('cluesBody')).toBeHidden();
