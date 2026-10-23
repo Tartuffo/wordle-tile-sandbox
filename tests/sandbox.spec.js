@@ -89,7 +89,9 @@ test('duplicate yellow counts', async ({ page }) => {
   await open(page);
   await expect(page.locator('#board .slot')).toHaveCount(5);
   await yellow(page, 1).fill('E');
+  await expect(page.locator('#doublesRow')).toBeHidden();   // one slot: nothing to decide
   await yellow(page, 2).fill('E');
+  await expect(page.locator('#doublesRow')).toBeVisible();
   const plus = page.getByRole('button', { name: 'Add another E tile', exact: true });
   const minus = page.getByRole('button', { name: 'Remove a E tile', exact: true });
   await expect(minus).toBeDisabled();
@@ -854,20 +856,19 @@ test('first-time tips show one at a time, in order, and are remembered; help can
 test('board: a chosen slot takes the next letter, × removes a tried one, and the note says which arrangement is showing', async ({ page }) => {
   await open(page, '?green=B%3F%3F%3F%3F&ban1=E&ban2=R&yellow=ER');
   await expect(page.locator('#boardNote')).toHaveText('Arrangement 1 of 7 Click an empty slot, then a letter below, to fill it.');
-  // ‹ › step through the list in its order, outlining the one on the board; ‹ is off at the start, › at the end.
+  // ‹ › cycle through the list in its order, wrapping at the ends, outlining the one on the board.
   const prev = page.getByRole('button', { name: 'Previous arrangement', exact: true });
   const next = page.getByRole('button', { name: 'Next arrangement', exact: true });
-  await expect(prev).toBeDisabled();
   await next.click();
   await expect(page.locator('#arrIndex')).toHaveText('Arrangement 2 of 7');
   await expect(page.locator('#list .arr.current')).toHaveText(await page.evaluate(() => shownOrder[1].replaceAll('?', '·')));
-  await expect(prev).toBeEnabled();
   for (let n = 0; n < 5; n++) await next.click();
   await expect(page.locator('#arrIndex')).toHaveText('Arrangement 7 of 7');
-  await expect(next).toBeDisabled();
+  await next.click();
+  await expect(page.locator('#arrIndex')).toHaveText('Arrangement 1 of 7');
   await prev.click();
-  await expect(page.locator('#arrIndex')).toHaveText('Arrangement 6 of 7');
-  for (let n = 0; n < 5; n++) await prev.click();
+  await expect(page.locator('#arrIndex')).toHaveText('Arrangement 7 of 7');
+  for (let n = 0; n < 6; n++) await prev.click();
   await expect(page.locator('#arrIndex')).toHaveText('Arrangement 1 of 7');
   // Two blank slots, wherever the first arrangement leaves them: choose the last one.
   const blanks = await page.locator('#board .slot.choosable').evaluateAll(els => els.map(el => Number(el.dataset.pos) + 1));

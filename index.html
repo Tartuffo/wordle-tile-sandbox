@@ -216,6 +216,7 @@
     }
 
     .row-grid + .row-grid { margin-top: var(--gap); }
+    .row-grid[hidden] { display: none; }
 
     .row-label {
       color: var(--muted);
@@ -725,7 +726,6 @@
     .arr-nav { display: inline-flex; align-items: center; gap: 4px; }
     .arr-nav[hidden] { display: none; }
     .arr-nav button { padding: 0 8px 3px; font-size: 20px; line-height: 1.2; }
-    .arr-nav button:disabled { opacity: .35; cursor: default; }
     #arrPrevBtn::before { content: '‹'; }
     #arrNextBtn::before { content: '›'; }
     #arrIndex { font-variant-numeric: tabular-nums; }
@@ -1273,8 +1273,8 @@
           <input id="grayInput" type="text" class="cell gray-cell" autocomplete="off" spellcheck="false"
                  autocapitalize="characters" autocorrect="off" enterkeyhint="done" aria-label="Gray letters: not in the word">
         </div>
-        <div class="row-grid">
-          <div class="row-label">Tiles<small>to place</small></div>
+        <div id="doublesRow" class="row-grid" hidden>
+          <div class="row-label">Double<small>letters</small></div>
           <div id="tileChips" class="tile-chips"></div>
         </div>
         <div id="clueStatus" class="status" role="status"></div>
@@ -1440,8 +1440,8 @@
         <dd>Under each slot, every letter that turned yellow there, across all your guesses.</dd>
         <dt>Gray</dt>
         <dd>Letters that aren’t in the word. If a letter turned gray in one place but green or yellow in another, enter it here too: the word then has no more copies of it than your green and yellow ones.</dd>
-        <dt>Tiles</dt>
-        <dd>The yellow letters still to place, one tile each; a letter that’s already green starts with none. If a single guess showed a letter twice in green or yellow, press + to add a tile, and − to take it away again.</dd>
+        <dt>Double letters</dt>
+        <dd>A yellow letter is one tile on the board, or none if it’s already green. When a letter could be in the word twice (yellow in two slots, or green in one and yellow in another), this row appears: press + to add a tile for the second copy, and − to take it away again.</dd>
       </dl>
       <p>After a screenshot, Random or a shared link, this step folds to a summary of the clues; Edit clues or the step’s heading opens it again. Start over clears everything. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day.</p>
       <p><button type="button" id="tipsAgainBtn" class="link">Show the first-time tips again</button></p>
@@ -1941,14 +1941,14 @@
       $('clueStatus').textContent = errors.join(' ');
     }
 
+    // The tiles themselves are on the board; this row is only for their counts, so it shows
+    // just the letters whose count can change (yellow in two slots, or green elsewhere too).
     function renderTileChips() {
       const wrap = $('tileChips');
       wrap.innerHTML = '';
-
-      if (!tileInfo.length) {
-        wrap.innerHTML = '<span class="hint">Yellow tiles appear here as you type them.</span>';
-        return;
-      }
+      const doubles = tileInfo.filter(t => t.max > t.min);
+      $('doublesRow').hidden = !doubles.length;
+      if (!doubles.length) return;
 
       const stepBtn = (label, name, enabled, onClick) => {
         const btn = document.createElement('button');
@@ -1962,7 +1962,8 @@
         return btn;
       };
 
-      for (const t of tileInfo) {
+      const fits = movable.length < openSlots().length;
+      for (const t of doubles) {
         const group = document.createElement('span');
         group.className = 'tile-chip-group';
         const chip = document.createElement('span');
@@ -1970,40 +1971,32 @@
         chip.textContent = t.letter;
         if (t.count === 0) {
           chip.classList.add('placed');
-          chip.title = `${t.letter} is already green, so there is no tile to place`;
+          chip.title = `${t.letter} is already green: no tile unless the word has another`;
         } else {
-          chip.title = `${t.count} ${t.letter} tile${t.count === 1 ? '' : 's'} to place`;
+          chip.title = `${t.count} ${t.letter} tile${t.count === 1 ? '' : 's'} on the board`;
         }
-        if (t.count > 1) {
-          const c = document.createElement('span');
-          c.className = 'count';
-          c.textContent = `×${t.count}`;
-          chip.appendChild(c);
-        }
-        group.appendChild(chip);
-
-        // The count can change only when one guess could have shown the letter more than once.
-        if (t.max > t.min) {
-          const fits = movable.length < openSlots().length;
-          group.append(
-            stepBtn('−', `Remove a ${t.letter} tile`, t.count > t.min, () => {
-              countOverrides[t.letter] = t.count - 1;
-              userEdit();
-            }),
-            stepBtn('+', `Add another ${t.letter} tile`, t.count < t.max && fits, () => {
-              countOverrides[t.letter] = t.count + 1;
-              userEdit();
-            }));
-        }
+        const c = document.createElement('span');
+        c.className = 'count';
+        c.textContent = `×${t.count}`;
+        chip.appendChild(c);
+        group.append(chip,
+          stepBtn('−', `Remove a ${t.letter} tile`, t.count > t.min, () => {
+            countOverrides[t.letter] = t.count - 1;
+            userEdit();
+          }),
+          stepBtn('+', `Add another ${t.letter} tile`, t.count < t.max && fits, () => {
+            countOverrides[t.letter] = t.count + 1;
+            userEdit();
+          }));
         wrap.appendChild(group);
       }
 
-      if (tileInfo.some(t => t.max > t.min)) {
-        const hint = document.createElement('span');
-        hint.className = 'hint';
-        hint.textContent = 'Use + when one guess showed the letter twice.';
-        wrap.appendChild(hint);
-      }
+      const hint = document.createElement('span');
+      hint.className = 'hint';
+      hint.textContent = doubles.some(t => t.green)
+        ? 'Use + if the word has another copy of a letter that is already green.'
+        : 'Use + when one guess showed the letter twice.';
+      wrap.appendChild(hint);
     }
 
     // ── Clue input handlers ───────────────────────────────────────────────────
@@ -2265,21 +2258,19 @@
         note = `Fill the blanks to check the word. ${fill}`.trim();
       }
       $('arrNav').hidden = !nav;
-      if (nav) {
-        $('arrIndex').textContent = i >= 0 ? `Arrangement ${i + 1} of ${shownOrder.length}` : `${shownOrder.length} arrangements`;
-        $('arrPrevBtn').disabled = i === 0;
-        $('arrNextBtn').disabled = i === shownOrder.length - 1;
-      }
+      if (nav) $('arrIndex').textContent = i >= 0 ? `Arrangement ${i + 1} of ${shownOrder.length}` : `${shownOrder.length} arrangements`;
       $('boardNoteText').textContent = note;
       $('boardNote').classList.toggle('empty', !nav && !note);
     }
 
-    // ‹ and › put the previous or next listed arrangement on the board; from one that isn't
-    // listed (hidden as a non-word, or outside the pins), they start at either end.
+    // ‹ and › put the previous or next listed arrangement on the board, wrapping at the ends
+    // so a cycle through them needs no pointer movement; from one that isn't listed (hidden
+    // as a non-word, or outside the pins), they start at either end.
     function stepArrangement(delta) {
-      if (!shownOrder.length) return;
+      const n = shownOrder.length;
+      if (!n) return;
       const i = shownOrder.indexOf(board);
-      const next = i < 0 ? (delta > 0 ? 0 : shownOrder.length - 1) : Math.max(0, Math.min(shownOrder.length - 1, i + delta));
+      const next = i < 0 ? (delta > 0 ? 0 : n - 1) : (i + delta + n) % n;
       board = shownOrder[next];
       countOnce('arrangement-step');
       refreshResults({ keepBoard: true });
@@ -3089,7 +3080,7 @@
       } else if (hiddenAll) {
         title = 'None of the legal arrangements fits a known word.';
       } else if (!total) {
-        title = 'No legal arrangement fits these clues. Check the Green, Yellow and Tiles rows.';
+        title = 'No legal arrangement fits these clues. Check the Green and Yellow rows.';
       } else if (pins.size) {
         title = `${filtered.length} of ${total} arrangement${total === 1 ? '' : 's'} match your pins`;
       } else {
