@@ -690,7 +690,7 @@ test('vowel odds use consonant clues only when switched to All clues, and rememb
     await expect(page.locator('#oddsCount')).toHaveText(`${count} of ${answerWords.length} answers left`);
     await expect(oddsChips(page)).toHaveText(chips);
   };
-  await expect(scope('Vowels only')).toHaveAttribute('aria-pressed', 'true');
+  await expect(scope('Vowel clues')).toHaveAttribute('aria-pressed', 'true');
   await check('A', 'E');
   await expect(page.locator('#oddsTable .odds-cell.current')).toHaveCount(1);
 
@@ -705,7 +705,7 @@ test('vowel odds use consonant clues only when switched to All clues, and rememb
   await page.reload();
   await expect(scope('All clues')).toHaveAttribute('aria-pressed', 'true');
   await check('A', 'E', 'M', 'RST');
-  await scope('Vowels only').click();
+  await scope('Vowel clues').click();
   await check('A', 'E');
 });
 

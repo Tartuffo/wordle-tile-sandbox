@@ -31,7 +31,7 @@ The page is three numbered steps: **1 Enter your clues**, **2 Try letters on the
 - **More analysis**: closed by default; the choice is remembered. Inside:
   - **Vowel odds**: how many answers fit, and for each vowel (A E I O U Y) still unknown, the chance it is in the word, plus the chance that no other vowel is, to help you decide whether to keep trying vowels or switch to consonants. Options are sorted by chance and shaded by it.
   - The vowels start from your clues (a green or yellow vowel counts as present). Tap one to cycle it through unknown, yellow and gray; **Reset to clues** undoes your taps.
-  - **Use: Vowels only / All clues**: by default only vowel clues count. All clues also uses your consonants, gray ones out and green or yellow ones in. That is closer to a solver, so it stays off until you choose it; the choice is remembered.
+  - **Use: Vowel clues / All clues**: by default only the vowel clues count. All clues also uses your consonants, gray ones out and green or yellow ones in. That is closer to a solver, so it stays off until you choose it; the choice is remembered.
   - Two collapsed reference sections: **every case of one yellow and one gray vowel** (the two likeliest other vowels and the chance of none), and the **letter ranking** with percentages, noting the date of the latest answer in the list.
   - Odds count Wordle answer words, not letters, and ignore position.
 - **Help**: each step has a **?** that explains it, and the first visit gets four short tips. Instructions say "click" on a device with a mouse or trackpad and "tap" on a touch screen.
@@ -123,7 +123,7 @@ letter taps, board tile drags and holds, the Rank view, real dictionary lookup, 
 Random puzzles (Wordle scoring with duplicates, and each puzzle checked against the real answer list and the arrangement range),
 manual edits after import, and More analysis: opening and closing it, the vowel
 odds' filtering and probability functions on a small hand-checked list, and the
-panel, Vowels only / All clues, the vowel table and the letter ranking against
+panel, Vowel clues / All clues, the vowel table and the letter ranking against
 the real answer list, with the expected numbers computed independently in the
 test. Clipboard writes
 are captured at the browser API boundary; dictionary filtering uses a tiny
