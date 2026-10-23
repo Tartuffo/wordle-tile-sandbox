@@ -51,6 +51,9 @@ test.beforeEach(async ({ page }) => {
   // The first-time tips have their own test, which opts out of this; elsewhere they would only get in the way.
   await page.addInitScript(tips => {
     if (!sessionStorage.getItem('test-tips')) localStorage.setItem('wordle-sandbox-tips-seen', JSON.stringify(tips));
+    // Most tests count arrangements with the non-words dimmed, as the default once was; the
+    // Hide default has its own test, which opts out of this.
+    if (!sessionStorage.getItem('test-wordmode')) localStorage.setItem('wordle-sandbox-nonword-mode-2', 'dim');
   }, TIPS);
 });
 
@@ -966,4 +969,30 @@ test('holding or right-clicking a letter marks it gray; a gray letter can be let
   // A green or yellow letter can't be excluded.
   await letter(page, 'E').click({ button: 'right' });
   await expect(page.locator('#grayInput')).toHaveValue('SA');
+});
+
+test('arrangements no word fits are hidden by default; Dim is remembered; the old key is ignored', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem('test-wordmode')) return;
+    sessionStorage.setItem('test-wordmode', 'on');
+    localStorage.removeItem('wordle-sandbox-nonword-mode-2');
+    localStorage.setItem('wordle-sandbox-nonword-mode', 'dim');   // from before Hide was the default
+  });
+  await page.route('**/words/5.txt', route => route.fulfill({ body: 'APPLE\nAMPLE\n', contentType: 'text/plain' }));
+  await open(page);
+  await yellow(page, 1).fill('P');
+  const mode = name => page.locator('#wordNote').getByRole('button', { name, exact: true });
+  await expect(mode('Hide')).toHaveAttribute('aria-pressed', 'true');
+  await expect(arrangements(page)).toHaveCount(2);
+  await expect(page.locator('#wordNoteText')).toHaveText('2 of 4 fit no known word:');
+  await expect(page.locator('#resultsTitle')).toHaveText('2 legal arrangements of your yellow tiles');
+  await expect(page.locator('#arrIndex')).toHaveText('Arrangement 1 of 2');
+  expect(await page.evaluate(() => localStorage.getItem('wordle-sandbox-nonword-mode'))).toBeNull();
+
+  await mode('Dim').click();
+  await expect(arrangements(page)).toHaveCount(4);
+  await expect(page.locator('#list .arr.noword')).toHaveCount(2);
+  await page.reload();
+  await expect(mode('Dim')).toHaveAttribute('aria-pressed', 'true');
+  await expect(arrangements(page)).toHaveCount(4);
 });

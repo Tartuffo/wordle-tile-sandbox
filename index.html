@@ -1456,7 +1456,7 @@
       <p>Every way your yellow tiles can fill the open slots without going where they were yellow. A · marks a slot whose letter you don’t know yet. The one on the board is outlined, and the ‹ › arrows under the board cycle through the list in this order.</p>
       <p><span class="tap">Tap</span> an arrangement to put it on the board. Hold it (or right-click it) to see the dictionary words that match it; since that can give the answer away, you’re asked first, once per tab.</p>
       <p>A line such as “E must go in slot 4” means every arrangement agrees. Longer lists are sorted into groups by where one letter goes; <span class="tap">tap</span> a group heading to pin that letter there. Lists of more than 24 stay folded until you narrow them with pins or choose Show all.</p>
-      <p>An arrangement is dimmed and struck through when no word in the word list fits it and your clues. When some don’t fit, Dim, Hide and Show choose how they appear.</p>
+      <p>Arrangements that no word in the word list fits, given your clues, are left out by default. When there are some, Dim, Hide and Show choose whether they are shown dimmed and struck through, left out, or shown like the rest.</p>
       <p>Put grid first moves the grid of where each letter can go above the list.</p>
     </div>
     <form method="dialog"><button>Close</button></form>
@@ -1529,8 +1529,10 @@
 
     const STATE_KEY = 'wordle-sandbox-v2';
     const OLD_STATE_KEY = 'wordle-sandbox-state';
-    const HIDE_KEY = 'wordle-sandbox-hide-nonwords';   // earlier on/off setting, read once
-    const WORD_MODE_KEY = 'wordle-sandbox-nonword-mode';
+    // The key changed when the default became Hide: a stored Dim was mostly the old default
+    // written back, so it is read no more. A choice made since is stored under the new key.
+    const OLD_WORD_MODE_KEYS = ['wordle-sandbox-hide-nonwords', 'wordle-sandbox-nonword-mode'];
+    const WORD_MODE_KEY = 'wordle-sandbox-nonword-mode-2';
     const LETTERS_VIEW_KEY = 'wordle-sandbox-letters-view';
     const ODDS_SCOPE_KEY = 'wordle-sandbox-odds-scope';
     const RESULTS_ORDER_KEY = 'wordle-sandbox-results-order';
@@ -1562,7 +1564,7 @@
     let touchOverPos = null;
     let wordList = 'loading';     // words/5.txt as { words, byPos } once loaded, or 'failed'
     let noWord = new Set();       // arrangements that no dictionary word fits
-    let wordMode = 'dim';         // non-word treatment: 'dim', 'hide' or 'off'
+    let wordMode = 'hide';        // non-word treatment: 'hide' (default), 'dim' or 'off'
     let answerWords = 'loading';  // Wordle answers (words/answers.csv) once loaded, or 'loading' / 'failed'
     let answerUses = new Map();   // answer -> { uses, last }: how often NYT used it and the last date
     let answersThrough = '';      // the answer list's last puzzle date, formatted, once loaded
@@ -4003,10 +4005,9 @@
       loadSavedState();
     }
     try {
-      const saved = localStorage.getItem(WORD_MODE_KEY) || (localStorage.getItem(HIDE_KEY) ? 'hide' : '');
+      const saved = localStorage.getItem(WORD_MODE_KEY);
       if (['dim', 'hide', 'off'].includes(saved)) wordMode = saved;
-      localStorage.setItem(WORD_MODE_KEY, wordMode);
-      localStorage.removeItem(HIDE_KEY);
+      OLD_WORD_MODE_KEYS.forEach(key => localStorage.removeItem(key));
       const view = localStorage.getItem(LETTERS_VIEW_KEY);
       if (['vc', 'rank', 'keyboard'].includes(view)) lettersView = view;   // 'hide', once offered, falls back to the keyboard
       if (localStorage.getItem(ODDS_SCOPE_KEY) === 'all') oddsScope = 'all';
