@@ -1321,7 +1321,7 @@
                 <button data-view="vc" title="Vowels and consonants" aria-label="Vowels and consonants (V/C)">V/C</button>
                 <button data-view="rank" title="Most common letters in Wordle answers first">Rank</button>
               </span>
-              <button type="button" class="help-btn" data-help="lettersHelp" aria-label="About the letters" title="About the letters">?</button>
+              <button type="button" class="help-btn" data-help="lettersHelp" aria-label="About the board and the letters" title="About the board and the letters">?</button>
             </span>
           </div>
           <div id="lettersBody"></div>
@@ -1431,29 +1431,29 @@
     <h2 id="cluesHelpTitle">Entering clues</h2>
     <div class="help-body">
       <p><b>From a screenshot:</b> Paste screenshot reads one you’ve copied, and Import file opens a saved one; on a computer, Ctrl/⌘+V also works. Check the letters, fix any that were misread, then choose Use these clues. If the puzzle was solved, the all-green row is left out, so the clues are as they stood just before the answer.</p>
-      <p><b>Random</b> makes up a puzzle to practice on: one or two guesses against a past Wordle answer, which stays hidden. It’s chosen so that from a few to a few dozen arrangements fit a word.</p>
+      <p><b>Random</b> makes up a puzzle to practice on: one or two guesses against a past Wordle answer, which stays hidden. It’s chosen so that from a few to a few dozen arrangements fit a word. A line under the heading says which guesses were made up, and New puzzle draws another.</p>
       <p><b>‹ Guess 2/3 ›</b> appears after a screenshot or Random: the clues as they stood after each guess, here after the second of three. ‹ and › step back and forth, say to see how much one guess narrowed things down. Editing a clue by hand ends the stepping and keeps the clues shown.</p>
-      <p><b>By hand:</b></p>
+      <p><b>By hand</b>, copy the colors Wordle gave your letters:</p>
       <dl>
-        <dt>Green</dt>
+        <dt>Green (right spot)</dt>
         <dd>The letter in each slot you’ve solved. Typing moves to the next slot; space skips one.</dd>
-        <dt>Yellow</dt>
-        <dd>Under each slot, every letter that turned yellow there, across all your guesses.</dd>
-        <dt>Gray</dt>
+        <dt>Yellow (wrong spot)</dt>
+        <dd>Under each slot, every letter that turned yellow there, across all your guesses. Each becomes a tile on the board.</dd>
+        <dt>Gray (ruled out)</dt>
         <dd>Letters that aren’t in the word. If a letter turned gray in one place but green or yellow in another, enter it here too: the word then has no more copies of it than your green and yellow ones.</dd>
         <dt>Double letters</dt>
         <dd>A yellow letter is one tile on the board, or none if it’s already green. When a letter could be in the word twice (yellow in two slots, or green in one and yellow in another), this row appears: press + to add a tile for the second copy, and − to take it away again.</dd>
       </dl>
-      <p>After a screenshot, Random or a shared link, this step folds to a summary of the clues; Edit clues or the step’s heading opens it again. Start over clears everything. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day.</p>
+      <p>After a screenshot, Random or a shared link, this step folds to a summary of the clues; Edit clues or the step’s heading opens it again. Start over clears everything, board included. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day.</p>
       <p><button type="button" id="tipsAgainBtn" class="link">Show the first-time tips again</button></p>
     </div>
     <form method="dialog"><button>Close</button></form>
   </dialog>
 
   <dialog id="arrangementsHelp" class="words-dialog help-dialog" aria-labelledby="arrangementsHelpTitle">
-    <h2 id="arrangementsHelpTitle">Arrangements</h2>
+    <h2 id="arrangementsHelpTitle">Legal arrangements</h2>
     <div class="help-body">
-      <p>Every way your yellow tiles can fill the open slots without going where they were yellow. A · marks a slot whose letter you don’t know yet. The one on the board is outlined.</p>
+      <p>Every way your yellow tiles can fill the open slots without going where they were yellow. A · marks a slot whose letter you don’t know yet. The one on the board is outlined, and the ‹ › arrows under the board cycle through the list in this order.</p>
       <p><span class="tap">Tap</span> an arrangement to put it on the board. Hold it (or right-click it) to see the dictionary words that match it; since that can give the answer away, you’re asked first, once per tab.</p>
       <p>A line such as “E must go in slot 4” means every arrangement agrees. Longer lists are sorted into groups by where one letter goes; <span class="tap">tap</span> a group heading to pin that letter there. Lists of more than 24 stay folded until you narrow them with pins or choose Show all.</p>
       <p>An arrangement is dimmed and struck through when no word in the word list fits it and your clues. When some don’t fit, Dim, Hide and Show choose how they appear.</p>
@@ -1497,11 +1497,11 @@
   </dialog>
 
   <dialog id="lettersHelp" class="words-dialog help-dialog" aria-labelledby="lettersHelpTitle">
-    <h2 id="lettersHelpTitle">Available letters</h2>
+    <h2 id="lettersHelpTitle">The board and the letters</h2>
     <div class="help-body">
-      <p>The letters that could still be in the word, under the board. Green and yellow keys are from your clues. Gray letters don’t go on the board: Keyboard and Rank keep them in place, and V/C leaves them out.</p>
-      <p><b><span class="tap">Tap</span> a letter</b> to try it on the board: in the slot you chose (<span class="tap">tap</span> an empty slot first), or else in the first blank slot that allows it. <b>Hold</b> a letter (or right-click it) to mark it gray without going back to the clues; hold a gray one to let it back in.</p>
-      <p>On the board, <b>drag</b> a tile to move or swap it, and remove a tried letter with its × (on a touch screen, holding it works too). Green tiles stay fixed. Under the board, ‹ Arrangement 3 of 12 › says which of the listed arrangements is showing, and its arrows step through them in the list’s order.</p>
+      <p><b>The board</b> shows one legal arrangement of your yellow tiles, with green letters fixed. <b>Drag</b> a yellow tile to another slot to move or swap it; a tile in a slot where it was yellow is flagged. ‹ Arrangement 3 of 12 › says which of the listed arrangements is showing, and ‹ › cycle through them in the list’s order, round and round.</p>
+      <p><b>Available letters</b>, under the board, are the ones that could still be in the word; green and yellow keys are from your clues. <b><span class="tap">Tap</span> a letter</b> to try it on the board: in the empty slot you chose (<span class="tap">tap</span> one first), or else in the first blank slot that allows it. A tried letter can be dragged too, and its × removes it (on a touch screen, holding it works as well).</p>
+      <p><b>Hold</b> a letter (or right-click it) to mark it gray without going back to the clues; hold a gray one to let it back in. Gray letters don’t go on the board: Keyboard and Rank keep them in place, dimmed, and V/C leaves them out.</p>
       <p>Fill the board to see whether the word is in the word list and whether it has been a Wordle answer.</p>
       <dl>
         <dt>Keyboard</dt>
@@ -1509,7 +1509,7 @@
         <dt>V/C</dt>
         <dd>Vowels, then Y (in five-letter words it mostly acts as one), then consonants.</dd>
         <dt>Rank</dt>
-        <dd>Letters by how many Wordle answers contain them, most common first. The order doesn’t change with your clues, so it’s the same every game. On a computer, hover over a letter to see its share. The More Analysis section has the full table.</dd>
+        <dd>Letters by how many Wordle answers contain them, most common first. The order doesn’t change with your clues, so it’s the same every game. On a computer, hover over a letter to see its share. More analysis, at the bottom, has the full table.</dd>
       </dl>
     </div>
     <form method="dialog"><button>Close</button></form>

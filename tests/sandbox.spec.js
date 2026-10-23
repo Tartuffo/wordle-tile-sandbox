@@ -489,16 +489,16 @@ test('the letters help button opens a dialog explaining the views', async ({ pag
   await openBoard(page);
   const help = page.locator('#lettersHelp');
   await expect(help).toBeHidden();
-  await page.getByRole('button', { name: 'About the letters' }).click();
+  await page.getByRole('button', { name: 'About the board and the letters' }).click();
   await expect(help).toBeVisible();
-  await expect(help.getByRole('heading')).toHaveText('Available letters');
+  await expect(help.getByRole('heading')).toHaveText('The board and the letters');
   await expect(help.locator('dt')).toHaveText(['Keyboard', 'V/C', 'Rank']);
   await help.getByRole('button', { name: 'Close' }).click();
   await expect(help).toBeHidden();
-  await page.getByRole('button', { name: 'About the letters' }).click();
+  await page.getByRole('button', { name: 'About the board and the letters' }).click();
   await page.mouse.click(5, 5);  // the backdrop
   await expect(help).toBeHidden();
-  await page.getByRole('button', { name: 'About the letters' }).click();
+  await page.getByRole('button', { name: 'About the board and the letters' }).click();
   await page.keyboard.press('Escape');
   await expect(help).toBeHidden();
 });
@@ -508,8 +508,8 @@ test('every section has a help button that opens its own popup', async ({ page }
   await openAnalysis(page);
   const helps = [
     ['About entering clues', 'Entering clues'],
-    ['About the letters', 'Available letters'],
-    ['About the arrangements', 'Arrangements'],
+    ['About the board and the letters', 'The board and the letters'],
+    ['About the arrangements', 'Legal arrangements'],
     ['About the grid', 'Where each letter can go'],
     ['About More analysis', 'More analysis'],
   ];

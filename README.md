@@ -34,11 +34,11 @@ The page is three numbered steps: **1 Enter your clues**, **2 Try letters on the
   - **Use: Vowels only / All clues**: by default only vowel clues count. All clues also uses your consonants, gray ones out and green or yellow ones in. That is closer to a solver, so it stays off until you choose it; the choice is remembered.
   - Two collapsed reference sections: **every case of one yellow and one gray vowel** (the two likeliest other vowels and the chance of none), and the **letter ranking** with percentages, noting the date of the latest answer in the list.
   - Odds count Wordle answer words, not letters, and ignore position.
-- **Help**: each section has a **?** that explains it, and the first visit gets four short tips. Instructions say "click" on a device with a mouse or trackpad and "tap" on a touch screen.
+- **Help**: each step has a **?** that explains it, and the first visit gets four short tips. Instructions say "click" on a device with a mouse or trackpad and "tap" on a touch screen.
 - **Light and dark themes**: follows your device's light or dark setting; the sun/moon switch by the title overrides it, and that choice is remembered in the browser.
 - **Copy link**, the link icon at the top right of the clues, shares the current clues. Your clues are also saved in the browser and come back if you reopen the app the same day.
 
-The tool is intentionally visual: it helps you reason about the puzzle by moving tiles around. It uses a word list to flag arrangements no word fits, and the answer list for letter and vowel odds and to say when a word on the board was an answer. Matching words stay hidden unless you hold an arrangement and choose Show words.
+The tool is intentionally visual: it helps you reason about the puzzle by moving tiles around on the board. It uses a word list to flag arrangements no word fits, and the answer list for letter and vowel odds and to say when a word on the board was an answer. Matching words stay hidden unless you hold an arrangement and choose Show words.
 
 ## Letters in Wordle answers
 
@@ -118,8 +118,8 @@ Coverage includes clue entry, duplicate yellow counts with the + / − stepper, 
 and pins, the list/grid order switch, contradictory clues, daily persistence,
 share links, dictionary modes, gray letters and gray duplicates capping a count,
 the numbered steps folding and unfolding, the first-time tips, choosing a board slot, the × on a tried letter, the board's
-arrangement note, holding a letter to mark it gray,
-letters taps/holds/drags, the Rank view, real dictionary lookup, PNG import, guess stepping, cancel/retry,
+‹ › arrangement cycling, holding a letter to mark it gray,
+letter taps, board tile drags and holds, the Rank view, real dictionary lookup, PNG import, guess stepping, cancel/retry,
 Random puzzles (Wordle scoring with duplicates, and each puzzle checked against the real answer list and the arrangement range),
 manual edits after import, and More analysis: opening and closing it, the vowel
 odds' filtering and probability functions on a small hand-checked list, and the
