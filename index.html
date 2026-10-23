@@ -969,6 +969,7 @@
       position: relative;
       max-width: 420px;
       margin: 12px 0;
+      font-weight: 500;
       padding: 12px 14px;
       border-radius: 12px;
       background: var(--accent);
@@ -992,6 +993,7 @@
     }
 
     .tip p { margin: 0 0 8px; }
+    .subtitle + .tip { margin: -4px 0 16px; }
     .tip button.link { color: inherit; font-weight: 800; }
 
     @keyframes tip-in {
@@ -1228,7 +1230,7 @@
         <span aria-hidden="true">☾</span>
       </button>
     </header>
-    <p class="subtitle">Work out where your yellow letters can go, and try your next guess before you play it.</p>
+    <p id="subtitle" class="subtitle">Work out where your yellow letters can go, and try your next guess before you play it.</p>
 
     <section id="importPanel" class="panel" aria-label="Import screenshot" hidden>
       <p id="importNote" class="hint" role="status"></p>
@@ -3670,9 +3672,13 @@
 
     // ── First-time tips ───────────────────────────────────────────────────────
 
-    // One speech bubble at a time, each shown once per browser: how to enter clues, what the
-    // board is for, and what the list is. The next shows when the one before is dismissed.
+    // One speech bubble at a time, each shown once per browser: what the tool is for, how to
+    // enter clues, what the board is for, and what the list is. The next shows when the one
+    // before is dismissed.
     const TIPS = {
+      intro: () => 'Stuck on a Wordle? Put in the colors from your guesses and this sandbox shows every way your ' +
+        'yellow letters can still fit, so you can try words on a board before you spend a guess. ' +
+        'Three steps, top to bottom. Nothing is sent anywhere.',
       clues: () => 'Copy your colors by hand: green letters in their slot, yellow letters under each slot where ' +
         'they were yellow, gray letters in the gray row. Or paste a screenshot, or press Random to practice.',
       board: () => movable.length
@@ -3698,7 +3704,8 @@
       const clues = hasClues();
       const visible = el => !!el.offsetParent;
       let id = null, anchor = null;
-      if (!clues && visible($('typeIntro'))) [id, anchor] = ['clues', $('typeIntro')];
+      if (!tipsSeen.has('intro')) [id, anchor] = ['intro', $('subtitle')];
+      else if (!clues && visible($('typeIntro'))) [id, anchor] = ['clues', $('typeIntro')];
       else if (clues && visible($('board')) && !tipsSeen.has('board')) [id, anchor] = ['board', $('board')];
       else if (movable.length && visible($('list')) && $('list').querySelector('.arr') && !tipsSeen.has('list')) [id, anchor] = ['list', $('listCaption')];
       if (!id || tipsSeen.has(id)) return;

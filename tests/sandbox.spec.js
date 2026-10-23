@@ -15,7 +15,7 @@ const openAnalysis = page => page.getByRole('button', { name: 'More analysis', e
 const editClues = page => page.getByRole('button', { name: 'Edit clues', exact: true }).click();
 const openBoard = page => page.getByRole('button', { name: 'open it now', exact: true }).click();
 const startOver = page => page.getByRole('button', { name: 'Start over', exact: true }).click();
-const TIPS = ['clues', 'board', 'list'];
+const TIPS = ['intro', 'clues', 'board', 'list'];
 
 // Expected vowel odds, computed here independently of the app from the real answer list.
 const VOWELS = 'AEIOUY';
@@ -822,6 +822,11 @@ test('first-time tips show one at a time, in order, and are remembered; help can
   await open(page);
   const tip = page.locator('.tip');
   const gotIt = () => tip.getByRole('button', { name: 'Got it' }).click();
+  // First, what the tool is for, right under the subtitle.
+  await expect(tip).toHaveAttribute('data-tip', 'intro');
+  await expect(tip).toContainText('Stuck on a Wordle?');
+  expect(await page.evaluate(() => $('subtitle').nextElementSibling.classList.contains('tip'))).toBe(true);
+  await gotIt();
   await expect(tip).toHaveAttribute('data-tip', 'clues');
   await expect(tip).toContainText('Copy your colors by hand');
   // In the flow under the "type them" line, covering nothing.
@@ -845,9 +850,11 @@ test('first-time tips show one at a time, in order, and are remembered; help can
   await page.getByRole('button', { name: 'About entering clues', exact: true }).click();
   await page.getByRole('button', { name: 'Show the first-time tips again' }).click();
   await expect(page.locator('dialog[open]')).toHaveCount(0);
-  await expect(tip).toHaveAttribute('data-tip', 'board');
+  await expect(tip).toHaveAttribute('data-tip', 'intro');
+  await gotIt();
+  await expect(tip).toHaveAttribute('data-tip', 'board');   // there are clues, so the clues tip is skipped
 
-  // A fresh visit with clues already in (a link) skips the clues tip and marks it moot.
+  // A fresh visit with clues already in (a link): the intro was dismissed above, the clues tip is moot.
   await open(page, '?green=B%3F%3F%3F%3F&ban1=E&yellow=E');
   await expect(tip).toHaveAttribute('data-tip', 'board');
   await expect(tip).toContainText('This is one way your yellow letters could fit');
