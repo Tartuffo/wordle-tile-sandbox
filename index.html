@@ -521,7 +521,6 @@
     @media (max-width: 420px) {
       .letters-tools .seg button { padding: 3px 7px; }
     }
-    .letters-hint { margin: 8px 0 0; font-size: 12px; }
 
     .kb { display: grid; gap: 5px; }
 
@@ -657,6 +656,7 @@
     }
 
     .tile.yellow { background: var(--yellow); cursor: grab; }
+    .tile.yellow, .tile.trial { -webkit-user-drag: element; }   /* Safari: user-select: none alone blocks the drag */
 
     /* A letter being tried, styled like a typed but unsubmitted Wordle tile. */
     .tile.trial {
@@ -1325,7 +1325,6 @@
             </span>
           </div>
           <div id="lettersBody"></div>
-          <p id="lettersHint" class="hint letters-hint"></p>
         </div>
       </div>
     </section>
@@ -1502,7 +1501,7 @@
     <div class="help-body">
       <p>The letters that could still be in the word, under the board. Green and yellow keys are from your clues. Gray letters don’t go on the board: Keyboard and Rank keep them in place, and V/C leaves them out.</p>
       <p><b><span class="tap">Tap</span> a letter</b> to try it on the board: in the slot you chose (<span class="tap">tap</span> an empty slot first), or else in the first blank slot that allows it. <b>Hold</b> a letter (or right-click it) to mark it gray without going back to the clues; hold a gray one to let it back in.</p>
-      <p>On the board, <b>drag</b> a tile to move or swap it, and remove a tried letter with its × or by holding it. Green tiles stay fixed. Under the board, ‹ Arrangement 3 of 12 › says which of the listed arrangements is showing, and its arrows step through them in the list’s order.</p>
+      <p>On the board, <b>drag</b> a tile to move or swap it, and remove a tried letter with its × (on a touch screen, holding it works too). Green tiles stay fixed. Under the board, ‹ Arrangement 3 of 12 › says which of the listed arrangements is showing, and its arrows step through them in the list’s order.</p>
       <p>Fill the board to see whether the word is in the word list and whether it has been a Wordle answer.</p>
       <dl>
         <dt>Keyboard</dt>
@@ -2184,7 +2183,7 @@
             tile.title = 'Green tile (fixed)';
           } else {
             if (conflicts.includes(pos)) tile.classList.add('conflict');
-            tile.title = kind === 'trial' ? 'Your letter: drag to move, hold or × to remove' : 'Drag to move or swap';
+            tile.title = kind === 'trial' ? 'Your letter: drag to move, × to remove' : 'Drag to move or swap';
             tile.draggable = true;
             tile.addEventListener('dragstart', e => {
               cancelHold();
@@ -2198,7 +2197,6 @@
               renderBoard();
             });
             if (kind === 'trial') {
-              tile.addEventListener('mousedown', e => startHold(pos, e.clientX, e.clientY));
               const x = document.createElement('button');
               x.type = 'button';
               x.className = 'tile-x';
@@ -2333,8 +2331,9 @@
       countOnce('board-move');
     }
 
-    // Holding a tried letter still for HOLD_MS removes it; moving more than MOVE_PX
-    // first makes it a drag instead, and a quick tap does nothing.
+    // On a touch screen, holding a tried letter still for HOLD_MS removes it; moving more
+    // than MOVE_PX first makes it a drag instead, and a quick tap chooses its slot. With a
+    // mouse the × removes it, so a slow press before a drag never takes the tile away.
     const HOLD_MS = 500;
     const MOVE_PX = 8;
     let hold = null;              // { pos, x, y, timer } while a press may become a hold
@@ -2350,7 +2349,6 @@
           touchOverPos = null;
           trials[p] = '';
           suppressClick = true;
-          document.addEventListener('mouseup', () => setTimeout(() => { suppressClick = false; }), { once: true });
           navigator.vibrate?.(15);
           renderBoard();
         }, HOLD_MS),
@@ -2362,11 +2360,6 @@
       clearTimeout(hold.timer);
       hold = null;
     }
-
-    document.addEventListener('mousemove', e => {
-      if (hold && Math.hypot(e.clientX - hold.x, e.clientY - hold.y) > MOVE_PX) cancelHold();
-    });
-    document.addEventListener('mouseup', cancelHold);
 
     // Touch drag: HTML5 drag events don't fire on iOS Safari, so mirror them with touch
     // events. touchmove fires on the element where the touch started, so elementFromPoint
@@ -2500,8 +2493,6 @@
       $('lettersTitle').innerHTML = ruledOut.size
         ? `<b>${26 - ruledOut.size}</b> available letters <span class="hint">(${exclude})</span>`
         : `Available letters <span class="hint">(${exclude})</span>`;
-      $('lettersHint').textContent = `${TAP} a letter to try it. ${TAP} an empty slot first to choose where it goes; ` +
-        'drag a tile on the board to move it.';
 
       const body = $('lettersBody');
       body.innerHTML = '';

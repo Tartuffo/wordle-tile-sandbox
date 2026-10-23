@@ -213,19 +213,39 @@ test('holding an arrangement asks once per tab, then lists matching words with r
   await expect(page.locator('#wordsNote')).toHaveText('No word in the dictionary matches this.');
 });
 
-test('letters-left taps fill legal blanks; quick tap keeps a trial, hold removes it', async ({ page }) => {
+test('letters-left taps fill legal blanks; a mouse press keeps a trial, × removes it, a touch hold removes it', async ({ page, browser }) => {
   await open(page, '?len=5&green=B%3F%3F%3F%3F&ban1=E&yellow=E');
   await letter(page, 'E').click();
   await expect(boardSlot(page, 2).locator('.trial')).toHaveCount(0);
   await expect(page.locator('#board .trial')).toHaveCount(1);
   await page.locator('#board .trial').click();
   await expect(page.locator('#board .trial')).toHaveCount(1);
+  // A long press with a mouse is the start of a slow drag, never a removal.
   const trial = page.locator('#board .trial');
   await trial.hover();
   await page.mouse.down();
-  await expect(page.locator('#board .trial')).toHaveCount(0);
+  await page.waitForTimeout(700);
   await page.mouse.up();
+  await expect(page.locator('#board .trial')).toHaveCount(1);
+  await page.getByRole('button', { name: /^Remove E from slot/ }).click();
+  await expect(page.locator('#board .trial')).toHaveCount(0);
   await expect(boardSlot(page, 1).locator('.green')).toHaveText('B');
+
+  // On a touch screen, holding a tried letter still removes it.
+  const context = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 800 } });
+  const phone = await context.newPage();
+  await phone.goto('http://127.0.0.1:4173/?len=5&green=B%3F%3F%3F%3F&ban1=E&yellow=E');
+  await phone.locator('.tip button').tap();
+  await letter(phone, 'E').tap();
+  await expect(phone.locator('#board .trial')).toHaveCount(1);
+  const box = await phone.locator('#board .trial').boundingBox();
+  await phone.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);   // a quick tap keeps it
+  await expect(phone.locator('#board .trial')).toHaveCount(1);
+  const client = await context.newCDPSession(phone);
+  await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: box.x + box.width / 2, y: box.y + box.height / 2 }] });
+  await expect(phone.locator('#board .trial')).toHaveCount(0);
+  await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await context.close();
 });
 
 test('trial drag swaps letters, preserves fixed greens and flags banned destinations', async ({ page }) => {
@@ -509,7 +529,7 @@ test('on a touch screen, instructions say Tap and the list caption says Long tap
   const context = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 800 } });
   const phone = await context.newPage();
   await phone.goto('http://127.0.0.1:4173/?green=B%3F%3F%3F%3F&ban1=E&yellow=E');
-  await expect(phone.locator('#lettersHint')).toHaveText(/^Tap a letter to try it\./);
+  await expect(phone.locator('#boardNote')).toContainText('Tap an empty slot, then a letter below, to fill it.');
   await expect(phone.locator('#listCaption')).toHaveText('Tap one to put it on the board. Long tap to see all matching words.');
   await expect(phone.locator('#summaryCaption')).toContainText('Tap a number to pin the letter there; tap a letter');
   await expect(phone.locator('#gridHelp')).toContainText('Tap a number to pin the letter there');
