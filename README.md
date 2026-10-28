@@ -10,7 +10,7 @@ Developed with assistance from ChatGPT and Claude Code.
 
 ## What it does
 
-Wordle Tile Sandbox lets you enter what you know from a Wordle puzzle, slot by slot, and shows every way the yellow tiles can still be arranged. Optional analysis, closed until you ask for it, adds vowel odds and a letter ranking drawn from Wordle's answer list.
+Wordle Tile Sandbox lets you enter what you know from a Wordle puzzle, slot by slot, and shows every way the yellow tiles can still be arranged. Optional analysis, closed until you ask for it, adds vowel odds and letter odds drawn from Wordle's answer list.
 
 The page is three numbered steps: **1 Enter your clues**, **2 Try letters on the board**, **3 Browse every legal arrangement**. Steps 2 and 3 open as soon as there is something to show; a step's heading folds or unfolds it by hand. After a screenshot, Random or a shared link, step 1 folds to a one-line summary of the clues, with **Edit clues** to open it again and **Start over** to clear everything. On a first visit, four short tips appear one at a time, the first saying what the tool is for and the rest under the thing each explains; **?** on step 1 can show them again.
 
@@ -32,7 +32,8 @@ The page is three numbered steps: **1 Enter your clues**, **2 Try letters on the
   - **Vowel odds**: how many answers fit, and for each vowel (A E I O U Y) still unknown, the chance it is in the word, plus the chance that no other vowel is, to help you decide whether to keep trying vowels or switch to consonants. Options are sorted by chance and shaded by it.
   - The vowels start from your clues (a green or yellow vowel counts as present). Tap one to cycle it through unknown, yellow and gray; **Reset to clues** undoes your taps.
   - **Use: Vowel clues / All clues**: by default only the vowel clues count. All clues also uses your consonants, gray ones out and green or yellow ones in. That is closer to a solver, so it stays off until you choose it; the choice is remembered.
-  - Two collapsed reference sections: **every case of one yellow and one gray vowel** (the two likeliest other vowels and the chance of none), and the **letter ranking** with percentages, noting the date of the latest answer in the list.
+  - **All letter odds**: the share of answers containing each letter, with percentages, noting the date of the latest answer in the list. **Use: No clues / All clues**: by default over every answer, the order the Rank view uses; All clues counts only the answers that fit everything you know (green letters in place, yellow letters present but not where they were yellow, gray letters absent, duplicate counts), so the known letters stand at 100% and the rest show how likely each is. Off until you choose it; the choice is remembered.
+  - A collapsed reference table, **every case of one yellow and one gray vowel**: the two likeliest other vowels and the chance of none. It doesn't use your clues.
   - Odds count Wordle answer words, not letters, and ignore position.
 - **Help**: each step has a **?** that explains it, and the first visit gets four short tips. Instructions say "click" on a device with a mouse or trackpad and "tap" on a touch screen.
 - **Light and dark themes**: follows your device's light or dark setting; the sun/moon switch by the title overrides it, and that choice is remembered in the browser.
@@ -56,7 +57,7 @@ So the top twelve are **EAROTI LSNUCY**: R and L rise, H and D drop out, Y comes
 
 This is a single-file static web app with no build step or dependencies. To modify it, edit `index.html` directly and reload the browser.
 
-Opened directly as a file, the app works except for what needs the files in `words/`, since browsers don't let a local file load them: the word check, matching words, vowel odds and letter ranking are off, Random is hidden, and the Rank view uses a built-in order. To have everything locally, serve the folder:
+Opened directly as a file, the app works except for what needs the files in `words/`, since browsers don't let a local file load them: the word check, matching words, vowel odds and letter odds are off, Random is hidden, and the Rank view uses a built-in order. To have everything locally, serve the folder:
 
 ```bash
 git clone git@github.com:YOUR-GITHUB-USERNAME/wordle-tile-sandbox.git
@@ -66,7 +67,7 @@ python3 -m http.server 8000
 
 Then open http://localhost:8000. Any static server works.
 
-The answer list updates itself: the `refresh-answers.yml` workflow runs every Monday, fetches answers through the last date whose puzzle is over in every time zone, runs the tests, and commits any new answers to main. To update it sooner, run it from the repository's Actions tab. The date of the latest answer is shown under the letter ranking in **More analysis**. `node scripts/analyze-answers.mjs` prints the letter ranking and vowel tables from the current list.
+The answer list updates itself: the `refresh-answers.yml` workflow runs every Monday, fetches answers through the last date whose puzzle is over in every time zone, runs the tests, and commits any new answers to main. To update it sooner, run it from the repository's Actions tab. The date of the latest answer is shown under the letter odds in **More analysis**. `node scripts/analyze-answers.mjs` prints the letter ranking and vowel tables from the current list.
 
 ### Repository structure
 
@@ -123,7 +124,7 @@ letter taps, board tile drags and holds, the Rank view, real dictionary lookup, 
 Random puzzles (Wordle scoring with duplicates, and each puzzle checked against the real answer list and the arrangement range),
 manual edits after import, and More analysis: opening and closing it, the vowel
 odds' filtering and probability functions on a small hand-checked list, and the
-panel, Vowel clues / All clues, the vowel table and the letter ranking against
+panel, Vowel clues / All clues, the vowel table and the letter odds (No clues / All clues) against
 the real answer list, with the expected numbers computed independently in the
 test. Clipboard writes
 are captured at the browser API boundary; dictionary filtering uses a tiny

@@ -655,12 +655,13 @@ test('Rank letters view orders letters by share of answers; grays stay in place,
   await letter(page, expected[1]).click();
   await expect(page.locator('#board .trial')).toHaveCount(1);
 
-  // The same ranking, with percentages, as reference data under the vowel odds.
+  // The same ranking, with percentages, as All letter odds under the vowel odds.
   await openAnalysis(page);
-  await page.locator('summary', { hasText: 'Letter ranking' }).click();
+  await expect(page.locator('#rankScope [aria-pressed="true"]')).toHaveText('No clues');
   await expect(page.locator('#rankTable .rank-cell')).toHaveText(expected.map(l => `${l}${percent(share(l), answerWords.length)}`));
   await expect(page.locator('#rankTable .rank-row')).toHaveCount(4);
   await expect(page.locator('#rankCaption')).toContainText(`top 12 are ${expected.slice(0, 6).join('')} ${expected.slice(6, 12).join('')}`);
+  await expect(page.locator('#rankCount')).toHaveText('');
   const through = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'words', 'answers-sources.json'), 'utf8')).nyt.throughDate;
   const shown = await page.evaluate(d => new Date(d + 'T00:00:00Z').toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }), through);
   expect(shown).toContain(through.slice(0, 4));
@@ -995,4 +996,44 @@ test('arrangements no word fits are hidden by default; Dim is remembered; the ol
   await page.reload();
   await expect(mode('Dim')).toHaveAttribute('aria-pressed', 'true');
   await expect(arrangements(page)).toHaveCount(4);
+});
+
+test('All letter odds under All clues count only the answers that fit every clue, and the choice is remembered', async ({ page }) => {
+  // M green in slot 1, A yellow in slot 3, E S T gray; and a second A tile (A yellow in slots 3 and 4).
+  await open(page, '?len=5&green=M%3F%3F%3F%3F&ban2=A&ban3=A&yellow=AA&gray=EST');
+  await openAnalysis(page);
+  const fits = answerWords.filter(w => w[0] === 'M' && w[2] !== 'A' && w[3] !== 'A' &&
+    [...w].filter(l => l === 'A').length >= 2 && ![...'EST'].some(l => w.includes(l)));
+  expect(fits.length).toBeGreaterThan(0);
+  const share = l => fits.filter(w => w.includes(l)).length;
+  const expected = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].sort((a, b) => share(b) - share(a));
+  const scope = name => page.locator('#rankScope').getByRole('button', { name, exact: true });
+
+  await scope('All clues').click();
+  await expect(page.locator('#rankCount')).toHaveText(`${fits.length} of ${answerWords.length} answers fit your clues`);
+  await expect(page.locator('#rankTable .rank-cell')).toHaveText(expected.map(l => `${l}${percent(share(l), fits.length)}`));
+  await expect(page.locator('#rankTable .rank-cell.green')).toHaveText(['M100%']);
+  await expect(page.locator('#rankTable .rank-cell.yellow')).toHaveText(['A100%']);
+  await expect(page.locator('#rankTable .rank-cell.out')).toHaveText(['E0%', 'S0%', 'T0%']);
+  await expect(page.locator('#rankCaption')).toContainText(`The likeliest 12 are ${expected.slice(0, 6).join('')} ${expected.slice(6, 12).join('')}`);
+
+  // It follows the clues, and is remembered.
+  await editClues(page);
+  await page.locator('#grayInput').fill('ESTR');
+  const fewer = fits.filter(w => !w.includes('R'));
+  await expect(page.locator('#rankCount')).toHaveText(`${fewer.length} of ${answerWords.length} answers fit your clues`);
+  await page.reload();
+  await expect(scope('All clues')).toHaveAttribute('aria-pressed', 'true');
+  await scope('No clues').click();
+  await expect(page.locator('#rankCount')).toHaveText('');
+  await expect(page.locator('#rankTable .rank-cell.green')).toHaveCount(0);
+
+  // Clues no answer fits (every letter but M, A and Y gray, and only MAMMA was left) leave
+  // nothing: the table says so instead of showing 26 zeros.
+  await scope('All clues').click();
+  await page.locator('#grayInput').fill('BCDFGHJKLNPQRSTVWXYZEIOU');
+  await expect(page.locator('#rankCount')).toHaveText(`1 of ${answerWords.length} answers fit your clues`);
+  await green(page, 2).fill('Y');
+  await expect(page.locator('#rankCaption')).toHaveText('No answer fits these clues.');
+  await expect(page.locator('#rankTable .rank-cell')).toHaveCount(0);
 });

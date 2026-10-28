@@ -1201,6 +1201,13 @@
     }
 
     .rank-cell b { font-size: 15px; font-weight: 900; }
+    /* Under All clues, a known letter keeps its color and a ruled-out one fades. */
+    .rank-cell.green { border-color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
+    .rank-cell.yellow { border-color: var(--yellow); box-shadow: inset 0 0 0 1px var(--yellow); }
+    .rank-cell.out { opacity: .4; }
+    .letter-head { margin-top: 20px; }
+    #rankCount { font-size: 14px; margin-right: auto; }
+    #rankCount b { color: var(--text); }
 
     .odds-entry {
       padding: 1px 2px;
@@ -1380,7 +1387,7 @@
     <section class="panel" aria-label="More analysis">
       <div class="analysis-toggle">
         <button id="analysisBtn" aria-expanded="false" aria-controls="analysisBody">More analysis</button>
-        <span class="hint">Vowel odds and letter ranking from Wordle’s answer list</span>
+        <span class="hint">Vowel and letter odds from Wordle’s answer list</span>
       </div>
       <div id="analysisBody" hidden>
         <div class="odds-head">
@@ -1402,16 +1409,26 @@
           <p class="hint odds-hint"><span class="tap">Tap</span> a vowel to cycle unknown, yellow, gray.</p>
           <p class="caption" id="oddsCaption"></p>
           <div id="oddsOptions" class="odds-options"></div>
+
+          <div class="odds-head letter-head">
+            <h2>All letter odds</h2>
+            <span id="rankCount" class="hint" role="status"></span>
+            <span class="odds-scope">
+              <span class="hint">Use:</span>
+              <span id="rankScope" class="seg" role="group" aria-label="Clues the letter odds use">
+                <button data-scope="none" title="Every Wordle answer, whatever your clues">No clues</button>
+                <button data-scope="all" title="Only the answers that fit your green, yellow and gray clues">All clues</button>
+              </span>
+            </span>
+          </div>
+          <p class="caption" id="rankCaption"></p>
+          <div id="rankTable" class="rank-rows"></div>
+          <p class="caption small" id="rankThrough"></p>
+
           <details class="odds-table-wrap">
             <summary>Every case of one yellow and one gray vowel</summary>
             <p class="caption">Columns: the yellow vowel. Rows: the gray one. Each cell gives the two likeliest other vowels, then <b>∅</b>, the chance of no other vowel, in percent.</p>
             <div id="oddsTable" class="odds-table"></div>
-          </details>
-          <details class="odds-table-wrap">
-            <summary>Letter ranking in Wordle answers</summary>
-            <p class="caption" id="rankCaption"></p>
-            <div id="rankTable" class="rank-rows"></div>
-            <p class="caption small" id="rankThrough"></p>
           </details>
         </div>
       </div>
@@ -1490,8 +1507,8 @@
       <p>These figures come from Wordle’s answer list: the original answers plus every word NYT has used. They count words, not letters, and ignore positions.</p>
       <p><b>Vowel odds:</b> of the answers that contain every vowel marked yellow and none marked gray, how many contain each unknown vowel, and how many contain none of them. The vowels start from your clues; <span class="tap">tap</span> one to change it, and Reset to clues undoes that.</p>
       <p><b>All clues</b> also uses your consonants: green or yellow ones must be in the word, gray ones must not. It is closer to a solver, so it stays off until you choose it.</p>
-      <p><b>Every case of one yellow and one gray vowel:</b> the same odds for each such pair, for reference. On a computer, hover over a cell to see how many answers it covers.</p>
-      <p><b>Letter ranking:</b> the share of answers containing each letter, which is the order the Rank view uses.</p>
+      <p><b>All letter odds:</b> the share of answers containing each letter. With <b>No clues</b> that is over every answer, the order the Rank view uses. With <b>All clues</b> it is over the answers that fit everything you know, green, yellow and gray, positions included: the known letters stand at 100%, gray ones at 0%, and the rest show how likely each is to be in the word. That too is close to a solver, so it stays off until you choose it.</p>
+      <p><b>Every case of one yellow and one gray vowel:</b> the vowel odds for each such pair, for reference; it doesn’t use your clues. On a computer, hover over a cell to see how many answers it covers.</p>
     </div>
     <form method="dialog"><button>Close</button></form>
   </dialog>
@@ -1535,6 +1552,7 @@
     const WORD_MODE_KEY = 'wordle-sandbox-nonword-mode-2';
     const LETTERS_VIEW_KEY = 'wordle-sandbox-letters-view';
     const ODDS_SCOPE_KEY = 'wordle-sandbox-odds-scope';
+    const RANK_SCOPE_KEY = 'wordle-sandbox-rank-scope';
     const RESULTS_ORDER_KEY = 'wordle-sandbox-results-order';
     const ANALYSIS_KEY = 'wordle-sandbox-analysis-open';
     const WORDS_OK_KEY = 'wordle-sandbox-words-ok';   // sessionStorage: matching words confirmed
@@ -1571,6 +1589,7 @@
     let letterRanking = null;     // [{ letter, p }] by share of answers containing the letter
     let vowelOverrides = {};      // vowel -> 'unknown' / 'yellow' / 'gray' tapped in the odds panel
     let oddsScope = 'vowels';     // odds use 'vowels' only (default) or 'all' clue letters
+    let rankScope = 'none';       // letter odds over every answer ('none', default) or those fitting 'all' clues
     let gridFirst = false;        // the where-each-letter-can-go grid above the arrangement list
     let analysisOpen = false;     // vowel odds and letter ranking shown (closed by default)
     let cluesCollapsed = false;   // step 1 folded to a summary line, after an import, Random or a link
@@ -1861,6 +1880,21 @@
         if (copiesOf(w, l) > cap) return `more ${l}’s than your clues allow`;
       }
       return '';
+    }
+
+    // Whether a word fits every clue: greens in place, each yellow letter present but not
+    // where it was yellow, at least as many copies as the green slots and tiles say and no
+    // more than a gray copy allows, and no gray letter.
+    function fitsAllClues(w, ruledOut = grayLetters(), caps = letterCaps()) {
+      for (let i = 0; i < len; i++) {
+        if (greens[i] ? w[i] !== greens[i] : ruledOut.has(w[i])) return false;
+        if (yellows[i].includes(w[i])) return false;
+      }
+      const need = new Map();
+      for (const l of [...greens.filter(Boolean), ...movable]) need.set(l, (need.get(l) || 0) + 1);
+      for (const [l, n] of need) if (copiesOf(w, l) < n) return false;
+      for (const [l, cap] of caps) if (copiesOf(w, l) > cap) return false;
+      return true;
     }
 
     function findNonWords() {
@@ -2739,26 +2773,48 @@
         optionsEl.appendChild(el);
       }
       renderOddsTable(have || lack ? {} : states);
-      if (!$('rankTable').childElementCount) buildRankTable();
+      renderRank();
     }
 
-    // Every letter by share of answers containing it: the answers' own etaoin shrdlu.
-    // Rows of 6, 6, 7 and 7, so the top 12 read as two words.
-    function buildRankTable() {
-      const top = letterRanking.slice(0, 12).map(r => r.letter).join('');
-      $('rankCaption').innerHTML = `Share of answers containing each letter, each word counted once. ` +
-        `In place of <a href="https://en.wikipedia.org/wiki/Etaoin_shrdlu" target="_blank" rel="noopener">Etaoin shrdlu</a>, the top 12 are <b>${top.slice(0, 6)} ${top.slice(6)}</b>.`;
+    // Every letter by share of answers containing it: over every answer, the answers' own
+    // etaoin shrdlu (the order the Rank view uses); under All clues, over the answers that
+    // fit every clue, so the known letters stand at 100% and the gray ones at 0%. Rows of
+    // 6, 6, 7 and 7, so the top 12 read as two words.
+    function renderRank() {
+      document.querySelectorAll('#rankScope button').forEach(btn => {
+        btn.setAttribute('aria-pressed', String(btn.dataset.scope === rankScope));
+      });
+      const all = rankScope === 'all';
+      const words = all ? answerWords.filter(w => fitsAllClues(w)) : answerWords;
+      const ranking = all ? letterRank(words) : letterRanking;
+      $('rankCount').innerHTML = all ? `<b>${words.length}</b> of ${answerWords.length} answers fit your clues` : '';
+      const top = ranking.slice(0, 12).map(r => r.letter).join('');
+      $('rankCaption').innerHTML = !words.length ? 'No answer fits these clues.'
+        : all ? `Share of those answers containing each letter, each word counted once. The likeliest 12 are <b>${top.slice(0, 6)} ${top.slice(6)}</b>.`
+        : `Share of answers containing each letter, each word counted once. In place of ` +
+          `<a href="https://en.wikipedia.org/wiki/Etaoin_shrdlu" target="_blank" rel="noopener">Etaoin shrdlu</a>, the top 12 are <b>${top.slice(0, 6)} ${top.slice(6)}</b>.`;
+
+      const table = $('rankTable');
+      table.innerHTML = '';
+      if (!words.length) return;
+      const ruledOut = grayLetters();
       for (const [from, to] of [[0, 6], [6, 12], [12, 19], [19, 26]]) {
         const row = document.createElement('div');
         row.className = 'rank-row';
-        for (const { letter, p } of letterRanking.slice(from, to)) {
+        for (const { letter, p } of ranking.slice(from, to)) {
           const cell = document.createElement('span');
           cell.className = 'rank-cell';
+          if (all) {
+            const status = letterStatus(letter, ruledOut);
+            if (status) cell.classList.add(status);
+            if (status === 'out') cell.title = `${letter} is gray`;
+            else if (status) cell.title = `${letter} is ${status}, so every answer that fits has it`;
+          }
           shadeOdds(cell, p);
           cell.innerHTML = `<b>${letter}</b>${pct(p)}`;
           row.appendChild(cell);
         }
-        $('rankTable').appendChild(row);
+        table.appendChild(row);
       }
     }
 
@@ -3915,6 +3971,14 @@
       });
     });
 
+    document.querySelectorAll('#rankScope button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        rankScope = btn.dataset.scope;
+        try { localStorage.setItem(RANK_SCOPE_KEY, rankScope); } catch {}
+        renderRank();
+      });
+    });
+
     $('analysisBtn').addEventListener('click', () => {
       analysisOpen = !analysisOpen;
       try { localStorage.setItem(ANALYSIS_KEY, analysisOpen ? 'open' : 'closed'); } catch {}
@@ -4011,6 +4075,7 @@
       const view = localStorage.getItem(LETTERS_VIEW_KEY);
       if (['vc', 'rank', 'keyboard'].includes(view)) lettersView = view;   // 'hide', once offered, falls back to the keyboard
       if (localStorage.getItem(ODDS_SCOPE_KEY) === 'all') oddsScope = 'all';
+      if (localStorage.getItem(RANK_SCOPE_KEY) === 'all') rankScope = 'all';
       gridFirst = localStorage.getItem(RESULTS_ORDER_KEY) === 'grid';
       analysisOpen = localStorage.getItem(ANALYSIS_KEY) === 'open';
     } catch {}
