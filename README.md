@@ -63,6 +63,8 @@ python3 -m http.server 8000
 
 Then open http://localhost:8000. Any static server works.
 
+To check the phone layout in a desktop browser, add `?view=mobile` to the address: the page narrows to an iPhone 14's 390 px and uses touch wording ("tap"). `?view=mobile-414` sets another width, and `?view=desktop` forces the full width and mouse wording. A note under the title says which preview is on, and the setting survives opening a shared link.
+
 The answer list updates itself: the `refresh-answers.yml` workflow runs every Monday, fetches answers through the last date whose puzzle is over in every time zone, runs the tests, and commits any new answers to main. To update it sooner, run it from the repository's Actions tab. The date of the latest answer is shown under the letter table in **Reference tables**. `node scripts/analyze-answers.mjs` prints the letter ranking and vowel tables from the current list.
 
 ### Repository structure

@@ -964,3 +964,29 @@ test('reference tables start closed, open and close, remember the choice, and ou
   await page.reload();
   await expect(page.locator('#analysisBody')).toBeHidden();
 });
+
+test('?view=mobile previews the phone layout and wording at 390px, or a given width; ?view=desktop forces the full width', async ({ page }) => {
+  const width = () => page.locator('.app').evaluate(el => el.getBoundingClientRect().width);
+  await open(page, '?view=mobile');
+  expect(await width()).toBe(390 - 28);
+  await expect(page.locator('#viewNote')).toHaveText('Phone preview, 390 px wide, with touch wording. Normal view');
+  await expect(page.locator('#importBtn .wide')).toBeHidden();   // the narrow layout's short labels
+  await green(page, 1).fill('B');
+  await expect(page.locator('#boardNote')).toContainText('Tap an empty slot');
+  await expect(page.locator('#lettersTitle')).toContainText('(hold to exclude)');
+
+  // Opening a shared link with the preview on keeps it after the link is consumed.
+  await open(page, '?green=B%3F%3F%3F%3F&ban1=E&yellow=E&view=mobile-320');
+  expect(new URL(page.url()).search).toBe('?view=mobile-320');
+  expect(await width()).toBe(320 - 28);
+  await expect(page.locator('#viewNote')).toContainText('320 px wide');
+  await expect(green(page, 1)).toHaveValue('B');
+
+  await open(page, '?view=desktop');
+  expect(await width()).toBe(640);
+  await expect(page.locator('#viewNote')).toHaveText('Desktop preview, with mouse wording. Normal view');
+  await expect(page.locator('#importBtn .wide')).toBeVisible();
+  await page.locator('#viewNote a').click();
+  await expect(page.locator('#viewNote')).toBeHidden();
+  expect(new URL(page.url()).search).toBe('');
+});
