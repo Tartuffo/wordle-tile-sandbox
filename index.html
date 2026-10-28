@@ -463,7 +463,15 @@
 
     /* The green and yellow clues as a stack: one column per slot, the green letter (or the
        slot's first yellow, or a dot) at the bottom and the other yellows piled above it. */
-    .clue-stack { display: inline-flex; align-items: flex-end; gap: 3px; }
+    .clue-stack {
+      display: inline-flex;
+      align-items: flex-end;
+      gap: 3px;
+      padding: 4px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel);
+    }
     .clue-stack .mini { flex-direction: column; }
 
     .mini span {
