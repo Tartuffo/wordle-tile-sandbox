@@ -10,7 +10,7 @@ Developed with assistance from ChatGPT and Claude Code.
 
 ## What it does
 
-Wordle Tile Sandbox lets you enter what you know from a Wordle puzzle, slot by slot, and shows every way the yellow tiles can still be arranged. Optional analysis, closed until you ask for it, adds vowel odds and letter odds drawn from Wordle's answer list.
+Wordle Tile Sandbox lets you enter what you know from a Wordle puzzle, slot by slot, and shows every way the yellow tiles can still be arranged. Two reference tables from Wordle's answer list, closed until you ask for them, sit at the bottom.
 
 The page is three numbered steps: **1 Enter your clues**, **2 Try letters on the board**, **3 Browse every legal arrangement**. Steps 2 and 3 open as soon as there is something to show; a step's heading folds or unfolds it by hand. After a screenshot, Random or a shared link, step 1 folds to a one-line summary of the clues, with **Edit clues** to open it again and **Start over** to clear everything. On a first visit, four short tips appear one at a time, the first saying what the tool is for and the rest under the thing each explains; **?** on step 1 can show them again.
 
@@ -18,23 +18,19 @@ The page is three numbered steps: **1 Enter your clues**, **2 Try letters on the
 - **Random** makes up a puzzle to practice on: a past Wordle answer as the solution, which stays hidden, and a first guess drawn from the 400 answers with five different letters most common in answers. If that guess turns up fewer than two letters (green, or yellow tiles), a second guess that fits its clues is added, as in hard mode. It is drawn again until 3 to 40 arrangements fit a word, with a few, some (7 to 15) or many (16 or more) equally likely; ‹ and › step through the guesses as after an import. A line under the step says which guesses were made up, and **New puzzle** draws another.
 - **Green row** (right spot): type a letter into each slot you know; it fills and moves on, like Wordle itself. Space skips a slot, and pasting a pattern such as `..A.E` into slot 1 fills the row.
 - **Yellow row** (wrong spot): enter each letter under every slot where it turned yellow, across all your guesses. The app creates the tiles for you.
-- **Gray row** (ruled out): letters that are not in the word. They sharpen the word check, and gray vowels feed the vowel odds. If a letter turned gray in one place but green or yellow in another, enter it here too: the word then has no more copies of it than your green and yellow ones.
+- **Gray row** (ruled out): letters that are not in the word. They sharpen the word check and the Rank view. If a letter turned gray in one place but green or yellow in another, enter it here too: the word then has no more copies of it than your green and yellow ones.
 - **Double letters**: a yellow letter counts as one tile, or as already placed if it is green elsewhere. When a letter could be in the word twice (yellow in two slots, or green in one and yellow in another), a **Double letters** row appears under the clues with **+** and **−** to change its count.
 - **The board** shows one arrangement of your tiles, with green letters fixed. Tap an empty slot, then a letter on the keyboard below, to try it there; without choosing a slot, the letter goes in the first blank slot that allows it. A tried letter has an × to remove it (on a touch screen, holding it works too). Under the board, ‹ Arrangement 3 of 12 › says which of the listed arrangements it shows, and the arrows cycle through them in the list's order; otherwise a line says why the board isn't one of them, or that the blanks are still to fill. Once every slot is filled, it says whether the word is in the word list and whether it has been a Wordle answer: the date it was used, or the number of times and the last date if NYT has reused it.
-- **Available letters**: under the board, the letters that aren't gray, so you needn't switch back to the game to check them. Show them as **Keyboard** (the default), **V/C** (vowels, then consonants) or **Rank** (most common in Wordle answers first, gray letters dimmed in place). Hold a letter (or right-click it) to mark it gray without going back to the clues, and hold a gray one to let it back in.
+- **Available letters**: under the board, the letters that aren't gray, so you needn't switch back to the game to check them. Show them as **Keyboard** (the default), **V/C** (vowels, then consonants) or **Rank**: by share of the answers that fit all your clues (green letters in place, yellow letters present but not where they were yellow, gray letters absent, duplicate counts), most common first, so known letters lead and gray ones trail, with a line saying how many answers that is. When no answer fits, or before the answer list loads, Rank falls back to the order over all answers and says so. Hold a letter (or right-click it) to mark it gray without going back to the clues, and hold a gray one to let it back in.
 - **Drag tiles on the board** to try arrangements by hand; the list outlines the arrangement now on the board, and a tile in a slot where it was yellow is flagged.
 - **Every legal arrangement**, sorted and grouped by where the most constrained letter sits. Tap one to put it on the board; tap a group heading to pin its letter there.
 - **Matching words**: hold an arrangement (or right-click it) to list the dictionary words with its known letters in place. Words your clues rule out (a gray letter, or a letter in a slot where it was yellow) are struck through and listed last, and past Wordle answers are bold. Since this can give the answer away, it asks first, once per browser tab.
 - **Where each letter can go**: a letter-by-slot grid counting the arrangements that put each letter in each slot, with forced placements called out and a legend for the cell styles. An "Unknown" row counts the slots shown as · in the list; an unknown slot may hold another copy of a known letter. Tap a number to pin that letter there and narrow the list. Tap a yellow letter at the left of the grid to sort the list by where that letter goes (pins still apply); tap it again to go back.
 - **List or grid first**: the list comes first; **Put grid first**, next to the arrangement count, swaps them, and the order is remembered.
 - **Word check**: arrangements that no word in the word list fits, given your gray and yellow clues, are left out by default; a Dim / Hide / Show switch can instead show them dimmed and struck through, or show them normally. The choice is remembered. Unknown slots may hold any letter that is not gray and was not yellow in that slot. The word list is in [`words/`](words/README.md).
-- **More analysis**: closed by default; the choice is remembered. Inside:
-  - **Vowel odds**: how many answers fit, and for each vowel (A E I O U Y) still unknown, the chance it is in the word, plus the chance that no other vowel is, to help you decide whether to keep trying vowels or switch to consonants. Options are sorted by chance and shaded by it.
-  - The vowels start from your clues (a green or yellow vowel counts as present). Tap one to cycle it through unknown, yellow and gray; **Reset to clues** undoes your taps.
-  - **Use: Vowel clues / All clues**: by default only the vowel clues count. All clues also uses your consonants, gray ones out and green or yellow ones in. That is closer to a solver, so it stays off until you choose it; the choice is remembered.
-  - **All letter odds**: the share of answers containing each letter, with percentages, noting the date of the latest answer in the list. **Use: No clues / All clues**: by default over every answer, the order the Rank view uses; All clues counts only the answers that fit everything you know (green letters in place, yellow letters present but not where they were yellow, gray letters absent, duplicate counts), so the known letters stand at 100% and the rest show how likely each is. Off until you choose it; the choice is remembered.
-  - A collapsed reference table, **every case of one yellow and one gray vowel**: the two likeliest other vowels and the chance of none. It doesn't use your clues.
-  - Odds count Wordle answer words, not letters, and ignore position.
+- **Reference tables**: closed by default; the choice is remembered. Neither table changes with your clues, and both count answer words, not letters, ignoring position.
+  - **Letters in Wordle answers**: the share of answers containing each letter, with percentages, noting the date of the latest answer in the list. It is the order Rank starts from.
+  - A collapsed table, **every case of one yellow and one gray vowel**: the two likeliest other vowels and the chance of none, with the case your clues match outlined.
 - **Help**: each step has a **?** that explains it, and the first visit gets four short tips. Instructions say "click" on a device with a mouse or trackpad and "tap" on a touch screen.
 - **Light and dark themes**: follows your device's light or dark setting; the sun/moon switch by the title overrides it, and that choice is remembered in the browser.
 - **Copy link**, the link icon at the top right of the clues, shares the current clues. Your clues are also saved in the browser and come back if you reopen the app the same day.
@@ -51,13 +47,13 @@ The tool is intentionally visual: it helps you reason about the puzzle by moving
 | % of answers | 45 | 39 | 36 | 29 | 29 | 28 | 28 | 27 | 24 | 20 | 19 | 18 |
 | Etaoin shrdlu | E | T | A | O | I | N | S | H | R | D | L | U |
 
-So the top twelve are **EAROTI LSNUCY**: R and L rise, H and D drop out, Y comes in. O, T, I and L are within 1.4 points of each other, so their order among themselves is close to a tie. The list is the union of the original Wordle answers and every answer NYT has used (see [`words/README.md`](words/README.md)); the table is from October 2026. The list is refreshed weekly, and [`words/answers-sources.json`](words/answers-sources.json) has its current word count and last date. The app computes the ranking from the current list, under **More analysis**.
+So the top twelve are **EAROTI LSNUCY**: R and L rise, H and D drop out, Y comes in. O, T, I and L are within 1.4 points of each other, so their order among themselves is close to a tie. The list is the union of the original Wordle answers and every answer NYT has used (see [`words/README.md`](words/README.md)); the table is from October 2026. The list is refreshed weekly, and [`words/answers-sources.json`](words/answers-sources.json) has its current word count and last date. The app computes the ranking from the current list, under **Reference tables**, and the Rank view of the keyboard re-ranks the letters over the answers that fit your clues.
 
 ## Development
 
 This is a single-file static web app with no build step or dependencies. To modify it, edit `index.html` directly and reload the browser.
 
-Opened directly as a file, the app works except for what needs the files in `words/`, since browsers don't let a local file load them: the word check, matching words, vowel odds and letter odds are off, Random is hidden, and the Rank view uses a built-in order. To have everything locally, serve the folder:
+Opened directly as a file, the app works except for what needs the files in `words/`, since browsers don't let a local file load them: the word check, matching words and the reference tables are off, Random is hidden, and the Rank view uses a built-in order. To have everything locally, serve the folder:
 
 ```bash
 git clone git@github.com:YOUR-GITHUB-USERNAME/wordle-tile-sandbox.git
@@ -67,7 +63,7 @@ python3 -m http.server 8000
 
 Then open http://localhost:8000. Any static server works.
 
-The answer list updates itself: the `refresh-answers.yml` workflow runs every Monday, fetches answers through the last date whose puzzle is over in every time zone, runs the tests, and commits any new answers to main. To update it sooner, run it from the repository's Actions tab. The date of the latest answer is shown under the letter odds in **More analysis**. `node scripts/analyze-answers.mjs` prints the letter ranking and vowel tables from the current list.
+The answer list updates itself: the `refresh-answers.yml` workflow runs every Monday, fetches answers through the last date whose puzzle is over in every time zone, runs the tests, and commits any new answers to main. To update it sooner, run it from the repository's Actions tab. The date of the latest answer is shown under the letter table in **Reference tables**. `node scripts/analyze-answers.mjs` prints the letter ranking and vowel tables from the current list.
 
 ### Repository structure
 
@@ -122,11 +118,10 @@ the numbered steps folding and unfolding, the first-time tips, choosing a board 
 ‹ › arrangement cycling, holding a letter to mark it gray,
 letter taps, board tile drags and holds, the Rank view, real dictionary lookup, PNG import, guess stepping, cancel/retry,
 Random puzzles (Wordle scoring with duplicates, and each puzzle checked against the real answer list and the arrangement range),
-manual edits after import, and More analysis: opening and closing it, the vowel
-odds' filtering and probability functions on a small hand-checked list, and the
-panel, Vowel clues / All clues, the vowel table and the letter odds (No clues / All clues) against
-the real answer list, with the expected numbers computed independently in the
-test. Clipboard writes
+manual edits after import, the Rank view's clue-aware order against the real answer list
+with the expected numbers computed independently, and Reference tables: opening and
+closing them, the vowel-odds functions on a small hand-checked list, and the letter
+table and the vowel table against the real answer list. Clipboard writes
 are captured at the browser API boundary; dictionary filtering uses a tiny
 controlled word list while a separate test loads the real bundled dictionary.
 The checked-in PNGs are synthetic, contain no personal data, and exercise real

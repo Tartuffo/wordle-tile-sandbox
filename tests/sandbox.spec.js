@@ -9,9 +9,18 @@ const boardSlot = (page, slot) => page.locator(`#board .slot[data-pos="${slot - 
 const letter = (page, value) => page.locator('#lettersBody').getByRole('button', { name: value, exact: true });
 const arrangements = page => page.locator('#list .arr');
 const fixture = name => path.join(__dirname, 'fixtures', name);
-const vowelKey = (page, vowel) => page.locator(`#oddsVowels [data-vowel="${vowel}"]`);
-const oddsChips = page => page.locator('#oddsOptions .odds-opt');
-const openAnalysis = page => page.getByRole('button', { name: 'More analysis', exact: true }).click();
+const openTables = page => page.getByRole('button', { name: 'Reference tables', exact: true }).click();
+// Which answers fit every clue, computed here independently of the app.
+const fitting = ({ green = '?????', bans = {}, yellow = '', gray = '' }) => answerWords.filter(w =>
+  [...green].every((g, i) => g === '?' || w[i] === g) &&
+  Object.entries(bans).every(([i, letters]) => ![...letters].includes(w[Number(i)])) &&
+  ![...gray].filter(l => !green.includes(l) && !yellow.includes(l)).some(l => w.includes(l)) &&
+  [...new Set(green.replace(/\?/g, '') + yellow)].every(l => [...w].filter(x => x === l).length >= [...green + yellow].filter(x => x === l).length) &&
+  [...gray].filter(l => green.includes(l) || yellow.includes(l)).every(l => [...w].filter(x => x === l).length <= [...green + yellow].filter(x => x === l).length));
+// By share, most common first; among equal shares, gray letters last, then alphabetical.
+const rankOf = (words, gray = '') => [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].sort((a, b) =>
+  (words.filter(w => w.includes(b)).length - words.filter(w => w.includes(a)).length) ||
+  (gray.includes(a) - gray.includes(b)));
 const editClues = page => page.getByRole('button', { name: 'Edit clues', exact: true }).click();
 const openBoard = page => page.getByRole('button', { name: 'open it now', exact: true }).click();
 const startOver = page => page.getByRole('button', { name: 'Start over', exact: true }).click();
@@ -508,13 +517,13 @@ test('the letters help button opens a dialog explaining the views', async ({ pag
 
 test('every section has a help button that opens its own popup', async ({ page }) => {
   await open(page, '?green=B%3F%3F%3F%3F&ban1=E&yellow=E');
-  await openAnalysis(page);
+  await openTables(page);
   const helps = [
     ['About entering clues', 'Entering clues'],
     ['About the board and the letters', 'The board and the letters'],
     ['About the arrangements', 'Legal arrangements'],
     ['About the grid', 'Where each letter can go'],
-    ['About More analysis', 'More analysis'],
+    ['About Reference tables', 'Reference tables'],
   ];
   await expect(page.locator('[data-help]')).toHaveCount(helps.length);
   for (const [button, heading] of helps) {
@@ -581,133 +590,33 @@ test('vowel odds: filtering counts words, not letters, and options sort by proba
   expect(result.rank).toEqual(['P300', 'R300', 'Y300']);
 });
 
-test('vowel odds panel starts from the clues, cycles vowels and matches the answer list', async ({ page }) => {
-  await open(page, '?len=5&green=%3F%3F%3F%3F%3F&ban2=A&yellow=A&gray=EST');
-  await openAnalysis(page);
-  const check = async (yellow, gray) => {
-    const { count, chips } = expectedOdds(yellow, gray);
-    await expect(page.locator('#oddsCount')).toHaveText(`${count} of ${answerWords.length} answers left`);
-    await expect(oddsChips(page)).toHaveText(chips);
-  };
-  await expect(vowelKey(page, 'A')).toHaveAttribute('data-state', 'yellow');
-  await expect(vowelKey(page, 'E')).toHaveAttribute('data-state', 'gray');
-  await expect(vowelKey(page, 'I')).toHaveAttribute('data-state', 'unknown');
-  await expect(page.locator('#oddsResetBtn')).toBeHidden();
-  await check('A', 'E');
-
-  // Shaded by value: each chip mixes in the accent at its own percentage, and equal odds look equal.
-  const shades = await oddsChips(page).evaluateAll(els => els.map(el => [Number(el.dataset.p), el.style.background]));
-  for (const [p, background] of shades) expect(background).toContain(`var(--accent) ${Math.round(100 * p)}%`);
-
-  // The table's yellow A / gray E cell is the same slice, and is marked as the current case.
-  const cell = page.locator('#oddsTable .odds-cell[data-yellow="A"][data-gray="E"]');
-  await expect(cell).toHaveClass(/current/);
-  const { options, count } = expectedOdds('A', 'E');
-  const top = options.filter(([label]) => label.length === 1).slice(0, 2);
-  const none = options.find(([label]) => label.length > 1);
-  await expect(cell.locator('.odds-entry')).toHaveText(
-    [...top, ['∅', none[1]]].map(([label, n]) => `${label} ${percent(n, count)}`));
-  await expect(page.locator('#oddsTable .odds-cell.current')).toHaveCount(1);
-
-  // Tapping cycles unknown → yellow → gray → unknown; back at the clue state, the override goes.
-  await vowelKey(page, 'O').click();
-  await expect(vowelKey(page, 'O')).toHaveAttribute('data-state', 'yellow');
-  await expect(page.locator('#oddsResetBtn')).toBeVisible();
-  await check('AO', 'E');
-  await expect(page.locator('#oddsTable .odds-cell.current')).toHaveCount(0);
-  await vowelKey(page, 'O').click();
-  await check('A', 'EO');
-  await vowelKey(page, 'O').click();
-  await expect(vowelKey(page, 'O')).toHaveAttribute('data-state', 'unknown');
-  await expect(page.locator('#oddsResetBtn')).toBeHidden();
-
-  // A clue vowel can be overridden too, and reset returns every vowel to the clues.
-  await vowelKey(page, 'A').click();
-  await vowelKey(page, 'I').click();
-  await check('I', 'AE');
-  await page.locator('#oddsResetBtn').click();
-  await check('A', 'E');
-
-  // The panel follows clue edits; Start over empties both.
-  await editClues(page);
-  await page.locator('#grayInput').fill('ESTU');
-  await check('A', 'EU');
-  // A green vowel counts as present (position is ignored), even if a duplicate of it was gray.
-  await green(page, 1).fill('U');
-  await expect(vowelKey(page, 'U')).toHaveAttribute('data-state', 'yellow');
-  await check('AU', 'E');
-  await vowelKey(page, 'Y').click();
-  await startOver(page);
-  await check('', '');
-  await expect(oddsChips(page).last()).toHaveText('No vowel 0%');
-});
-
-test('Rank letters view orders letters by share of answers; grays stay in place, disabled', async ({ page }) => {
+test('Rank letters view ranks over the answers that fit the clues, grays last and disabled; the reference table is over all answers', async ({ page }) => {
   await open(page, '?len=5&green=%3F%3F%3F%3F%3F&gray=EZ');
-  const share = l => answerWords.filter(w => w.includes(l)).length;
-  const expected = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].sort((a, b) => share(b) - share(a));
+  const fits = fitting({ gray: 'EZ' });
+  const share = l => fits.filter(w => w.includes(l)).length;
+  const expected = rankOf(fits, 'EZ');
   await page.locator('#lettersSeg').getByRole('button', { name: 'Rank', exact: true }).click();
   await expect(page.locator('#lettersBody .key')).toHaveText(expected);
   await expect(page.locator('#lettersBody .vc-label')).toHaveText(['Top 12', '', 'Then']);
+  await expect(page.locator('#rankNote')).toHaveText(`Ranked over the ${fits.length} answers that fit your clues.`);
   await expect(letter(page, 'E')).toBeDisabled();
+  expect(expected.slice(-2).sort()).toEqual(['E', 'Z']);
   await expect(letter(page, expected[1])).toHaveAttribute('title',
-    `Click to try ${expected[1]} in the chosen slot, or the first blank one that allows it. ${expected[1]} is in ${percent(share(expected[1]), answerWords.length)} of all Wordle answers.`);
+    `Click to try ${expected[1]} in the chosen slot, or the first blank one that allows it. ${expected[1]} is in ${percent(share(expected[1]), fits.length)} of the answers that fit your clues.`);
   await letter(page, expected[1]).click();
   await expect(page.locator('#board .trial')).toHaveCount(1);
 
-  // The same ranking, with percentages, as All letter odds under the vowel odds.
-  await openAnalysis(page);
-  await expect(page.locator('#rankScope [aria-pressed="true"]')).toHaveText('No clues');
-  await expect(page.locator('#rankTable .rank-cell')).toHaveText(expected.map(l => `${l}${percent(share(l), answerWords.length)}`));
+  // The reference table is over every answer, whatever the clues.
+  const all = l => answerWords.filter(w => w.includes(l)).length;
+  const overall = rankOf(answerWords);
+  await openTables(page);
+  await expect(page.locator('#rankTable .rank-cell')).toHaveText(overall.map(l => `${l}${percent(all(l), answerWords.length)}`));
   await expect(page.locator('#rankTable .rank-row')).toHaveCount(4);
-  await expect(page.locator('#rankCaption')).toContainText(`top 12 are ${expected.slice(0, 6).join('')} ${expected.slice(6, 12).join('')}`);
-  await expect(page.locator('#rankCount')).toHaveText('');
+  await expect(page.locator('#rankCaption')).toContainText(`top 12 are ${overall.slice(0, 6).join('')} ${overall.slice(6, 12).join('')}`);
   const through = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'words', 'answers-sources.json'), 'utf8')).nyt.throughDate;
   const shown = await page.evaluate(d => new Date(d + 'T00:00:00Z').toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }), through);
   expect(shown).toContain(through.slice(0, 4));
   await expect(page.locator('#rankThrough')).toHaveText(`Published answers through ${shown}.`);
-});
-
-test('without the answer list, vowel odds explain and Rank falls back to the built-in order', async ({ page }) => {
-  await page.route('**/words/answers.csv', route => route.abort());
-  await open(page);
-  await openAnalysis(page);
-  await expect(page.locator('#oddsNote')).toHaveText('Vowel odds need the answer list, which didn’t load.');
-  await expect(page.locator('#oddsBody')).toBeHidden();
-  await expect(page.locator('#randomBtn')).toBeHidden();
-  await openBoard(page);
-  await page.locator('#lettersSeg').getByRole('button', { name: 'Rank', exact: true }).click();
-  await expect(page.locator('#lettersBody .key').first()).toHaveText('E');
-  await expect(page.locator('#lettersBody .key')).toHaveCount(26);
-});
-
-test('vowel odds use consonant clues only when switched to All clues, and remember it', async ({ page }) => {
-  // Clues: A yellow, M green, E gray vowel, S and T gray consonants.
-  await open(page, '?len=5&green=M%3F%3F%3F%3F&ban2=A&yellow=A&gray=EST');
-  await openAnalysis(page);
-  const scope = name => page.locator('#oddsScope').getByRole('button', { name, exact: true });
-  const check = async (...args) => {
-    const { count, chips } = expectedOdds(...args);
-    await expect(page.locator('#oddsCount')).toHaveText(`${count} of ${answerWords.length} answers left`);
-    await expect(oddsChips(page)).toHaveText(chips);
-  };
-  await expect(scope('Vowel clues')).toHaveAttribute('aria-pressed', 'true');
-  await check('A', 'E');
-  await expect(page.locator('#oddsTable .odds-cell.current')).toHaveCount(1);
-
-  await scope('All clues').click();
-  await check('A', 'E', 'M', 'ST');
-  // The table is vowels only, so no cell matches the panel now.
-  await expect(page.locator('#oddsTable .odds-cell.current')).toHaveCount(0);
-  await editClues(page);
-  await page.locator('#grayInput').fill('ESTR');
-  await check('A', 'E', 'M', 'RST');
-
-  await page.reload();
-  await expect(scope('All clues')).toHaveAttribute('aria-pressed', 'true');
-  await check('A', 'E', 'M', 'RST');
-  await scope('Vowel clues').click();
-  await check('A', 'E');
 });
 
 test('tapping a letter in the grid groups the whole list by where it goes', async ({ page }) => {
@@ -764,27 +673,6 @@ test('arrangement list comes before the grid; the swap link reverses that and is
   expect(await listFirst()).toBe(false);
   await swap.click();
   expect(await listFirst()).toBe(true);
-});
-
-test('more analysis starts closed, opens and closes, and remembers the choice', async ({ page }) => {
-  await open(page, '?len=5&green=%3F%3F%3F%3F%3F&ban2=A&yellow=A');
-  const toggle = page.locator('#analysisBtn');
-  await expect(toggle).toHaveText('More analysis');
-  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  await expect(page.locator('#analysisBody')).toBeHidden();
-
-  await toggle.click();
-  await expect(toggle).toHaveText('Hide analysis');
-  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-  await expect(vowelKey(page, 'A')).toHaveAttribute('data-state', 'yellow');
-  await expect(page.locator('#oddsCount')).toHaveText(`${expectedOdds('A', '').count} of ${answerWords.length} answers left`);
-
-  await page.reload();
-  await expect(page.locator('#analysisBody')).toBeVisible();
-  await toggle.click();
-  await expect(page.locator('#analysisBody')).toBeHidden();
-  await page.reload();
-  await expect(page.locator('#analysisBody')).toBeHidden();
 });
 
 test('steps: 2 and 3 open as clues arrive; a link folds step 1 to a summary that Edit clues reopens', async ({ page }) => {
@@ -998,42 +886,81 @@ test('arrangements no word fits are hidden by default; Dim is remembered; the ol
   await expect(arrangements(page)).toHaveCount(4);
 });
 
-test('All letter odds under All clues count only the answers that fit every clue, and the choice is remembered', async ({ page }) => {
-  // M green in slot 1, A yellow in slot 3, E S T gray; and a second A tile (A yellow in slots 3 and 4).
+
+test('Rank view: known letters lead at their share, it follows clue edits, and falls back when no answer fits', async ({ page }) => {
+  // M green in slot 1, A yellow in slots 3 and 4 (two tiles), E S T gray.
   await open(page, '?len=5&green=M%3F%3F%3F%3F&ban2=A&ban3=A&yellow=AA&gray=EST');
-  await openAnalysis(page);
-  const fits = answerWords.filter(w => w[0] === 'M' && w[2] !== 'A' && w[3] !== 'A' &&
-    [...w].filter(l => l === 'A').length >= 2 && ![...'EST'].some(l => w.includes(l)));
+  await page.locator('#lettersSeg').getByRole('button', { name: 'Rank', exact: true }).click();
+  const fits = fitting({ green: 'M????', bans: { 2: 'A', 3: 'A' }, yellow: 'AA', gray: 'EST' });
   expect(fits.length).toBeGreaterThan(0);
-  const share = l => fits.filter(w => w.includes(l)).length;
-  const expected = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].sort((a, b) => share(b) - share(a));
-  const scope = name => page.locator('#rankScope').getByRole('button', { name, exact: true });
+  expect(fits.every(w => w[0] === 'M' && [...w].filter(l => l === 'A').length >= 2)).toBe(true);
+  await expect(page.locator('#lettersBody .key')).toHaveText(rankOf(fits, 'EST'));
+  await expect(page.locator('#rankNote')).toHaveText(`Ranked over the ${fits.length} answers that fit your clues.`);
+  await expect(page.locator('#lettersBody .key').nth(0)).toHaveClass(/green|yellow/);
+  await expect(page.locator('#lettersBody .key').nth(1)).toHaveClass(/green|yellow/);
+  await expect(letter(page, 'M')).toHaveAttribute('title', /M is in 100% of the answers that fit your clues\.$/);
 
-  await scope('All clues').click();
-  await expect(page.locator('#rankCount')).toHaveText(`${fits.length} of ${answerWords.length} answers fit your clues`);
-  await expect(page.locator('#rankTable .rank-cell')).toHaveText(expected.map(l => `${l}${percent(share(l), fits.length)}`));
-  await expect(page.locator('#rankTable .rank-cell.green')).toHaveText(['M100%']);
-  await expect(page.locator('#rankTable .rank-cell.yellow')).toHaveText(['A100%']);
-  await expect(page.locator('#rankTable .rank-cell.out')).toHaveText(['E0%', 'S0%', 'T0%']);
-  await expect(page.locator('#rankCaption')).toContainText(`The likeliest 12 are ${expected.slice(0, 6).join('')} ${expected.slice(6, 12).join('')}`);
-
-  // It follows the clues, and is remembered.
   await editClues(page);
   await page.locator('#grayInput').fill('ESTR');
   const fewer = fits.filter(w => !w.includes('R'));
-  await expect(page.locator('#rankCount')).toHaveText(`${fewer.length} of ${answerWords.length} answers fit your clues`);
-  await page.reload();
-  await expect(scope('All clues')).toHaveAttribute('aria-pressed', 'true');
-  await scope('No clues').click();
-  await expect(page.locator('#rankCount')).toHaveText('');
-  await expect(page.locator('#rankTable .rank-cell.green')).toHaveCount(0);
+  await expect(page.locator('#rankNote')).toHaveText(`Ranked over the ${fewer.length} answers that fit your clues.`);
+  await expect(page.locator('#lettersBody .key')).toHaveText(rankOf(fewer, 'ESTR'));
 
-  // Clues no answer fits (every letter but M, A and Y gray, and only MAMMA was left) leave
-  // nothing: the table says so instead of showing 26 zeros.
-  await scope('All clues').click();
+  // Every letter but M, A and Y gray leaves MAMMA alone; a green Y leaves nothing, and Rank says so.
   await page.locator('#grayInput').fill('BCDFGHJKLNPQRSTVWXYZEIOU');
-  await expect(page.locator('#rankCount')).toHaveText(`1 of ${answerWords.length} answers fit your clues`);
+  await expect(page.locator('#rankNote')).toHaveText('Ranked over the 1 answers that fit your clues.');
   await green(page, 2).fill('Y');
-  await expect(page.locator('#rankCaption')).toHaveText('No answer fits these clues.');
-  await expect(page.locator('#rankTable .rank-cell')).toHaveCount(0);
+  await expect(page.locator('#rankNote')).toHaveText('No answer fits your clues, so this is the order over all answers.');
+  await expect(page.locator('#lettersBody .key')).toHaveText(rankOf(answerWords));
+
+  // With no clues at all, the order is over all answers too, and the note says it narrows.
+  await startOver(page);
+  await openBoard(page);
+  await expect(page.locator('#rankNote')).toHaveText(`Ranked over all ${answerWords.length} answers; it narrows as you enter clues.`);
+});
+
+test('without the answer list, the reference tables explain and Rank falls back to the built-in order', async ({ page }) => {
+  await page.route('**/words/answers.csv', route => route.abort());
+  await open(page);
+  await openTables(page);
+  await expect(page.locator('#oddsNote')).toHaveText('These tables need the answer list, which didn’t load.');
+  await expect(page.locator('#oddsBody')).toBeHidden();
+  await expect(page.locator('#randomBtn')).toBeHidden();
+  await openBoard(page);
+  await page.locator('#lettersSeg').getByRole('button', { name: 'Rank', exact: true }).click();
+  await expect(page.locator('#lettersBody .key').first()).toHaveText('E');
+  await expect(page.locator('#lettersBody .key')).toHaveCount(26);
+  await expect(page.locator('#rankNote')).toHaveText('Ranked over all answers by a built-in order; the answer list didn’t load.');
+  await expect(letter(page, 'E')).not.toHaveAttribute('title', /is in/);
+});
+
+test('reference tables start closed, open and close, remember the choice, and outline the vowel case the clues match', async ({ page }) => {
+  await open(page, '?len=5&green=%3F%3F%3F%3F%3F&ban2=A&yellow=A&gray=EST');
+  const toggle = page.locator('#analysisBtn');
+  await expect(toggle).toHaveText('Reference tables');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('#analysisBody')).toBeHidden();
+
+  await toggle.click();
+  await expect(toggle).toHaveText('Hide tables');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('#rankTable .rank-cell')).toHaveCount(26);
+
+  // The yellow A / gray E cell is the one the clues match; its entries come from the answer list.
+  await page.locator('summary', { hasText: 'Every case of one yellow and one gray vowel' }).click();
+  const cell = page.locator('#oddsTable .odds-cell[data-yellow="A"][data-gray="E"]');
+  await expect(cell).toHaveClass(/current/);
+  await expect(page.locator('#oddsTable .odds-cell.current')).toHaveCount(1);
+  const { options, count } = expectedOdds('A', 'E');
+  const top = options.filter(([label]) => label.length === 1).slice(0, 2);
+  const none = options.find(([label]) => label.length > 1);
+  await expect(cell.locator('.odds-entry')).toHaveText([...top, ['∅', none[1]]].map(([label, n]) => `${label} ${percent(n, count)}`));
+  await expect(cell).toHaveAttribute('title', `A yellow, E gray: ${count} answers`);
+
+  await page.reload();
+  await expect(page.locator('#analysisBody')).toBeVisible();
+  await toggle.click();
+  await expect(page.locator('#analysisBody')).toBeHidden();
+  await page.reload();
+  await expect(page.locator('#analysisBody')).toBeHidden();
 });
