@@ -458,8 +458,13 @@
       margin: 10px 0 0 36px;
     }
 
-    .clue-chips { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+    .clue-chips { display: inline-flex; flex-wrap: wrap; align-items: flex-end; gap: 4px 10px; }
     .mini { display: inline-flex; gap: 3px; }
+
+    /* The green and yellow clues as a stack: one column per slot, the green letter (or the
+       slot's first yellow, or a dot) at the bottom and the other yellows piled above it. */
+    .clue-stack { display: inline-flex; align-items: flex-end; gap: 3px; }
+    .clue-stack .mini { flex-direction: column; }
 
     .mini span {
       min-width: 22px;
@@ -1444,7 +1449,7 @@
         <dt>Double letters</dt>
         <dd>A yellow letter is one tile on the board, or none if it’s already green. When a letter could be in the word twice (yellow in two slots, or green in one and yellow in another), this row appears: press + to add a tile for the second copy, and − to take it away again.</dd>
       </dl>
-      <p>After a screenshot, Random or a shared link, this step folds to a summary of the clues; Edit clues or the step’s heading opens it again. Start over clears everything, board included. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day.</p>
+      <p>After a screenshot, Random or a shared link, this step folds to a summary of the clues: a stack with a column per slot, the green letter at the bottom and the letters that were yellow in that slot above it, then the gray letters; Edit clues or the step’s heading opens it again. Start over clears everything, board included. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day.</p>
       <p><button type="button" id="tipsAgainBtn" class="link">Show the first-time tips again</button></p>
     </div>
     <form method="dialog"><button>Close</button></form>
@@ -3630,12 +3635,13 @@
       offerTips();
     }
 
-    // The clues in miniature, for the folded step 1: the green pattern (if any letter is
-    // green), then the yellow letters (with the slots they can't take), then the gray ones.
+    // The clues in miniature, for the folded step 1: a stack with a column per slot, the green
+    // letter at the bottom and the letters that were yellow there piled above it (a slot with
+    // neither is a dot); then any letter counted twice, then the gray letters.
     function renderClueChips() {
       const wrap = $('clueChips');
       wrap.innerHTML = '';
-      const mini = (cls, items) => {
+      const mini = (parent, items) => {
         const el = document.createElement('span');
         el.className = 'mini';
         for (const { text, kind, title } of items) {
@@ -3645,22 +3651,30 @@
           if (title) cell.title = title;
           el.appendChild(cell);
         }
-        wrap.appendChild(el);
+        parent.appendChild(el);
         return el;
       };
-      if (greens.some(Boolean)) {   // five dots would say nothing
-        mini('', greens.map((g, i) => ({ text: g || '·', kind: g ? 'g' : '', title: `Slot ${i + 1}: ${g ? `${g} is green` : 'unknown'}` })))
-          .setAttribute('aria-label', `Green: ${greens.map(g => g || '?').join('')}`);
+      if (greens.some(Boolean) || yellows.some(Boolean)) {
+        const stack = document.createElement('span');
+        stack.className = 'clue-stack';
+        stack.setAttribute('aria-label', 'Green and yellow letters by slot');
+        for (let i = 0; i < len; i++) {
+          const g = greens[i], ys = [...yellows[i]].filter(y => y !== g);
+          const items = ys.map(y => ({ text: y, kind: 'y', title: `${y} was yellow in slot ${i + 1}` }));
+          if (g) items.push({ text: g, kind: 'g', title: `Slot ${i + 1}: ${g} is green` });
+          else if (!ys.length) items.push({ text: '·', kind: '', title: `Slot ${i + 1}: unknown` });
+          const known = [g && `${g} green`, ys.length && `${ys.join(', ')} yellow`].filter(Boolean).join(', ');
+          mini(stack, items).setAttribute('aria-label', `Slot ${i + 1}: ${known || 'unknown'}`);
+        }
+        wrap.appendChild(stack);
       }
-      if (tileInfo.length) {
-        mini('', tileInfo.map(t => ({
-          text: t.count > 1 ? `${t.letter}×${t.count}` : t.letter,
-          kind: 'y',
-          title: `${t.letter} was yellow in ${slotList(yellows.map((cell, i) => cell.includes(t.letter) ? i : -1).filter(i => i >= 0))}`,
-        }))).setAttribute('aria-label', `Yellow: ${tileInfo.map(t => t.letter).join(', ')}`);
+      const doubles = tileInfo.filter(t => t.count > 1);
+      if (doubles.length) {
+        mini(wrap, doubles.map(t => ({ text: `${t.letter}×${t.count}`, kind: 'y', title: `${t.count} ${t.letter} tiles on the board` })))
+          .setAttribute('aria-label', `Double letters: ${doubles.map(t => `${t.letter} ×${t.count}`).join(', ')}`);
       }
       if (grays) {
-        mini('', [...grays].map(g => ({ text: g, kind: 'x', title: `${g} is gray` })))
+        mini(wrap, [...grays].map(g => ({ text: g, kind: 'x', title: `${g} is gray` })))
           .setAttribute('aria-label', `Gray: ${grays}`);
       }
     }

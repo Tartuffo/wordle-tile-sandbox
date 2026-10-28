@@ -820,14 +820,35 @@ test('steps: 2 and 3 open as clues arrive; a link folds step 1 to a summary that
   // Opened from a link, the clues came in whole: step 1 is a summary of them.
   await open(page, '?green=B%3F%3F%3F%3F&ban1=E&ban2=R&yellow=ER&gray=STLN');
   await expect(body('cluesBody')).toBeHidden();
-  await expect(page.locator('#clueChips .mini').nth(0).locator('span')).toHaveText(['B', '·', '·', '·', '·']);
-  await expect(page.locator('#clueChips .mini').nth(1).locator('span')).toHaveText(['E', 'R']);
-  await expect(page.locator('#clueChips .mini').nth(2).locator('span')).toHaveText(['S', 'T', 'L', 'N']);
-  await expect(page.locator('#clueChips .mini').nth(1).locator('span').first()).toHaveAttribute('title', 'E was yellow in slot 2');
-  // With no green letter, the pattern is left out rather than shown as five dots.
+  // The summary is a stack: a column per slot, the green letter at the bottom and the letters
+  // that were yellow there above it; a slot with neither is a dot. Then the gray letters.
+  const column = i => page.locator('#clueChips .clue-stack .mini').nth(i).locator('span');
+  await expect(page.locator('#clueChips .clue-stack .mini')).toHaveCount(5);
+  await expect(column(0)).toHaveText(['B']);
+  await expect(column(1)).toHaveText(['E']);
+  await expect(column(2)).toHaveText(['R']);
+  await expect(column(3)).toHaveText(['·']);
+  await expect(column(4)).toHaveText(['·']);
+  await expect(column(0).first()).toHaveClass('g');
+  await expect(column(1).first()).toHaveClass('y');
+  await expect(column(1).first()).toHaveAttribute('title', 'E was yellow in slot 2');
+  await expect(page.locator('#clueChips > .mini').last().locator('span')).toHaveText(['S', 'T', 'L', 'N']);
+  // A slot that is green and had yellows too stacks them above the green; a letter yellow in
+  // two slots is in both columns and, counted twice, gets a ×2 chip.
+  await open(page, '?green=%3F%3F%3FS%3F&ban1=E&ban3=ED&ban4=E&yellow=ED&gray=TLN');
+  await expect(page.locator('#clueChips .clue-stack .mini')).toHaveCount(5);
+  await expect(column(1)).toHaveText(['E']);
+  await expect(column(3)).toHaveText(['E', 'D', 'S']);
+  await expect(column(3).last()).toHaveClass('g');
+  await expect(column(4)).toHaveText(['E']);
+  await expect(page.locator('#clueChips > .mini')).toHaveCount(1);
+  await open(page, '?green=%3F%3F%3FS%3F&ban1=E&ban3=ED&ban4=E&yellow=EED&gray=TLN');
+  await expect(page.locator('#clueChips > .mini')).toHaveCount(2);
+  await expect(page.locator('#clueChips > .mini').first().locator('span')).toHaveText(['E×2']);
+  // With no green letter, the yellows alone make the stack.
   await open(page, '?green=%3F%3F%3F%3F%3F&ban1=E&yellow=E&gray=ST');
-  await expect(page.locator('#clueChips .mini')).toHaveCount(2);
-  await expect(page.locator('#clueChips .mini').first().locator('span')).toHaveText(['E']);
+  await expect(column(1)).toHaveText(['E']);
+  await expect(column(0)).toHaveText(['·']);
   await expect(body('boardBody')).toBeVisible();
   await expect(body('resultsBody')).toBeVisible();
   await editClues(page);
