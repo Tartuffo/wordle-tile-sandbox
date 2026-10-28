@@ -820,8 +820,8 @@ test('steps: 2 and 3 open as clues arrive; a link folds step 1 to a summary that
   // Opened from a link, the clues came in whole: step 1 is a summary of them.
   await open(page, '?green=B%3F%3F%3F%3F&ban1=E&ban2=R&yellow=ER&gray=STLN');
   await expect(body('cluesBody')).toBeHidden();
-  // The summary is a stack: a column per slot, the green letter at the bottom and the letters
-  // that were yellow there above it; a slot with neither is a dot. Then the gray letters.
+  // The summary is a stack: a column per slot with its green letter, else the letters that
+  // were yellow there piled up, else a dot. Then the gray letters, in alphabetical order.
   const column = i => page.locator('#clueChips .clue-stack .mini').nth(i).locator('span');
   await expect(page.locator('#clueChips .clue-stack .mini')).toHaveCount(5);
   await expect(column(0)).toHaveText(['B']);
@@ -832,14 +832,14 @@ test('steps: 2 and 3 open as clues arrive; a link folds step 1 to a summary that
   await expect(column(0).first()).toHaveClass('g');
   await expect(column(1).first()).toHaveClass('y');
   await expect(column(1).first()).toHaveAttribute('title', 'E was yellow in slot 2');
-  await expect(page.locator('#clueChips > .mini').last().locator('span')).toHaveText(['S', 'T', 'L', 'N']);
-  // A slot that is green and had yellows too stacks them above the green; a letter yellow in
+  await expect(page.locator('#clueChips > .mini').last().locator('span')).toHaveText(['L', 'N', 'S', 'T']);
+  // A green slot shows only its green, whatever was yellow there before; a letter yellow in
   // two slots is in both columns and, counted twice, gets a ×2 chip.
   await open(page, '?green=%3F%3F%3FS%3F&ban1=E&ban3=ED&ban4=E&yellow=ED&gray=TLN');
   await expect(page.locator('#clueChips .clue-stack .mini')).toHaveCount(5);
   await expect(column(1)).toHaveText(['E']);
-  await expect(column(3)).toHaveText(['E', 'D', 'S']);
-  await expect(column(3).last()).toHaveClass('g');
+  await expect(column(3)).toHaveText(['S']);
+  await expect(column(3).first()).toHaveClass('g');
   await expect(column(4)).toHaveText(['E']);
   await expect(page.locator('#clueChips > .mini')).toHaveCount(1);
   await open(page, '?green=%3F%3F%3FS%3F&ban1=E&ban3=ED&ban4=E&yellow=EED&gray=TLN');

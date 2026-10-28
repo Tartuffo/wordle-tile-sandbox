@@ -449,16 +449,32 @@
     .clue-note { margin: 8px 0 0 36px; font-size: 14px; }
     .clue-note:empty { display: none; }
 
-    /* Step 1 folded: the clues in miniature, and a way back in. */
+    /* Step 1 folded: the clues in miniature and a way back in, on one row with the step's
+       foot (‹ Guess › and Start over), everything bottom-aligned with the clue box. */
+    .clue-bottom {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 8px 14px;
+      margin-top: 10px;
+    }
+
+    .clue-bottom:has(.clue-summary[hidden]) { margin-top: 14px; }
+    .clue-bottom .step-foot { margin: 0 0 0 auto; }
+
     .clue-summary {
       display: flex;
       flex-wrap: wrap;
-      align-items: center;
+      align-items: flex-end;
       gap: 8px 14px;
-      margin: 10px 0 0 36px;
+      margin: 0 0 0 36px;
     }
 
+    /* The links sit level with the box's bottom row of tiles (22px, 5px above the edge). */
+    .clue-summary button.link { line-height: 22px; padding-bottom: 5px; }
+
     .clue-chips { display: inline-flex; flex-wrap: wrap; align-items: flex-end; gap: 4px 10px; }
+    .clue-chips:empty { display: none; }
     .mini { display: inline-flex; gap: 3px; }
 
     /* The green and yellow clues as a stack: one column per slot, the green letter (or the
@@ -1268,11 +1284,6 @@
         <button type="button" class="help-btn" data-help="cluesHelp" aria-label="About entering clues" title="About entering clues">?</button>
       </div>
       <p id="clueNote" class="hint clue-note" role="status"></p>
-      <div id="cluesSummary" class="clue-summary" hidden>
-        <span id="clueChips" class="clue-chips" aria-label="Your clues"></span>
-        <button id="editCluesBtn" type="button" class="link">Edit clues</button>
-        <button id="newPuzzleBtn" type="button" class="link" hidden>New puzzle</button>
-      </div>
       <div id="cluesBody" class="step-body">
         <p class="hint clue-intro">Paste or import a screenshot of your game, or let Random make up a practice puzzle.</p>
         <div id="cluesToolbar" class="toolbar-row">
@@ -1296,13 +1307,20 @@
         </div>
         <div id="clueStatus" class="status" role="status"></div>
       </div>
-      <div class="step-foot">
-        <span id="guessNav" class="guess-nav" hidden>
-          <button id="guessPrevBtn" aria-label="Previous guess" title="Show the clues one guess earlier">‹</button>
-          <span id="guessStep"></span>
-          <button id="guessNextBtn" aria-label="Next guess" title="Show the clues one guess later">›</button>
-        </span>
-        <button id="clearBtn" title="Clear every clue and the board">Start over</button>
+      <div class="clue-bottom">
+        <div id="cluesSummary" class="clue-summary" hidden>
+          <span id="clueChips" class="clue-chips" aria-label="Your clues"></span>
+          <button id="editCluesBtn" type="button" class="link">Edit clues</button>
+          <button id="newPuzzleBtn" type="button" class="link" hidden>New puzzle</button>
+        </div>
+        <div class="step-foot">
+          <span id="guessNav" class="guess-nav" hidden>
+            <button id="guessPrevBtn" aria-label="Previous guess" title="Show the clues one guess earlier">‹</button>
+            <span id="guessStep"></span>
+            <button id="guessNextBtn" aria-label="Next guess" title="Show the clues one guess later">›</button>
+          </span>
+          <button id="clearBtn" title="Clear every clue and the board">Start over</button>
+        </div>
       </div>
     </section>
 
@@ -1459,7 +1477,7 @@
         <dt>Double letters</dt>
         <dd>A yellow letter is one tile on the board, or none if it’s already green. When a letter could be in the word twice (yellow in two slots, or green in one and yellow in another), this row appears: press + to add a tile for the second copy, and − to take it away again.</dd>
       </dl>
-      <p>After a screenshot, Random or a shared link, this step folds to a summary of the clues: a stack with a column per slot, the green letter at the bottom and the letters that were yellow in that slot above it, then the gray letters; Edit clues or the step’s heading opens it again. Start over clears everything, board included. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day.</p>
+      <p>After a screenshot, Random or a shared link, this step folds to a summary of the clues: a stack with a column per slot, each showing its green letter or else the letters that were yellow there, then the gray letters; Edit clues or the step’s heading opens it again. Start over clears everything, board included. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day.</p>
       <p><button type="button" id="tipsAgainBtn" class="link">Show the first-time tips again</button></p>
     </div>
     <form method="dialog"><button>Close</button></form>
@@ -3646,8 +3664,8 @@
     }
 
     // The clues in miniature, for the folded step 1: a stack with a column per slot, the green
-    // letter at the bottom and the letters that were yellow there piled above it (a slot with
-    // neither is a dot); then any letter counted twice, then the gray letters.
+    // letter if there is one, else the letters that were yellow there piled up, else a dot;
+    // then any letter counted twice, then the gray letters in alphabetical order.
     function renderClueChips() {
       const wrap = $('clueChips');
       wrap.innerHTML = '';
@@ -3669,12 +3687,12 @@
         stack.className = 'clue-stack';
         stack.setAttribute('aria-label', 'Green and yellow letters by slot');
         for (let i = 0; i < len; i++) {
-          const g = greens[i], ys = [...yellows[i]].filter(y => y !== g);
-          const items = ys.map(y => ({ text: y, kind: 'y', title: `${y} was yellow in slot ${i + 1}` }));
-          if (g) items.push({ text: g, kind: 'g', title: `Slot ${i + 1}: ${g} is green` });
-          else if (!ys.length) items.push({ text: '·', kind: '', title: `Slot ${i + 1}: unknown` });
-          const known = [g && `${g} green`, ys.length && `${ys.join(', ')} yellow`].filter(Boolean).join(', ');
-          mini(stack, items).setAttribute('aria-label', `Slot ${i + 1}: ${known || 'unknown'}`);
+          const g = greens[i], ys = g ? [] : [...yellows[i]];
+          const items = g ? [{ text: g, kind: 'g', title: `Slot ${i + 1}: ${g} is green` }]
+            : ys.length ? ys.map(y => ({ text: y, kind: 'y', title: `${y} was yellow in slot ${i + 1}` }))
+            : [{ text: '·', kind: '', title: `Slot ${i + 1}: unknown` }];
+          const known = g ? `${g} green` : ys.length ? `${ys.join(', ')} yellow` : 'unknown';
+          mini(stack, items).setAttribute('aria-label', `Slot ${i + 1}: ${known}`);
         }
         wrap.appendChild(stack);
       }
@@ -3684,8 +3702,9 @@
           .setAttribute('aria-label', `Double letters: ${doubles.map(t => `${t.letter} ×${t.count}`).join(', ')}`);
       }
       if (grays) {
-        mini(wrap, [...grays].map(g => ({ text: g, kind: 'x', title: `${g} is gray` })))
-          .setAttribute('aria-label', `Gray: ${grays}`);
+        const sorted = [...grays].sort();
+        mini(wrap, sorted.map(g => ({ text: g, kind: 'x', title: `${g} is gray` })))
+          .setAttribute('aria-label', `Gray: ${sorted.join('')}`);
       }
     }
 
