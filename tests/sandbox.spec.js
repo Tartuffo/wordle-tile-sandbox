@@ -975,6 +975,29 @@ test('?view=mobile previews the phone layout and wording at 390px, or a given wi
   await expect(page.locator('#boardNote')).toContainText('Tap an empty slot');
   await expect(page.locator('#lettersTitle')).toContainText('(hold to exclude)');
 
+  // Beside the column, with room: a ruler of five phones, the fold line on the one nearest 390 wide.
+  const ruler = page.locator('#phoneRuler');
+  await expect(ruler).toBeVisible();
+  await expect(ruler.locator('.phone')).toHaveCount(5);
+  await expect(ruler.locator('.label.current')).toContainText('844 iPhone 12 to 14');
+  await expect(ruler.locator('.phone.current')).toHaveCount(1);
+  const fold = page.locator('#fold');
+  await expect(fold).toHaveCSS('top', '844px');
+  const app = await page.locator('.app').boundingBox();
+  const box = await fold.boundingBox();
+  expect(Math.round(box.x)).toBe(Math.round(app.x));
+  expect(Math.round(box.width)).toBe(Math.round(app.width));
+  expect(Number(await ruler.evaluate(el => parseFloat(el.style.left)))).toBeGreaterThan(app.x + app.width);
+  await ruler.locator('.label', { hasText: '667' }).click();
+  await expect(fold).toHaveCSS('top', '667px');
+  await expect(ruler.locator('.label.current')).toContainText('iPhone SE');
+  // No room beside the column: the ruler and the line go.
+  await page.setViewportSize({ width: 600, height: 800 });
+  await expect(ruler).toBeHidden();
+  await expect(fold).toBeHidden();
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await expect(ruler).toBeVisible();
+
   // Opening a shared link with the preview on keeps it after the link is consumed.
   await open(page, '?green=B%3F%3F%3F%3F&ban1=E&yellow=E&view=mobile-320');
   expect(new URL(page.url()).search).toBe('?view=mobile-320');

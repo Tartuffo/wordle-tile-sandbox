@@ -109,6 +109,39 @@
     .view-note { margin: -4px 0 12px; font-size: 13px; }
     .view-note[hidden] { display: none; }
 
+    /* Phone preview: beside the column, nested boxes as tall as common phones' screens, from
+       the top of the page, so the fold shows; a dashed line across the column marks one. */
+    .phone-ruler { position: absolute; top: 0; width: 260px; font-size: 11px; line-height: 1.3; color: var(--muted); pointer-events: none; }
+    .phone-ruler[hidden] { display: none; }
+    .phone-ruler .phone {
+      position: absolute;
+      top: 0;
+      left: 0;
+      border: 1px solid var(--border);
+      border-top: 0;
+      border-radius: 0 0 5px 5px;
+    }
+    .phone-ruler .phone.current { border-color: var(--accent); }
+    .phone-ruler .label {
+      position: absolute;
+      left: 58px;   /* clear of the widest box */
+      margin-top: -7px;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: inherit;
+      font: inherit;
+      white-space: nowrap;
+      text-align: left;
+      pointer-events: auto;
+      cursor: pointer;
+    }
+    .phone-ruler .label b { color: var(--text); }
+    .phone-ruler .label.current b { color: var(--accent); }
+    .phone-ruler .note { position: absolute; left: 0; width: 210px; }
+    .fold { position: absolute; height: 0; border-top: 1px dashed var(--accent); pointer-events: none; }
+    .fold[hidden] { display: none; }
+
     .app-head {
       display: flex;
       align-items: flex-start;
@@ -3773,6 +3806,76 @@
 
     if (CLICK) document.querySelectorAll('.tap').forEach(el => { el.textContent = el.textContent === 'Tap' ? 'Click' : 'click'; });
 
+    // Common phones' screens in CSS pixels, oldest first, for the preview's ruler.
+    const PHONES = [
+      { name: 'iPhone SE', w: 375, h: 667, years: '2016–22' },
+      { name: 'iPhone X to 13 mini', w: 375, h: 812, years: '2017–21' },
+      { name: 'iPhone 12 to 14', w: 390, h: 844, years: '2020–22' },
+      { name: 'Pixel 7', w: 412, h: 915, years: '2022' },
+      { name: 'iPhone 14 to 16 Plus and Pro Max', w: 430, h: 932, years: '2022–24' },
+    ];
+    let foldPhone = null;
+
+    // The ruler is absolute, so it scrolls with the page and its top is the screen's top. The
+    // fold line starts on the phone nearest the preview's width; a label moves it. Both are
+    // left out when the window has no room beside the column.
+    function renderPhoneRuler() {
+      if (!VIEW.mobile) return;
+      let ruler = $('phoneRuler');
+      if (!ruler) {
+        ruler = document.createElement('div');
+        ruler.id = 'phoneRuler';
+        ruler.className = 'phone-ruler';
+        ruler.setAttribute('aria-hidden', 'true');
+        const byHeight = [...PHONES].sort((a, b) => a.h - b.h);
+        foldPhone = PHONES.reduce((best, p) => Math.abs(p.w - VIEW.width) < Math.abs(best.w - VIEW.width) ? p : best);
+        byHeight.forEach((phone, i) => {
+          const box = document.createElement('div');
+          box.className = 'phone';
+          box.style.height = `${phone.h}px`;
+          box.style.width = `${12 + 9 * i}px`;
+          box.dataset.h = String(phone.h);
+          ruler.appendChild(box);
+          const label = document.createElement('button');
+          label.type = 'button';
+          label.className = 'label';
+          label.dataset.h = String(phone.h);
+          label.style.top = `${phone.h}px`;
+          label.innerHTML = `<b>${phone.h}</b> ${phone.name}, ${phone.w} wide, ${phone.years}`;
+          label.title = 'Put the fold line at this height';
+          label.addEventListener('click', () => {
+            foldPhone = phone;
+            renderPhoneRuler();
+          });
+          ruler.appendChild(label);
+        });
+        const note = document.createElement('p');
+        note.className = 'note';
+        note.style.top = `${byHeight.at(-1).h + 26}px`;
+        ruler.style.height = `${byHeight.at(-1).h + 90}px`;
+        note.textContent = 'Screen heights in CSS pixels from the top of the page. Safari’s bars take 100 to 140 px of each until you scroll. Click a phone to move the fold line.';
+        ruler.appendChild(note);
+        const fold = document.createElement('div');
+        fold.id = 'fold';
+        fold.className = 'fold';
+        document.body.append(ruler, fold);
+      }
+      const app = document.querySelector('.app').getBoundingClientRect();
+      const left = app.right + window.scrollX + 18;
+      const room = left + 260 <= document.documentElement.clientWidth;
+      ruler.hidden = !room;
+      $('fold').hidden = !room;
+      if (!room) return;
+      ruler.style.left = `${left}px`;
+      ruler.querySelectorAll('.phone, .label').forEach(el => el.classList.toggle('current', Number(el.dataset.h) === foldPhone.h));
+      const fold = $('fold');
+      fold.style.left = `${app.left + window.scrollX}px`;
+      fold.style.width = `${app.width}px`;
+      fold.style.top = `${foldPhone.h}px`;
+    }
+
+    window.addEventListener('resize', renderPhoneRuler);
+
     if (VIEW.param) {
       const note = $('viewNote');
       note.hidden = false;
@@ -3781,6 +3884,7 @@
       back.href = location.pathname;
       back.textContent = 'Normal view';
       note.appendChild(back);
+      renderPhoneRuler();
     }
 
     // Help: each [data-help] button opens its dialog; a click on the backdrop closes it.
