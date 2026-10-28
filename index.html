@@ -139,6 +139,27 @@
     .phone-ruler .label b { color: var(--text); }
     .phone-ruler .label.current b { color: var(--accent); }
     .phone-ruler .note { position: absolute; left: 0; width: 210px; }
+    /* The handle: drag it to put the screens' top anywhere down the page. */
+    .phone-ruler .grab {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 56px;
+      height: 18px;
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--panel-2);
+      color: var(--muted);
+      font: inherit;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: grab;
+      pointer-events: auto;
+      touch-action: none;
+      user-select: none;
+    }
+    .phone-ruler .grab:active { cursor: grabbing; }
     .fold { position: absolute; height: 0; border-top: 1px dashed var(--accent); pointer-events: none; }
     .fold[hidden] { display: none; }
 
@@ -3815,6 +3836,7 @@
       { name: 'iPhone 14 to 16 Plus and Pro Max', w: 430, h: 932, years: '2022–24' },
     ];
     let foldPhone = null;
+    let rulerTop = 0;     // how far down the page the screens' top sits, moved by the handle
 
     // The ruler is absolute, so it scrolls with the page and its top is the screen's top. The
     // fold line starts on the phone nearest the preview's width; a label moves it. Both are
@@ -3851,10 +3873,32 @@
         });
         const note = document.createElement('p');
         note.className = 'note';
+        note.id = 'rulerNote';
         note.style.top = `${byHeight.at(-1).h + 26}px`;
-        ruler.style.height = `${byHeight.at(-1).h + 90}px`;
-        note.textContent = 'Screen heights in CSS pixels from the top of the page. Safari’s bars take 100 to 140 px of each until you scroll. Click a phone to move the fold line.';
+        ruler.style.height = `${byHeight.at(-1).h + 110}px`;
         ruler.appendChild(note);
+        const grab = document.createElement('button');
+        grab.type = 'button';
+        grab.className = 'grab';
+        grab.textContent = '⇕ drag';
+        grab.title = 'Drag to move the screens’ top down the page; double-click to put it back at the top';
+        grab.setAttribute('aria-label', 'Move the phone ruler');
+        let drag = null;
+        grab.addEventListener('pointerdown', e => {
+          drag = { y: e.clientY, top: rulerTop };
+          grab.setPointerCapture(e.pointerId);
+        });
+        grab.addEventListener('pointermove', e => {
+          if (!drag) return;
+          rulerTop = Math.max(0, Math.round(drag.top + e.clientY - drag.y));
+          renderPhoneRuler();
+        });
+        for (const type of ['pointerup', 'pointercancel']) grab.addEventListener(type, () => { drag = null; });
+        grab.addEventListener('dblclick', () => {
+          rulerTop = 0;
+          renderPhoneRuler();
+        });
+        ruler.appendChild(grab);
         const fold = document.createElement('div');
         fold.id = 'fold';
         fold.className = 'fold';
@@ -3867,11 +3911,14 @@
       $('fold').hidden = !room;
       if (!room) return;
       ruler.style.left = `${left}px`;
+      ruler.style.top = `${rulerTop}px`;
       ruler.querySelectorAll('.phone, .label').forEach(el => el.classList.toggle('current', Number(el.dataset.h) === foldPhone.h));
+      $('rulerNote').textContent = (rulerTop ? `The screens’ top is ${rulerTop} px down the page. ` : 'Screen heights in CSS pixels from the top of the page. ') +
+        'Safari’s bars take 100 to 140 px of each until you scroll. Click a phone to move the fold line; drag the handle to move the screens’ top, and double-click it to go back to the top.';
       const fold = $('fold');
       fold.style.left = `${app.left + window.scrollX}px`;
       fold.style.width = `${app.width}px`;
-      fold.style.top = `${foldPhone.h}px`;
+      fold.style.top = `${rulerTop + foldPhone.h}px`;
     }
 
     window.addEventListener('resize', renderPhoneRuler);

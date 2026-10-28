@@ -991,6 +991,19 @@ test('?view=mobile previews the phone layout and wording at 390px, or a given wi
   await ruler.locator('.label', { hasText: '667' }).click();
   await expect(fold).toHaveCSS('top', '667px');
   await expect(ruler.locator('.label.current')).toContainText('iPhone SE');
+  // The handle drags the screens' top down the page; the fold follows; a double-click resets.
+  const grab = ruler.locator('.grab');
+  const g = await grab.boundingBox();
+  await page.mouse.move(g.x + g.width / 2, g.y + g.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(g.x + g.width / 2, g.y + g.height / 2 + 120, { steps: 6 });
+  await page.mouse.up();
+  await expect(ruler).toHaveCSS('top', '120px');
+  await expect(fold).toHaveCSS('top', '787px');
+  await expect(page.locator('#rulerNote')).toContainText('The screens’ top is 120 px down the page.');
+  await grab.dblclick();
+  await expect(ruler).toHaveCSS('top', '0px');
+  await expect(fold).toHaveCSS('top', '667px');
   // No room beside the column: the ruler and the line go.
   await page.setViewportSize({ width: 600, height: 800 });
   await expect(ruler).toBeHidden();
