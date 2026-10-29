@@ -1017,3 +1017,64 @@ test('arrangements no word fits are hidden by default; Dim is remembered; the ol
   await expect(mode('Dim')).toHaveAttribute('aria-pressed', 'true');
   await expect(arrangements(page)).toHaveCount(4);
 });
+
+test('dev panel: ?dev=1 turns it on and is remembered, Phone width previews the page in a frame, Off turns it off', async ({ page }) => {
+  await open(page);
+  await expect(page.locator('#devPanel')).toBeHidden();
+  await open(page, '?dev=1');
+  await expect(page.locator('#devPanel')).toBeVisible();
+  expect(await page.evaluate(() => location.search)).toBe('');   // the parameter is dropped once read
+  await open(page);
+  await expect(page.locator('#devPanel')).toBeVisible();
+
+  // Phone width shows the page again in a phone-sized frame, opened on the clues of the
+  // moment and kept in step with them; the width picker resizes it; it survives a reload.
+  const frame = page.locator('#phoneFrame');
+  const inner = page.frameLocator('#phoneFrame iframe');
+  await expect(frame).toBeHidden();
+  await green(page, 1).fill('B');
+  const phone = page.getByRole('switch', { name: 'Phone width' });
+  await phone.click();
+  await expect(phone).toHaveAttribute('aria-checked', 'true');
+  await expect(frame).toBeVisible();
+  expect(await frame.evaluate(el => el.clientWidth)).toBe(390);
+  await expect(inner.locator('#pasteBtn .wide')).toBeHidden();      // the narrow layout
+  await expect(inner.locator('#devPanel')).toBeHidden();            // no panel within the preview
+  const innerCell = name => inner.getByRole('textbox', { name, exact: true, includeHidden: true });
+  await expect(innerCell('Green letter, slot 1')).toHaveValue('B');   // folded: the preview opened on a clue link
+  await yellow(page, 2).fill('E');
+  await expect(innerCell('Letters that were yellow in slot 2')).toHaveValue('E');
+  await inner.getByRole('button', { name: 'Edit clues', exact: true }).click();
+  await innerCell('Green letter, slot 3').fill('R');
+  await expect(green(page, 3)).toHaveValue('R');
+  await page.locator('#devPhoneSeg button[data-width="430"]').click();
+  expect(await frame.evaluate(el => el.clientWidth)).toBe(430);
+  await open(page);
+  await expect(frame).toBeVisible();
+  expect(await frame.evaluate(el => el.clientWidth)).toBe(430);
+  await phone.click();
+  await expect(frame).toBeHidden();
+
+  // The wording switch reloads with the other word; the state line says which is in force.
+  await expect(page.locator('#devState')).toContainText('Click wording');
+  await page.locator('#devTouchSeg button[data-touch="tap"]').click();
+  await page.waitForLoadState();
+  await expect(page.locator('#devState')).toContainText('Tap wording');
+  await expect(page.locator('#devTouchSeg button[data-touch="tap"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#devTouchSeg button[data-touch=""]').click();
+  await page.waitForLoadState();
+  await expect(page.locator('#devState')).toContainText('Click wording');
+
+  // A clue link with the flag loads both; the state line carries the clue link.
+  await open(page, '?dev=1&green=B%3F%3F%3F%3F&ban1=E&yellow=E&gray=ST');
+  await expect(green(page, 1)).toHaveValue('B');
+  await expect(page.locator('#devState')).toContainText('?green=B%3F%3F%3F%3F&yellow=E&gray=ST&ban1=E');
+
+  await page.getByRole('button', { name: 'Off', exact: true }).click();
+  await page.waitForLoadState();
+  await expect(page.locator('#devPanel')).toBeHidden();
+  await open(page);
+  await expect(page.locator('#devPanel')).toBeHidden();
+  await open(page, '?dev=0');
+  await expect(page.locator('#devPanel')).toBeHidden();
+});
