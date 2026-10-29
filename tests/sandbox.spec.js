@@ -1017,3 +1017,50 @@ test('arrangements no word fits are hidden by default; Dim is remembered; the ol
   await expect(mode('Dim')).toHaveAttribute('aria-pressed', 'true');
   await expect(arrangements(page)).toHaveCount(4);
 });
+
+test('dev panel: ?dev=1 turns it on and is remembered, Phone width narrows the page, Off turns it off', async ({ page }) => {
+  await open(page);
+  await expect(page.locator('#devPanel')).toBeHidden();
+  await open(page, '?dev=1');
+  await expect(page.locator('#devPanel')).toBeVisible();
+  expect(await page.evaluate(() => location.search)).toBe('');   // the parameter is dropped once read
+  await open(page);
+  await expect(page.locator('#devPanel')).toBeVisible();
+
+  // Phone width narrows the page and brings the narrow layout with it; it survives a reload.
+  const appWidth = () => page.locator('.app').evaluate(el => el.getBoundingClientRect().width);
+  expect(await appWidth()).toBeGreaterThan(500);
+  await expect(page.locator('#pasteBtn .wide')).toBeVisible();
+  const phone = page.getByRole('switch', { name: 'Phone width' });
+  await phone.click();
+  await expect(phone).toHaveAttribute('aria-checked', 'true');
+  expect(await appWidth()).toBeLessThan(400);
+  await expect(page.locator('#pasteBtn .wide')).toBeHidden();
+  await open(page);
+  expect(await appWidth()).toBeLessThan(400);
+  await phone.click();
+  expect(await appWidth()).toBeGreaterThan(500);
+
+  // The wording switch reloads with the other word; the state line says which is in force.
+  await expect(page.locator('#devState')).toContainText('Click wording');
+  await page.locator('#devTouchSeg button[data-touch="tap"]').click();
+  await page.waitForLoadState();
+  await expect(page.locator('#devState')).toContainText('Tap wording');
+  await expect(page.locator('#devTouchSeg button[data-touch="tap"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#devTouchSeg button[data-touch=""]').click();
+  await page.waitForLoadState();
+  await expect(page.locator('#devState')).toContainText('Click wording');
+
+  // A clue link with the flag loads both; the state line carries the clue link.
+  await open(page, '?dev=1&green=B%3F%3F%3F%3F&ban1=E&yellow=E&gray=ST');
+  await expect(green(page, 1)).toHaveValue('B');
+  await expect(page.locator('#devState')).toContainText('?green=B%3F%3F%3F%3F&yellow=E&gray=ST&ban1=E');
+
+  await page.getByRole('button', { name: 'Off', exact: true }).click();
+  await page.waitForLoadState();
+  await expect(page.locator('#devPanel')).toBeHidden();
+  await open(page);
+  await expect(page.locator('#devPanel')).toBeHidden();
+  await open(page, '?dev=0');
+  await expect(page.locator('#devPanel')).toBeHidden();
+});

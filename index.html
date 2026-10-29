@@ -14,6 +14,28 @@
     if (savedTheme() ? savedTheme() === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches) {
       document.documentElement.dataset.theme = 'dark';
     }
+
+    // A Dev panel for working on the app, at the bottom of the page: ?dev=1 turns it on for
+    // this browser and site and ?dev=0 turns it off; the parameter is then dropped from the
+    // URL. Its phone-width setting is applied here, before the page paints.
+    const DEV_KEY = 'wordle-sandbox-dev';
+    const DEV_PHONE_KEY = 'wordle-sandbox-dev-phone';
+    const DEV_TOUCH_KEY = 'wordle-sandbox-dev-touch';   // 'click' or 'tap' forces the wording
+    function devSetting(key) {
+      try { return localStorage.getItem(DEV_KEY) === 'on' ? localStorage.getItem(key) : null; } catch { return null; }
+    }
+    try {
+      const params = new URLSearchParams(location.search);
+      const dev = params.get('dev');
+      if (dev !== null) {
+        if (dev === '1') localStorage.setItem(DEV_KEY, 'on');
+        else if (dev === '0') localStorage.removeItem(DEV_KEY);
+        params.delete('dev');
+        const rest = params.toString();
+        history.replaceState(null, '', location.pathname + (rest ? `?${rest}` : ''));
+      }
+    } catch {}
+    if (devSetting(DEV_PHONE_KEY) === 'on') document.documentElement.classList.add('phone');
   </script>
   <script>
     // Count page views with GoatCounter (no cookies, nothing shown on the page), only on the
@@ -89,6 +111,11 @@
     }
 
     * { box-sizing: border-box; }
+
+    /* The narrow layout (the @container rules) follows the page's width rather than the
+       viewport's, so the Dev panel's Phone width can narrow the page on a desktop. */
+    html { container-type: inline-size; }
+    html.phone { width: 390px; margin: 0 auto; }
 
     body {
       margin: 0;
@@ -549,7 +576,7 @@
     .letters-title b { color: var(--text); }
     /* The view switch and its help button wrap as one. */
     .letters-tools { display: inline-flex; align-items: center; gap: 6px; }
-    @media (max-width: 420px) {
+    @container (max-width: 420px) {
       .letters-tools .seg button { padding: 3px 7px; }
     }
 
@@ -1100,6 +1127,15 @@
 
     button:disabled { opacity: .5; cursor: default; }
 
+    /* The Dev panel: dashed, so it never passes for part of the app. */
+    .dev-panel { border-style: dashed; }
+    .dev-panel h2 { margin: 0; font-size: 16px; }
+    .dev-head { display: flex; align-items: center; gap: 10px; }
+    .dev-head .link { margin-left: auto; }
+    .dev-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+    .dev-row .hint { font-size: 13px; }
+    .dev-state { margin: 10px 0 0; font-size: 13px; word-break: break-all; }
+
     .copyright {
       width: min(640px, 100%);
       color: var(--muted);
@@ -1241,8 +1277,8 @@
       overflow: hidden;
     }
 
-    @media (max-width: 480px) {
-      :root { --label-w: 54px; --gap: 5px; }
+    @container (max-width: 480px) {
+      body { --label-w: 54px; --gap: 5px; }
       .odds-entry .pc { display: none; }
       /* The line above the buttons says "paste or import a screenshot", so the short labels are enough. */
       .toolbar-row .wide { display: none; }
@@ -1449,6 +1485,32 @@
         </div>
       </div>
     </section>
+
+    <section id="devPanel" class="panel dev-panel" aria-label="Dev" hidden>
+      <div class="dev-head">
+        <h2>Dev</h2>
+        <span class="hint">On for this browser and site, until Off or <code>?dev=0</code>.</span>
+        <button id="devOffBtn" type="button" class="link">Off</button>
+      </div>
+      <div class="dev-row">
+        <button id="devPhoneBtn" type="button" role="switch" aria-checked="false">Phone width</button>
+        <span class="hint">Lays the page out 390px wide, as on a phone. Remembered.</span>
+      </div>
+      <div class="dev-row">
+        <span id="devTouchSeg" class="seg" role="group" aria-label="Instruction wording">
+          <button type="button" data-touch="" title="Click or Tap, as the device decides">Device</button>
+          <button type="button" data-touch="click" title="Say Click, as with a mouse or trackpad">Click</button>
+          <button type="button" data-touch="tap" title="Say Tap, as on a touch screen">Tap</button>
+        </span>
+        <span class="hint">Click or Tap in the instructions. Changing it reloads the page; the board's tried letters are lost.</span>
+      </div>
+      <div class="dev-row">
+        <button id="devTipsBtn" type="button">Show tips again</button>
+        <button id="devWordsBtn" type="button">Ask about words again</button>
+        <button id="devForgetBtn" type="button" title="Forget the theme, views and other remembered choices, but not the clues or these Dev settings, and reload">Forget choices</button>
+      </div>
+      <p id="devState" class="hint dev-state"></p>
+    </section>
   </main>
 
   <dialog id="wordsConfirm" class="words-dialog confirm-dialog" aria-labelledby="wordsConfirmText">
@@ -1577,7 +1639,8 @@
 
     const len = 5;                // Wordle's word length
     // A mouse or trackpad clicks; a touch screen taps. Tooltips need a mouse, so they always say Click.
-    const CLICK = matchMedia('(any-pointer: fine)').matches;
+    const devTouch = devSetting(DEV_TOUCH_KEY);
+    const CLICK = devTouch ? devTouch === 'click' : matchMedia('(any-pointer: fine)').matches;
     const TAP = CLICK ? 'Click' : 'Tap';
     const tap = TAP.toLowerCase();
     let greens = [];              // per slot: one letter or ''
@@ -3622,6 +3685,7 @@
       renderClueLink();
       renderSteps();
       saveState();
+      renderDevPanel();
     }
 
     // ── Steps ─────────────────────────────────────────────────────────────────
@@ -4036,6 +4100,59 @@
     // Follow the system setting as it changes (e.g. at sunset) until the switch is used.
     matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
       if (!savedTheme()) applyTheme(e.matches);
+    });
+
+    // ── Dev panel ─────────────────────────────────────────────────────────────
+
+    // Shown only with the dev flag (see the first script). Its settings live in localStorage
+    // beside the app's, and Forget choices spares them and the saved clues.
+    function renderDevPanel() {
+      let on = false;
+      try { on = localStorage.getItem(DEV_KEY) === 'on'; } catch {}
+      $('devPanel').hidden = !on;
+      if (!on) return;
+      $('devPhoneBtn').setAttribute('aria-checked', String(document.documentElement.classList.contains('phone')));
+      document.querySelectorAll('#devTouchSeg button').forEach(btn => {
+        btn.setAttribute('aria-pressed', String((devTouch || '') === btn.dataset.touch));
+      });
+      const words = wordList === 'loading' ? 'loading' : wordList === 'failed' ? 'failed to load' : 'loaded';
+      const answers = answersThrough ? `answers through ${answersThrough}` : 'answers not loaded';
+      $('devState').textContent = `${hasClues() ? getShareURL() : 'No clues.'} · ${arrangements.length} arrangement${arrangements.length === 1 ? '' : 's'} · ` +
+        `word list ${words} · ${answers} · ${CLICK ? 'Click' : 'Tap'} wording`;
+    }
+
+    $('devOffBtn').addEventListener('click', () => {
+      try { [DEV_KEY, DEV_PHONE_KEY, DEV_TOUCH_KEY].forEach(key => localStorage.removeItem(key)); } catch {}
+      location.reload();
+    });
+    $('devPhoneBtn').addEventListener('click', () => {
+      const phone = document.documentElement.classList.toggle('phone');
+      try { phone ? localStorage.setItem(DEV_PHONE_KEY, 'on') : localStorage.removeItem(DEV_PHONE_KEY); } catch {}
+      renderDevPanel();
+    });
+    document.querySelectorAll('#devTouchSeg button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if ((devTouch || '') === btn.dataset.touch) return;
+        try { btn.dataset.touch ? localStorage.setItem(DEV_TOUCH_KEY, btn.dataset.touch) : localStorage.removeItem(DEV_TOUCH_KEY); } catch {}
+        location.reload();
+      });
+    });
+    $('devTipsBtn').addEventListener('click', () => {
+      tipsSeen = new Set();
+      try { localStorage.removeItem(TIPS_KEY); } catch {}
+      if (openTip) closeTip(false);
+      offerTips();
+    });
+    $('devWordsBtn').addEventListener('click', () => {
+      try { sessionStorage.removeItem(WORDS_OK_KEY); } catch {}
+    });
+    $('devForgetBtn').addEventListener('click', () => {
+      const keep = new Set([DEV_KEY, DEV_PHONE_KEY, DEV_TOUCH_KEY, STATE_KEY]);
+      try {
+        Object.keys(localStorage).filter(key => key.startsWith('wordle-sandbox-') && !keep.has(key))
+          .forEach(key => localStorage.removeItem(key));
+      } catch {}
+      location.reload();
     });
 
     // ── Init ──────────────────────────────────────────────────────────────────
