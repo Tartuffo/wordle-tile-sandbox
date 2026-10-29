@@ -17,10 +17,12 @@
 
     // A Dev panel for working on the app, at the bottom of the page: ?dev=1 turns it on for
     // this browser and site and ?dev=0 turns it off; the parameter is then dropped from the
-    // URL. Its phone-width setting is applied here, before the page paints.
+    // URL. Its phone preview, a copy of the page in a phone-sized frame on the right, is
+    // given its room here, before the page paints. Inside that frame there is no panel.
     const DEV_KEY = 'wordle-sandbox-dev';
-    const DEV_PHONE_KEY = 'wordle-sandbox-dev-phone';
+    const DEV_PHONE_KEY = 'wordle-sandbox-dev-phone';   // the preview's width in px, or unset
     const DEV_TOUCH_KEY = 'wordle-sandbox-dev-touch';   // 'click' or 'tap' forces the wording
+    const IN_FRAME = window.self !== window.top;
     function devSetting(key) {
       try { return localStorage.getItem(DEV_KEY) === 'on' ? localStorage.getItem(key) : null; } catch { return null; }
     }
@@ -35,7 +37,7 @@
         history.replaceState(null, '', location.pathname + (rest ? `?${rest}` : ''));
       }
     } catch {}
-    if (devSetting(DEV_PHONE_KEY) === 'on') document.documentElement.classList.add('phone');
+    if (!IN_FRAME && devSetting(DEV_PHONE_KEY)) document.documentElement.classList.add('phone');
   </script>
   <script>
     // Count page views with GoatCounter (no cookies, nothing shown on the page), only on the
@@ -111,11 +113,6 @@
     }
 
     * { box-sizing: border-box; }
-
-    /* The narrow layout (the @container rules) follows the page's width rather than the
-       viewport's, so the Dev panel's Phone width can narrow the page on a desktop. */
-    html { container-type: inline-size; }
-    html.phone { width: 390px; margin: 0 auto; }
 
     body {
       margin: 0;
@@ -576,7 +573,7 @@
     .letters-title b { color: var(--text); }
     /* The view switch and its help button wrap as one. */
     .letters-tools { display: inline-flex; align-items: center; gap: 6px; }
-    @container (max-width: 420px) {
+    @media (max-width: 420px) {
       .letters-tools .seg button { padding: 3px 7px; }
     }
 
@@ -1127,8 +1124,28 @@
 
     button:disabled { opacity: .5; cursor: default; }
 
-    /* The Dev panel: dashed, so it never passes for part of the app. */
+    /* The Dev panel: dashed, so it never passes for part of the app. Its phone preview is a
+       frame fixed at the right; html.phone keeps the page clear of it. */
     .dev-panel { border-style: dashed; }
+    html.phone body { padding-right: 440px; }
+
+    .phone-frame {
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      width: 390px;
+      height: min(844px, calc(100vh - 28px));
+      box-sizing: content-box;
+      border: 8px solid #1c1c1e;
+      border-radius: 32px;
+      overflow: hidden;
+      background: var(--bg);
+      box-shadow: 0 10px 30px rgb(0 0 0 / 0.3);
+      z-index: 5;
+    }
+
+    .phone-frame[hidden] { display: none; }
+    .phone-frame iframe { display: block; width: 100%; height: 100%; border: 0; }
     .dev-panel h2 { margin: 0; font-size: 16px; }
     .dev-head { display: flex; align-items: center; gap: 10px; }
     .dev-head .link { margin-left: auto; }
@@ -1277,8 +1294,8 @@
       overflow: hidden;
     }
 
-    @container (max-width: 480px) {
-      body { --label-w: 54px; --gap: 5px; }
+    @media (max-width: 480px) {
+      :root { --label-w: 54px; --gap: 5px; }
       .odds-entry .pc { display: none; }
       /* The line above the buttons says "paste or import a screenshot", so the short labels are enough. */
       .toolbar-row .wide { display: none; }
@@ -1494,7 +1511,13 @@
       </div>
       <div class="dev-row">
         <button id="devPhoneBtn" type="button" role="switch" aria-checked="false">Phone width</button>
-        <span class="hint">Lays the page out 390px wide, as on a phone. Remembered.</span>
+        <span id="devPhoneSeg" class="seg" role="group" aria-label="Phone width" hidden>
+          <button type="button" data-width="375" data-height="667" title="iPhone SE">375</button>
+          <button type="button" data-width="390" data-height="844" title="iPhone 12 to 15">390</button>
+          <button type="button" data-width="412" data-height="915" title="Pixel and Galaxy">412</button>
+          <button type="button" data-width="430" data-height="932" title="iPhone Plus and Pro Max">430</button>
+        </span>
+        <span class="hint">Shows the page in a phone-sized frame on the right, kept in step with the clues. Remembered.</span>
       </div>
       <div class="dev-row">
         <span id="devTouchSeg" class="seg" role="group" aria-label="Instruction wording">
@@ -1512,6 +1535,7 @@
       <p id="devState" class="hint dev-state"></p>
     </section>
   </main>
+  <div id="phoneFrame" class="phone-frame" hidden><iframe title="Phone preview"></iframe></div>
 
   <dialog id="wordsConfirm" class="words-dialog confirm-dialog" aria-labelledby="wordsConfirmText">
     <p id="wordsConfirmText"><b>Are you sure you want to see the matching words?</b></p>
@@ -4106,12 +4130,15 @@
 
     // Shown only with the dev flag (see the first script). Its settings live in localStorage
     // beside the app's, and Forget choices spares them and the saved clues.
+    const PHONE_WIDTHS = [...document.querySelectorAll('#devPhoneSeg button')]
+      .map(btn => ({ width: btn.dataset.width, height: btn.dataset.height }));
+
     function renderDevPanel() {
       let on = false;
       try { on = localStorage.getItem(DEV_KEY) === 'on'; } catch {}
-      $('devPanel').hidden = !on;
-      if (!on) return;
-      $('devPhoneBtn').setAttribute('aria-checked', String(document.documentElement.classList.contains('phone')));
+      $('devPanel').hidden = !on || IN_FRAME;
+      if (!on || IN_FRAME) return;
+      renderPhoneFrame();
       document.querySelectorAll('#devTouchSeg button').forEach(btn => {
         btn.setAttribute('aria-pressed', String((devTouch || '') === btn.dataset.touch));
       });
@@ -4125,10 +4152,49 @@
       try { [DEV_KEY, DEV_PHONE_KEY, DEV_TOUCH_KEY].forEach(key => localStorage.removeItem(key)); } catch {}
       location.reload();
     });
+    // The phone preview: the page again, in an iframe the size of a phone, opened on the
+    // clues of the moment. From then on the two keep in step through the saved clues: a
+    // change in either page is a storage event in the other, which reloads them.
+    function phoneWidth() {
+      const saved = devSetting(DEV_PHONE_KEY);
+      return PHONE_WIDTHS.find(p => p.width === saved) || (saved ? PHONE_WIDTHS[1] : null);
+    }
+
+    function renderPhoneFrame() {
+      const phone = phoneWidth();
+      document.documentElement.classList.toggle('phone', !!phone);
+      $('devPhoneBtn').setAttribute('aria-checked', String(!!phone));
+      $('devPhoneSeg').hidden = !phone;
+      const frame = $('phoneFrame');
+      frame.hidden = !phone;
+      if (!phone) {
+        frame.querySelector('iframe').removeAttribute('src');
+        return;
+      }
+      document.querySelectorAll('#devPhoneSeg button').forEach(btn => {
+        btn.setAttribute('aria-pressed', String(btn.dataset.width === phone.width));
+      });
+      frame.style.width = `${phone.width}px`;
+      frame.style.height = `min(${phone.height}px, calc(100vh - 28px))`;
+      const iframe = frame.querySelector('iframe');
+      if (!iframe.getAttribute('src')) iframe.src = hasClues() ? getShareURL() : location.pathname;
+    }
+
     $('devPhoneBtn').addEventListener('click', () => {
-      const phone = document.documentElement.classList.toggle('phone');
-      try { phone ? localStorage.setItem(DEV_PHONE_KEY, 'on') : localStorage.removeItem(DEV_PHONE_KEY); } catch {}
+      try { phoneWidth() ? localStorage.removeItem(DEV_PHONE_KEY) : localStorage.setItem(DEV_PHONE_KEY, PHONE_WIDTHS[1].width); } catch {}
       renderDevPanel();
+    });
+    document.querySelectorAll('#devPhoneSeg button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        try { localStorage.setItem(DEV_PHONE_KEY, btn.dataset.width); } catch {}
+        renderDevPanel();
+      });
+    });
+    window.addEventListener('storage', e => {
+      if (e.key !== STATE_KEY || !(IN_FRAME || phoneWidth())) return;
+      if (!loadSavedState()) return;
+      renderClueInputs();
+      update();
     });
     document.querySelectorAll('#devTouchSeg button').forEach(btn => {
       btn.addEventListener('click', () => {

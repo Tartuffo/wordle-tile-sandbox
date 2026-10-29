@@ -66,7 +66,7 @@ python3 -m http.server 8000
 
 Then open http://localhost:8000. Any static server works.
 
-Adding `?dev=1` to the URL turns on a **Dev** panel at the bottom of the page, remembered for that browser and site until Off or `?dev=0`. It lays the page out 390px wide as on a phone, forces Click or Tap wording in the instructions, shows the first-time tips and the matching-words question again, forgets the remembered choices, and shows the current clue link and the word lists' status. The panel is for working on the app; it isn't mentioned in the app itself.
+Adding `?dev=1` to the URL turns on a **Dev** panel at the bottom of the page, remembered for that browser and site until Off or `?dev=0`. It shows the page again in a phone-sized frame at the right, kept in step with the clues, at a choice of phone widths; forces Click or Tap wording in the instructions, shows the first-time tips and the matching-words question again, forgets the remembered choices, and shows the current clue link and the word lists' status. The panel is for working on the app; it isn't mentioned in the app itself.
 
 The answer list updates itself: the `refresh-answers.yml` workflow runs every Monday, fetches answers through the last date whose puzzle is over in every time zone, runs the tests, and commits any new answers to main. To update it sooner, run it from the repository's Actions tab. The date of the latest answer is shown under the letter ranking in **More analysis**. `node scripts/analyze-answers.mjs` prints the letter ranking and vowel tables from the current list.
 

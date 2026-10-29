@@ -1018,7 +1018,7 @@ test('arrangements no word fits are hidden by default; Dim is remembered; the ol
   await expect(arrangements(page)).toHaveCount(4);
 });
 
-test('dev panel: ?dev=1 turns it on and is remembered, Phone width narrows the page, Off turns it off', async ({ page }) => {
+test('dev panel: ?dev=1 turns it on and is remembered, Phone width previews the page in a frame, Off turns it off', async ({ page }) => {
   await open(page);
   await expect(page.locator('#devPanel')).toBeHidden();
   await open(page, '?dev=1');
@@ -1027,19 +1027,33 @@ test('dev panel: ?dev=1 turns it on and is remembered, Phone width narrows the p
   await open(page);
   await expect(page.locator('#devPanel')).toBeVisible();
 
-  // Phone width narrows the page and brings the narrow layout with it; it survives a reload.
-  const appWidth = () => page.locator('.app').evaluate(el => el.getBoundingClientRect().width);
-  expect(await appWidth()).toBeGreaterThan(500);
-  await expect(page.locator('#pasteBtn .wide')).toBeVisible();
+  // Phone width shows the page again in a phone-sized frame, opened on the clues of the
+  // moment and kept in step with them; the width picker resizes it; it survives a reload.
+  const frame = page.locator('#phoneFrame');
+  const inner = page.frameLocator('#phoneFrame iframe');
+  await expect(frame).toBeHidden();
+  await green(page, 1).fill('B');
   const phone = page.getByRole('switch', { name: 'Phone width' });
   await phone.click();
   await expect(phone).toHaveAttribute('aria-checked', 'true');
-  expect(await appWidth()).toBeLessThan(400);
-  await expect(page.locator('#pasteBtn .wide')).toBeHidden();
+  await expect(frame).toBeVisible();
+  expect(await frame.evaluate(el => el.clientWidth)).toBe(390);
+  await expect(inner.locator('#pasteBtn .wide')).toBeHidden();      // the narrow layout
+  await expect(inner.locator('#devPanel')).toBeHidden();            // no panel within the preview
+  const innerCell = name => inner.getByRole('textbox', { name, exact: true, includeHidden: true });
+  await expect(innerCell('Green letter, slot 1')).toHaveValue('B');   // folded: the preview opened on a clue link
+  await yellow(page, 2).fill('E');
+  await expect(innerCell('Letters that were yellow in slot 2')).toHaveValue('E');
+  await inner.getByRole('button', { name: 'Edit clues', exact: true }).click();
+  await innerCell('Green letter, slot 3').fill('R');
+  await expect(green(page, 3)).toHaveValue('R');
+  await page.locator('#devPhoneSeg button[data-width="430"]').click();
+  expect(await frame.evaluate(el => el.clientWidth)).toBe(430);
   await open(page);
-  expect(await appWidth()).toBeLessThan(400);
+  await expect(frame).toBeVisible();
+  expect(await frame.evaluate(el => el.clientWidth)).toBe(430);
   await phone.click();
-  expect(await appWidth()).toBeGreaterThan(500);
+  await expect(frame).toBeHidden();
 
   // The wording switch reloads with the other word; the state line says which is in force.
   await expect(page.locator('#devState')).toContainText('Click wording');
