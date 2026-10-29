@@ -468,13 +468,16 @@
     }
 
     .step-foot .guess-nav { margin-right: auto; }
+    .step-foot .guess-nav[hidden] + #clearBtn { margin-left: auto; }
+    .step-foot button.link[hidden] { display: none; }
     .clue-intro { margin: 0 0 8px; }
     .clue-intro + .toolbar-row { margin-bottom: 12px; }
     .clue-note { margin: 8px 0 0 36px; font-size: 14px; }
     .clue-note:empty { display: none; }
 
-    /* Step 1 folded: the clues in miniature and a way back in, on one row with the step's
-       foot (‹ Guess › and Start over), everything bottom-aligned with the clue box. */
+    /* Step 1 folded: the clues in miniature, then the step's foot (Edit clues, ‹ Guess › and
+       Start over) on the same row when it fits, bottom-aligned with the clue box; on a phone
+       the foot wraps to a row of its own, so Edit clues and Start over always share a line. */
     .clue-bottom {
       display: flex;
       flex-wrap: wrap;
@@ -484,18 +487,9 @@
     }
 
     .clue-bottom:has(.clue-summary[hidden]) { margin-top: 14px; }
-    .clue-bottom .step-foot { margin: 0 0 0 auto; }
-
-    .clue-summary {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: flex-end;
-      gap: 8px 14px;
-      margin: 0 0 0 36px;
-    }
-
-    /* The links sit level with the box's bottom row of tiles (22px, 5px above the edge). */
-    .clue-summary button.link { line-height: 22px; padding-bottom: 5px; }
+    .clue-bottom .step-foot { flex: 1 1 auto; margin: 0; }
+    .clue-summary { margin: 0 0 0 36px; }
+    .clue-summary[hidden] { display: none; }
 
     .clue-chips { display: inline-flex; flex-wrap: wrap; align-items: flex-end; gap: 4px 10px; }
     .clue-chips:empty { display: none; }
@@ -1363,10 +1357,10 @@
       <div class="clue-bottom">
         <div id="cluesSummary" class="clue-summary" hidden>
           <span id="clueChips" class="clue-chips" aria-label="Your clues"></span>
-          <button id="editCluesBtn" type="button" class="link">Edit clues</button>
-          <button id="newPuzzleBtn" type="button" class="link" hidden>New puzzle</button>
         </div>
         <div class="step-foot">
+          <button id="editCluesBtn" type="button" class="link" hidden>Edit clues</button>
+          <button id="newPuzzleBtn" type="button" class="link" hidden>New puzzle</button>
           <span id="guessNav" class="guess-nav" hidden>
             <button id="guessPrevBtn" aria-label="Previous guess" title="Show the clues one guess earlier">‹</button>
             <span id="guessStep"></span>
@@ -3728,6 +3722,7 @@
       const folded = cluesCollapsed && clues;
       $('cluesBody').hidden = folded;
       $('cluesSummary').hidden = !folded;
+      $('editCluesBtn').hidden = !folded;
       $('cluesToggle').setAttribute('aria-expanded', String(!folded));
       $('cluesPanel').classList.toggle('done', clues);
       if (folded) renderClueChips();
