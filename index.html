@@ -1509,8 +1509,8 @@
   <dialog id="lettersHelp" class="words-dialog help-dialog" aria-labelledby="lettersHelpTitle">
     <h2 id="lettersHelpTitle">The board and the letters</h2>
     <div class="help-body">
-      <p><b>The board</b> shows one legal arrangement of your yellow tiles, with green letters fixed. <b>Drag</b> a yellow tile to another slot to move it, or onto another yellow tile to swap them; a tile in a slot where it was yellow is flagged. The yellow letters over a slot are the ones that were yellow there: the word has them, but not in that slot. Above the board, ‹ Arrangement 3 of 12 › says which of the listed arrangements is showing, and ‹ › cycle through them in the list’s order, round and round. Putting another arrangement on the board, from there or from the list, clears the letters you had tried. Dragging a yellow tile keeps them, except one it is dropped on, which it replaces.</p>
-      <p><b>Available letters</b>, under the board, are the ones that could still be in the word; green and yellow keys are from your clues. <b><span class="tap">Tap</span> a letter</b> to try it on the board: in the empty slot you chose (<span class="tap">tap</span> one first), or else in the first blank slot that allows it. A tried letter can be dragged too, and its × removes it (on a touch screen, holding it works as well).</p>
+      <p><b>The board</b> shows one legal arrangement of your yellow tiles, with green letters fixed. <b>Drag</b> a yellow tile to another slot to move it, or onto another yellow tile to swap them; a tile in a slot where it was yellow is flagged. The yellow letters over a slot are the ones that were yellow there: the word has them, but not in that slot. Above the board, ‹ Arrangement 3 of 12 › says which of the listed arrangements is showing, and ‹ › cycle through them in the list’s order, round and round. Putting another arrangement on the board, from there or from the list, clears the letters you had tried. Dragging a tile keeps them, except one it is dropped on, which it replaces.</p>
+      <p><b>Available letters</b>, under the board, are the ones that could still be in the word; green and yellow keys are from your clues. <b><span class="tap">Tap</span> a letter</b> to try it on the board: in the empty slot you chose (<span class="tap">tap</span> one first), or else in the first blank slot that allows it. A tried letter can be dragged too: onto an empty slot to move it, onto another tried letter to take its place, or onto a yellow tile to trade places with it. Its × removes it (on a touch screen, holding it works as well).</p>
       <p>Gray letters don’t go on the board: Keyboard and Rank keep them in place, dimmed, and V/C leaves them out.</p>
       <p>Fill the board to see whether the word is in the word list and whether it has been a Wordle answer.</p>
       <dl>
@@ -2332,16 +2332,16 @@
       slotEl.classList.add(legal ? 'drag-over' : 'drag-conflict');
     }
 
-    // Swaps whatever two slots hold: a yellow tile, a tried letter, or nothing. One case is
-    // not a swap: a yellow tile dragged onto a tried letter takes its slot and the letter
-    // goes, since it was tried for the arrangement the drag has just changed.
+    // Moves what one slot holds to another. A tried letter in the way goes: the dragged tile,
+    // yellow or tried, takes its place and leaves its own slot empty. A yellow tile in the
+    // way can't go, so it trades places with the dragged one.
     function moveTile(from, to) {
       draggedPos = null;
       if (from === null || from === to || greens[to]) {
         renderBoard();
         return;
       }
-      if (board[from] !== '?') trials[to] = '';
+      trials[to] = '';
       const cur = [...board];
       [cur[from], cur[to]] = [cur[to], cur[from]];
       [trials[from], trials[to]] = [trials[to], trials[from]];

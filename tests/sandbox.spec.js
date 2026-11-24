@@ -412,18 +412,29 @@ test('letters-left taps fill legal blanks; a mouse press keeps a trial, × remov
   await context.close();
 });
 
-test('trial drag swaps letters, preserves fixed greens and flags banned destinations', async ({ page }) => {
+test('a tried letter dragged onto another takes its place; onto a yellow tile they trade; greens stay fixed and banned destinations are flagged', async ({ page }) => {
   await open(page, '?len=5&green=B%3F%3F%3F%3F&ban1=E&yellow=E');
   await letter(page, 'A').click();
   await expect(boardSlot(page, 2)).toHaveText('A');
   await letter(page, 'O').click();
-  const destination = await page.locator('#board .slot').filter({ has: page.locator('.trial', { hasText: 'O' }) }).getAttribute('data-pos');
-  await boardSlot(page, 2).locator('.trial').dragTo(boardSlot(page, Number(destination) + 1));
-  await expect(boardSlot(page, 2)).toHaveText('O');
+  const slotOf = async sel => Number(await page.locator('#board .slot').filter({ has: page.locator(sel) }).getAttribute('data-pos')) + 1;
+  const oSlot = await slotOf('.trial:text("O")');
+  // A dropped on O: A is there now, O is gone, and the slot A left is empty.
+  await boardSlot(page, 2).locator('.trial').dragTo(boardSlot(page, oSlot));
+  await expect(boardSlot(page, oSlot)).toHaveText('A');
+  await expect(boardSlot(page, 2)).toHaveText('');
+  await expect(page.locator('#board .trial')).toHaveText(['A']);
+  // Onto an empty slot it just moves; onto a green one it stays where it was.
+  await boardSlot(page, oSlot).locator('.trial').dragTo(boardSlot(page, 2));
+  await expect(boardSlot(page, 2)).toHaveText('A');
+  await expect(boardSlot(page, oSlot)).toHaveText('');
   await boardSlot(page, 2).locator('.trial').dragTo(boardSlot(page, 1));
   await expect(boardSlot(page, 1)).toHaveText('B');
-  await expect(boardSlot(page, 2)).toHaveText('O');
-  await page.locator('#board .yellow').dragTo(boardSlot(page, 2));
+  await expect(boardSlot(page, 2)).toHaveText('A');
+  // Onto the yellow tile they trade places, which puts E where it was yellow: flagged.
+  const eSlot = await slotOf('.yellow');
+  await boardSlot(page, 2).locator('.trial').dragTo(boardSlot(page, eSlot));
+  await expect(boardSlot(page, eSlot).locator('.trial')).toHaveText('A');
   await expect(boardSlot(page, 2).locator('.conflict')).toHaveText('E');
   await expect(page.locator('#boardStatus')).toContainText("E can't go in slot 2");
 });
