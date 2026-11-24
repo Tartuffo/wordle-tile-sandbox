@@ -345,6 +345,10 @@
     .guess-tile.gray { background: var(--gray); border-color: var(--gray); }
     .guess-tile.yellow { background: var(--yellow); border-color: var(--yellow); }
     .guess-tile.green { background: var(--green); border-color: var(--green); }
+    .guess-tile { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+    /* A gap is tinted with the color it is keeping for the next letter typed there. */
+    .guess-tile.keeps-yellow { border-color: var(--yellow); background: color-mix(in srgb, var(--yellow) 35%, var(--panel-2)); }
+    .guess-tile.keeps-green { border-color: var(--green); background: color-mix(in srgb, var(--green) 35%, var(--panel-2)); }
     /* Where the next letter goes. */
     .guess-tile.next {
       border-color: var(--accent);
@@ -1305,7 +1309,7 @@
         </div>
       </div>
       <div id="cluesBody" class="step-body" hidden>
-        <p id="typeIntro" class="hint clue-intro">Type each guess you played. Then <span class="tap">tap</span> its letters until they match Wordle’s colors: once for yellow, twice for green.</p>
+        <p id="typeIntro" class="hint clue-intro">Type each guess you played. Then <span class="tap">tap</span> its letters until they match Wordle’s colors: once for yellow, twice for green. <span id="holdHint"></span></p>
         <div id="guessRows" class="guess-rows" aria-label="Your guesses"></div>
         <input id="guessInput" class="guess-input" type="text" autocomplete="off" autocapitalize="characters" autocorrect="off"
                spellcheck="false" enterkeyhint="done" aria-label="Type a guess">
@@ -1493,7 +1497,7 @@
       <p>The card first offers four ways to give your clues; once they are in, it shows a summary of them and the board and the arrangements appear below.</p>
       <p><b>From a screenshot:</b> Paste screenshot reads one you’ve copied, and Choose image opens a saved one; on a computer, Ctrl/⌘+V also works. Check the letters, fix any that were misread, then choose Use these clues. If the puzzle was solved, the all-green row is left out, so the clues are as they stood just before the answer.</p>
       <p><b>Practice puzzle</b> makes up a puzzle to practice on: one or two guesses against a past Wordle answer, which stays hidden. It’s chosen so that from a few to a few dozen arrangements fit a word. A line under the heading says which guesses were made up, and New puzzle, in place of Edit clues, draws another.</p>
-      <p><b>Type clues</b> opens rows of tiles like Wordle’s. Type each guess you played; a full row opens the next, up to six. Then <span class="tap">tap</span> a letter to give it the color Wordle did: once for yellow, twice for green, a third time for gray again. Backspace takes back the last letter, and × empties a guess so you can retype it in the same place. Use these clues takes the guesses once each started one is finished and none contradicts another; if they do, a line under the rows says how. Cancel leaves the clues as they were.</p>
+      <p><b>Type clues</b> opens rows of tiles like Wordle’s. Type each guess you played; a full row opens the next, up to six. Then <span class="tap">tap</span> a letter to give it the color Wordle did: once for yellow, twice for green, a third time for gray again. To fix one letter, hold it (or right-click it): it is cleared, the rest of the guess stays, and the next letter you type goes there, in the color the slot had. Backspace takes back the letter before the marked tile, and × empties a guess so you can retype it in the same place. Use these clues takes the guesses once each started one is finished and none contradicts another; if they do, a line under the rows says how. Cancel leaves the clues as they were.</p>
       <p>Double letters need no extra step: two yellow copies of a letter in one guess are two tiles on the board, and a gray copy beside a green or yellow one says the word has no more of that letter.</p>
       <p><b>‹ Guess 2/3 ›</b> appears when there is more than one guess to step through: the clues as they stood after each guess, here after the second of three. ‹ and › step back and forth, say to see how much one guess narrowed things down.</p>
       <p>The summary is a stack with a column per slot, each showing its green letter or else the letters that were yellow there, then the gray letters. Edit clues opens your guesses again, from a screenshot too, to change or add to them; clues from a link that carries no guesses can only be started over. Start over clears everything, board included, and goes back to the four ways in. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day. Your guesses are kept and shared with them, so the guess stepping still works after a reload or from a link.</p>
@@ -1635,7 +1639,7 @@
     let gridFirst = false;        // the where-each-letter-can-go grid above the arrangement list
     let analysisOpen = false;     // the reference tables shown (closed by default)
     let cardState = 'choose';     // the clues card: 'choose' a way to give them, 'edit' the guesses, or their 'summary'
-    let editRows = [];            // the guess editor's rows while it is open: [[{ letter, color }]], up to len tiles each
+    let editRows = [];            // the guess editor's rows while it is open: [[{ letter, color }]], len tiles each, '' for a gap
     let editFrom = 'choose';      // the card state the editor was opened from, for Cancel
     let stepOverride = { board: null, results: null };  // a step the user opened or closed by hand
     let selectedPos = null;       // board slot chosen for the next letter, or null for the first blank
@@ -1955,41 +1959,64 @@
     // ── The guess editor ──────────────────────────────────────────────────────
 
     // Type clues and Edit clues open it. The guesses are typed as in Wordle, a row at a time,
-    // and each letter is given its color by tapping it. Nothing changes until Use these clues.
+    // and each letter is given its color by tapping it; holding a letter takes it out to be
+    // retyped. Nothing changes until Use these clues.
     const GUESS_CYCLE = { gray: 'yellow', yellow: 'green', green: 'gray' };
     const GUESS_SENTINEL = '.';   // kept in the unseen input so that Backspace has something to delete
 
-    // After any change: no empty rows at the end, and one empty row to type in when every
-    // row is full and there is room. An emptied row in the middle keeps its place.
+    // A row is always len tiles, each a letter (or '' for a gap) and a color. The color
+    // belongs to the slot: it stays when the letter is taken out and comes back with the
+    // next letter typed there, since it was copied from Wordle's tile in that place.
+    const blankGuessRow = () => Array.from({ length: len }, () => ({ letter: '', color: 'gray' }));
+    const guessRowFull = row => row.every(t => t.letter);
+    const guessRowEmpty = row => !row.some(t => t.letter);
+
+    // After any change: an emptied row forgets its colors, there are no empty rows at the
+    // end, and there is one empty row to type in when every row is full and there is room.
+    // An emptied row in the middle keeps its place.
     function tidyGuessRows() {
-      while (editRows.length && !editRows.at(-1).length) editRows.pop();
-      if (editRows.length < MAX_GUESSES && editRows.every(row => row.length === len)) editRows.push([]);
+      editRows = editRows.map(row => guessRowEmpty(row) ? blankGuessRow() : row);
+      while (editRows.length && guessRowEmpty(editRows.at(-1))) editRows.pop();
+      if (editRows.length < MAX_GUESSES && editRows.every(guessRowFull)) editRows.push(blankGuessRow());
     }
 
-    // Letters go to the first row with room.
+    // Where the next letter goes: the first gap of the first row that has one.
+    function guessCursor() {
+      const r = editRows.findIndex(row => !guessRowFull(row));
+      return r < 0 ? null : { r, i: editRows[r].findIndex(t => !t.letter) };
+    }
+
     function typeGuessLetter(letter) {
-      const row = editRows.find(r => r.length < len);
-      if (!row) return;
-      row.push({ letter, color: 'gray' });
+      const at = guessCursor();
+      if (!at) return;
+      editRows[at.r][at.i].letter = letter;
       tidyGuessRows();
     }
 
-    // Backspace takes the last letter of the row being typed, or of the one before it.
+    // Backspace takes the letter before that place: the nearest one before it in its row,
+    // or else the last letter of the guess above.
     function backspaceGuess() {
-      const at = editRows.findIndex(r => r.length < len);
-      for (let r = at < 0 ? editRows.length - 1 : at; r >= 0; r--) {
-        if (editRows[r].length) {
-          editRows[r].pop();
+      const at = guessCursor() || { r: editRows.length - 1, i: len };
+      for (let r = at.r, from = at.i - 1; r >= 0; r--, from = len - 1) {
+        const i = editRows[r].findLastIndex((t, k) => k <= from && t.letter);
+        if (i >= 0) {
+          editRows[r][i].letter = '';
           break;
         }
       }
       tidyGuessRows();
     }
 
+    // Holding a letter takes just that one out, leaving the rest of the guess and its colors.
+    function clearGuessLetter(r, i) {
+      editRows[r][i].letter = '';
+      tidyGuessRows();
+    }
+
     // × empties a guess, keeping its place for a retyped one; on an empty row it removes the row.
     function clearGuessRow(r) {
-      if (editRows[r].length) editRows[r] = [];
-      else editRows.splice(r, 1);
+      if (guessRowEmpty(editRows[r])) editRows.splice(r, 1);
+      else editRows[r] = blankGuessRow();
       tidyGuessRows();
     }
 
@@ -2025,36 +2052,49 @@
       return errors;
     }
 
+    let guessHeld = false;   // a hold just cleared a letter, so the release after it is not a tap
+
     function renderGuessRows() {
       const wrap = $('guessRows');
       wrap.innerHTML = '';
-      const target = editRows.findIndex(r => r.length < len);
+      const at = guessCursor();
       editRows.forEach((row, r) => {
         const rowEl = document.createElement('div');
         rowEl.className = 'guess-row';
-        for (let i = 0; i < len; i++) {
-          const t = row[i];
+        row.forEach((t, i) => {
           const tile = document.createElement('button');
           tile.type = 'button';
-          tile.className = `guess-tile ${t ? t.color : 'empty'}`;
-          if (r === target && i === row.length) tile.classList.add('next');
-          tile.textContent = t ? t.letter : '';
-          tile.setAttribute('aria-label', t ? `Guess ${r + 1}, slot ${i + 1}: ${t.letter}, ${t.color}` : `Guess ${r + 1}, slot ${i + 1}: empty`);
-          if (t) tile.title = `${TAP} to change the color`;
+          // A gap is tinted with the color it is keeping for the next letter.
+          tile.className = `guess-tile ${t.letter ? t.color : `empty keeps-${t.color}`}`;
+          if (at && r === at.r && i === at.i) tile.classList.add('next');
+          tile.textContent = t.letter;
+          tile.setAttribute('aria-label', `Guess ${r + 1}, slot ${i + 1}: ${t.letter || 'empty'}, ${t.color}`);
+          if (t.letter) {
+            tile.title = `${TAP} to change the color; ${CLICK ? 'hold or right-click' : 'hold'} to clear the letter`;
+            addHold(tile, () => {
+              guessHeld = true;
+              document.addEventListener('pointerup', () => setTimeout(() => { guessHeld = false; }), { once: true });
+              clearGuessLetter(r, i);
+              renderGuessRows();
+              focusGuessInput();
+            });
+          }
           tile.addEventListener('click', () => {
-            if (t) t.color = GUESS_CYCLE[t.color];
+            if (guessHeld) return;
+            if (t.letter) t.color = GUESS_CYCLE[t.color];
             renderGuessRows();
             focusGuessInput();
           });
           rowEl.appendChild(tile);
-        }
-        if (row.length || r < editRows.length - 1) {
+        });
+        const empty = guessRowEmpty(row);
+        if (!empty || r < editRows.length - 1) {
           const x = document.createElement('button');
           x.type = 'button';
           x.className = 'guess-x';
           x.textContent = '×';
-          x.setAttribute('aria-label', row.length ? `Clear guess ${r + 1}` : `Remove the empty row ${r + 1}`);
-          x.title = row.length ? 'Clear this guess' : 'Remove this row';
+          x.setAttribute('aria-label', empty ? `Remove the empty row ${r + 1}` : `Clear guess ${r + 1}`);
+          x.title = empty ? 'Remove this row' : 'Clear this guess';
           x.addEventListener('click', () => {
             clearGuessRow(r);
             renderGuessRows();
@@ -2065,8 +2105,8 @@
         wrap.appendChild(rowEl);
       });
 
-      const started = editRows.filter(r => r.length);
-      const whole = started.length > 0 && started.every(r => r.length === len);
+      const started = editRows.filter(row => !guessRowEmpty(row));
+      const whole = started.length > 0 && started.every(guessRowFull);
       const errors = whole ? guessConflicts(started) : [];
       $('guessStatus').textContent = errors.join(' ');
       $('useCluesBtn').disabled = !whole || errors.length > 0;
@@ -3595,7 +3635,7 @@
     }
 
     function useEditedClues() {
-      const rows = editRows.filter(row => row.length);
+      const rows = editRows.filter(guessRowFull);
       editRows = [];
       guesses = { rows, step: rows.length, random: false };
       cardState = 'summary';
@@ -3980,6 +4020,7 @@
     $('cluesBody').addEventListener('click', e => {
       if (!e.target.closest('button')) focusGuessInput();
     });
+    $('holdHint').textContent = `${CLICK ? 'Hold or right-click' : 'Hold'} a letter to clear it and type another.`;
     $('typeBtn').addEventListener('click', openEditor);
     $('editCluesBtn').addEventListener('click', openEditor);
     $('useCluesBtn').addEventListener('click', useEditedClues);

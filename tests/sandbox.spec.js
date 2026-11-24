@@ -152,6 +152,56 @@ test('typing guesses: letters fill a row at a time, a tap colors a letter, Backs
   expect(await guessWords(page)).toEqual(['AAAAA', 'BBBBB', 'CCCCC', 'DDDDD', 'EEEEE', 'FFFFF']);
 });
 
+test('holding or right-clicking a letter clears just that one; the next letter typed goes there, in the color the slot had', async ({ page }) => {
+  await open(page);
+  const use = page.getByRole('button', { name: 'Use these clues', exact: true });
+  await typeClues(page);
+  await expect(page.locator('#holdHint')).toHaveText('Hold or right-click a letter to clear it and type another.');
+  await typeGuess(page, 1, 'crxne', '01201');
+  await page.keyboard.type('be');
+  await guessTile(page, 2, 1).click();
+  expect(await guessWords(page)).toEqual(['CRXNE', 'BE···']);
+
+  // A right-click takes the X out. The gap is where typing goes next, ahead of the unfinished guess below.
+  await guessTile(page, 1, 3).click({ button: 'right' });
+  expect(await guessWords(page)).toEqual(['CR·NE', 'BE···']);
+  await expect(guessTile(page, 1, 3)).toHaveClass(/next/);
+  await expect(guessTile(page, 1, 3)).toHaveClass(/keeps-green/);
+  await expect(guessTile(page, 1, 3)).toHaveAttribute('aria-label', 'Guess 1, slot 3: empty, green');
+  await expect(use).toBeDisabled();
+  await page.keyboard.type('a');
+  expect(await guessWords(page)).toEqual(['CRANE', 'BE···']);
+  await expect(guessTile(page, 1, 3)).toHaveClass(/green/);
+  await expect(guessTile(page, 1, 2)).toHaveClass(/yellow/);   // the others kept their colors
+  await expect(guessTile(page, 2, 3)).toHaveClass(/next/);
+
+  // Holding does the same, and the release after it is not a tap on the tile.
+  await guessTile(page, 1, 2).hover();
+  await page.mouse.down();
+  await expect.poll(() => guessWords(page)).toEqual(['C·ANE', 'BE···']);
+  await page.mouse.up();
+  await expect(guessTile(page, 1, 2)).toHaveClass(/keeps-yellow/);
+  // A short press still changes the color, as before.
+  await guessTile(page, 1, 1).click();
+  await expect(guessTile(page, 1, 1)).toHaveClass(/yellow/);
+
+  // Backspace takes the letter before the gap, then runs out of letters in that guess.
+  await page.keyboard.press('Backspace');
+  expect(await guessWords(page)).toEqual(['··ANE', 'BE···']);
+  await page.keyboard.press('Backspace');
+  expect(await guessWords(page)).toEqual(['··ANE', 'BE···']);
+  await page.keyboard.type('stefy');
+  expect(await guessWords(page)).toEqual(['STANE', 'BEEFY', '·····']);
+  await expect(guessTile(page, 1, 1)).toHaveClass(/yellow/);
+  await expect(guessTile(page, 1, 2)).toHaveClass(/yellow/);
+
+  // A guess emptied whole forgets its colors.
+  await page.getByRole('button', { name: 'Clear guess 1', exact: true }).click();
+  await page.keyboard.type('pilot');
+  for (let slot = 1; slot <= 5; slot++) await expect(guessTile(page, 1, slot)).toHaveClass(/gray/);
+  await expect(use).toBeEnabled();
+});
+
 test('arrangements of a typed guess can be pinned and cleared', async ({ page }) => {
   await open(page);
   await typeClues(page);
@@ -1285,7 +1335,8 @@ test('?view=mobile previews the phone layout and wording at 390px, or a given wi
   await typeClues(page);
   await expect(page.locator('#typeIntro')).toContainText('Then tap its letters');
   await typeGuess(page, 1, 'bodil', '20000');
-  await expect(guessTile(page, 1, 1)).toHaveAttribute('title', 'Tap to change the color');
+  await expect(guessTile(page, 1, 1)).toHaveAttribute('title', 'Tap to change the color; hold to clear the letter');
+  await expect(page.locator('#holdHint')).toHaveText('Hold a letter to clear it and type another.');
   await useClues(page);
   await expect(page.locator('#boardNote')).toContainText('Tap an empty slot');
 

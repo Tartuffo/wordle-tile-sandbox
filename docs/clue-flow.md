@@ -32,6 +32,7 @@ Replaces today's green / yellow / gray form, which is retired from the UI.
 
 - Rows of five tiles. Typing fills the current row left to right; Backspace removes the last letter.
 - A filled tile starts gray. Tapping it cycles gray, yellow, green.
+- Holding a filled tile (or right-clicking it) clears that one letter. The gap is where the next typed letter goes, and the slot keeps its color.
 - A new empty row appears when the last one is full, up to six. A row can be removed.
 - **Use these clues** is enabled once every started row is complete and there is at least one row. Contradictory rows (a slot green for two different letters, and so on) are reported in the card and block it.
 - **Cancel** returns to the summary if the editor was opened by Edit, otherwise to the chooser. Nothing changes.
