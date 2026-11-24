@@ -735,12 +735,19 @@
     #arrNextBtn::before { content: '›'; }
     #arrIndex { font-variant-numeric: tabular-nums; }
 
+    /* The arrangements are the lower part of the board's panel, set off by a rule. */
+    .results-part { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+    .results-part[hidden] { display: none; }
+
     .results-head {
       display: flex;
       flex-wrap: wrap;
       gap: 4px 12px;
       align-items: baseline;
     }
+
+    .results-head .help-btn { margin-left: auto; align-self: center; }
+    .results-title.muted ~ .help-btn { display: none; }   /* nothing to arrange, nothing to explain */
 
     .results-title {
       margin: 0;
@@ -1304,18 +1311,14 @@
           <p id="rankNote" class="hint rank-note"></p>
         </div>
       </div>
-    </section>
-
-    <section id="resultsPanel" class="panel step" aria-label="Arrangements" hidden>
-      <div class="step-head">
-        <h2 class="step-title">Browse every legal arrangement</h2>
-        <button type="button" class="help-btn" data-help="arrangementsHelp" aria-label="About the arrangements" title="About the arrangements">?</button>
-      </div>
-      <div id="resultsBody" class="step-body">
+      <!-- The arrangements: once a panel of their own, now the lower part of the board's. -->
+      <div id="resultsPanel" class="results-part" role="group" aria-label="Arrangements">
+      <div id="resultsBody">
         <div class="results-head">
           <p id="resultsTitle" class="results-title"></p>
           <button id="swapResultsBtn" class="link" hidden></button>
           <button id="clearPinsBtn" class="link" hidden>Clear pins</button>
+          <button type="button" class="help-btn" data-help="arrangementsHelp" aria-label="About the arrangements" title="About the arrangements">?</button>
         </div>
         <p id="forced" class="forced"></p>
         <div id="wordNote" class="word-note" hidden>
@@ -1346,6 +1349,7 @@
             <span><span class="sum-cell swatch pinned" style="background: color-mix(in srgb, var(--yellow) 35%, var(--panel-2))">3</span> Pinned</span>
           </div>
         </div>
+      </div>
       </div>
     </section>
 
@@ -3453,8 +3457,8 @@
     }
 
     // The clues card is the only panel until the clues are in: first the ways to give them,
-    // then (for Type clues, or Edit clues later) the guess editor, then their summary. The board, the
-    // arrangements and the reference tables appear with the summary.
+    // then (for Type clues, or Edit clues later) the guess editor, then their summary. The board
+    // with the arrangements under it, and the reference tables, appear with the summary.
     function renderSteps() {
       if (cardState === 'summary' && !hasClues()) cardState = 'choose';
       const summary = cardState === 'summary';

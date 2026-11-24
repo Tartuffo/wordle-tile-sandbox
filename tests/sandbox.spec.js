@@ -997,10 +997,11 @@ test('the clues card shows one thing at a time: the ways in, the guess editor, t
   await expect(body('resultsBody')).toBeVisible();
   await expect(arrangements(page)).toHaveCount(3);
 
-  // The headings are only headings: the panels don't fold.
+  // One panel holds the board and, under it, the arrangements; nothing in it folds.
   await expect(page.getByRole('heading', { name: 'Try letters on the board', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Browse every legal arrangement', exact: true })).toBeVisible();
-  await expect(page.locator('#boardPanel button[aria-expanded], #resultsPanel button[aria-expanded]')).toHaveCount(0);
+  expect(await page.evaluate(() => $('boardPanel').contains($('resultsPanel')))).toBe(true);
+  await expect(page.locator('#boardPanel button[aria-expanded]')).toHaveCount(0);
+  await expect(page.locator('#resultsTitle')).toHaveText('3 legal arrangements of your yellow tiles');
 
   // Edit clues reopens the editor on the guesses. Cancel drops the changes and returns to the summary.
   await editClues(page);
