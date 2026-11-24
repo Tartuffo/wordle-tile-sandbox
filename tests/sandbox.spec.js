@@ -1091,6 +1091,44 @@ test('the clues card shows one thing at a time: the ways in, the guess editor, t
   await expect(body('resultsBody')).toBeVisible();
 });
 
+test('Back leaves the guess editor as Cancel does, and the editor leaves no step behind in the history', async ({ page }) => {
+  await open(page);
+  const depth = () => page.evaluate(() => history.length);
+  const start = await depth();
+  // From the ways in: Back returns to them, the page stays, nothing is kept.
+  await typeClues(page);
+  expect(await page.evaluate(() => history.state)).toEqual({ editor: true });
+  await page.keyboard.type('crane');
+  await page.goBack();
+  await expect(page.locator('#chooser')).toBeVisible();
+  await expectClues(page, NO_CLUES);
+  expect(new URL(page.url()).pathname).toBe('/');
+
+  // Use these clues and Cancel take the editor's step back out themselves.
+  await typeClues(page);
+  await typeGuess(page, 1, 'bezil', '21000');
+  await useClues(page);
+  await expect(page.locator('#cluesSummary')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => history.state)).toBeNull();
+  await editClues(page);
+  await cancel(page);
+  await expect(page.locator('#cluesSummary')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => history.state)).toBeNull();
+
+  // From the summary: Back out of the editor returns to the summary, changes dropped.
+  await editClues(page);
+  await typeGuess(page, 2, 'stone', '00001');
+  await page.goBack();
+  await expect(page.locator('#cluesSummary')).toBeVisible();
+  await expectGuesses(page, ['BEZIL']);
+  // And the editor still opens and cancels as before after all that.
+  await editClues(page);
+  expect(await guessWords(page)).toEqual(['BEZIL', '·····']);
+  await cancel(page);
+  await expect(page.locator('#cluesSummary')).toBeVisible();
+  expect(await depth()).toBeLessThanOrEqual(start + 1);
+});
+
 test('Start over can be undone from the ways in, until other clues are used or the page is left', async ({ page }) => {
   await open(page, '?guesses=CRANE01001.BEEFY22002.SLATE00000');
   const undoLine = page.locator('#undoLine');
@@ -1393,9 +1431,9 @@ test('Rank view: known letters lead at their share, it follows the clues, and fa
   await expect(page.locator('#rankNote')).toHaveText('No answer fits your clues, so this is the order over all answers.');
   await expect(page.locator('#lettersBody .key')).toHaveText(rankOf(answerWords));
 
-  // With no clues at all, the order is over all answers too, and the note says it narrows.
+  // With no clues at all, the order is over all answers too.
   await startOver(page);
-  await expect(page.locator('#rankNote')).toHaveText(`Ranked over all ${answerWords.length} answers; it narrows as you enter clues.`);
+  await expect(page.locator('#rankNote')).toHaveText(`Ranked over all ${answerWords.length} answers.`);
 });
 
 test('without the answer list, the reference tables explain and Rank falls back to the built-in order', async ({ page }) => {

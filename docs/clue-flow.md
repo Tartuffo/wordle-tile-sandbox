@@ -1,6 +1,6 @@
 # Clue flow redesign
 
-Status: design agreed, not built. Baseline is `v0.2` (`0bade8c`).
+Status: built, all six stages. Baseline was `v0.2` (`0bade8c`).
 
 ## Goal
 
@@ -20,7 +20,7 @@ Before the summary, the card is the only panel on the page. The board, the arran
 
 ### Chooser
 
-- **Paste screenshot** and **Choose image** read the screenshot and go straight to the summary, with no review.
+- **Paste screenshot** and **Choose image** read the screenshot and go straight to the summary, with no review and no Edit afterwards.
   - Exception: if the reader flagged any letter as unsure, the guess editor opens instead, filled with what was read, the unsure tiles marked, and a line saying how many letters to check. It is the ordinary editor, not a separate mode.
   - A failure (no image on the clipboard, unreadable image) shows a message in the chooser and stays there.
 - **Type clues** opens the guess editor, empty.

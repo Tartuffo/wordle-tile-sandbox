@@ -1463,8 +1463,8 @@
     <div class="help-body">
       <p>The card first offers four ways to give your clues; once they are in, it shows a summary of them and the board and the arrangements appear below.</p>
       <p><b>From a screenshot:</b> Paste screenshot reads one you’ve copied, and Choose image opens a saved one; on a computer, Ctrl/⌘+V also works. The guesses go straight to the summary. If a letter was hard to read, the guesses open in the editor instead with that letter outlined in red: if it is wrong, hold it and type the right one, then choose Use these clues. If the puzzle was solved, the all-green row is left out, so the clues are as they stood just before the answer.</p>
-      <p><b>Practice puzzle</b> makes up a puzzle to practice on: one or two guesses against a past Wordle answer, which stays hidden. It’s chosen so that from a few to a few dozen arrangements fit a word. A line under the heading says which guesses were made up, and New puzzle, in place of Edit clues, draws another.</p>
-      <p><b>Type clues</b> opens rows of tiles like Wordle’s. Type each guess you played; a full row opens the next, up to six. Then <span class="tap">tap</span> a letter to give it the color Wordle did: once for yellow, twice for green, a third time for gray again. To fix one letter, hold it (or right-click it): it is cleared, the rest of the guess stays, and the next letter you type goes there, in the color the slot had. Backspace takes back the letter before the marked tile, and × empties a guess so you can retype it in the same place. Use these clues takes the guesses once each started one is finished and none contradicts another; if they do, a line under the rows says how. Cancel leaves the clues as they were.</p>
+      <p><b>Practice puzzle</b> makes up a puzzle to practice on: one or two guesses against a past Wordle answer, which stays hidden. It’s chosen so that from a few to a few dozen arrangements fit a word. A line under the heading says it is a practice puzzle, and New puzzle, in place of Edit clues, draws another.</p>
+      <p><b>Type clues</b> opens rows of tiles like Wordle’s. Type each guess you played; a full row opens the next, up to six. Then <span class="tap">tap</span> a letter to give it the color Wordle did: once for yellow, twice for green, a third time for gray again. To fix one letter, hold it (or right-click it): it is cleared, the rest of the guess stays, and the next letter you type goes there, in the color the slot had. Backspace takes back the letter before the marked tile, and × empties a guess so you can retype it in the same place. Use these clues takes the guesses once each started one is finished and none contradicts another; if they do, a line under the rows says how. Cancel leaves the clues as they were, and so does your phone’s or browser’s Back.</p>
       <p>Double letters need no extra step: two yellow copies of a letter in one guess are two tiles on the board, and a gray copy beside a green or yellow one says the word has no more of that letter.</p>
       <p><b>Guesses</b> lists the words you played. <span class="tap">Tap</span> one to see the clues as they stood after it, say to see how much a guess narrowed things down: the later guesses go faint and a line says which guess is shown. <span class="tap">Tap</span> the last one to count them all again.</p>
       <p><b>In</b> is a stack with a column per slot, each showing its green letter or else the letters that were yellow there, with any letter the word has twice beside it. <b>Out</b> is the letters that aren’t in the word. Edit clues opens the guesses you typed again, to change or add to them. Clues read straight from a screenshot have no Edit clues: start over and paste the newer screenshot. Nor do clues from a link that carries no guesses. Start over clears everything, board included, and goes back to the four ways in; Undo there puts it all back, until you use other clues or leave the page. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day. Your guesses are kept and shared with them, along with which one is shown.</p>
@@ -1530,7 +1530,7 @@
         <dt>V/C</dt>
         <dd>Vowels, then Y (in five-letter words it mostly acts as one), then consonants.</dd>
         <dt>Rank</dt>
-        <dd>Letters by how many of the answers that fit all your clues contain them, most common first: green and yellow letters lead, gray ones trail, and a line under the keys says how many answers that is. On a computer, hover over a letter to see its share. With no clues, or none that any answer fits, it is the order over all answers, the table under Reference tables.</dd>
+        <dd>Letters by how many of the answers that fit all your clues contain them, most common first: green and yellow letters lead, gray ones trail, and a line under the keys says how many answers that is. On a computer, hover over a letter to see its share. When no answer fits your clues, it is the order over all answers, the table under Reference tables.</dd>
       </dl>
     </div>
     <form method="dialog"><button>Close</button></form>
@@ -1609,7 +1609,7 @@
     let editRows = [];            // the guess editor's rows while it is open: [[{ letter, color }]], len tiles each, '' for a gap
     let editFrom = 'choose';      // the card state the editor was opened from, for Cancel
     let undo = null;              // what Start over cleared, for Undo, until other clues are used
-    let stepOverride = { board: null, results: null };  // a step the user opened or closed by hand
+    let stepOverride = { board: null, results: null };  // a panel the user folded or unfolded by hand
     let selectedPos = null;       // board slot chosen for the next letter, or null for the first blank
     let shownOrder = [];          // the arrangements in the order the list shows them
     let justMoved = [];           // slots whose tile just moved, for the landing animation
@@ -2603,7 +2603,7 @@
         return { ranking: letterRanking, count: 0, note: 'No answer fits your clues, so this is the order over all answers.' };
       }
       const note = hasClues() ? `Ranked over the ${fits.length} answers that fit your clues.`
-        : `Ranked over all ${fits.length} answers; it narrows as you enter clues.`;
+        : `Ranked over all ${fits.length} answers.`;
       // Among the letters at 0%, the gray ones go last, so they read as one dimmed group.
       const ruledOut = grayLetters();
       const ranking = letterRank(fits).sort((a, b) => (b.p - a.p) || (ruledOut.has(a.letter) - ruledOut.has(b.letter)));
@@ -3014,7 +3014,7 @@
       const hiddenAll = wordMode === 'hide' && !total && arrangements.length > 0;
       let title;
       if (!tileInfo.length) {
-        title = 'Enter your yellow letters to see where they can go.';
+        title = 'Your clues have no yellow letters to arrange.';
       } else if (!movable.length) {
         title = 'Every yellow letter is already placed.';
       } else if (hiddenAll) {
@@ -3320,6 +3320,7 @@
       guesses = { rows: rows.map(row => row.map(t => ({ letter: t.letter, color: t.color }))), step: rows.length, imported: true, leftOut: solved };
       cardState = 'summary';
       editRows = [];
+      leaveEditorHistory();
       showGuessStep();
     }
 
@@ -3537,6 +3538,26 @@
 
     // The editor opens on the guesses there are, all of them whatever the step, or empty;
     // or on the rows read from a screenshot when some letter of theirs needs checking.
+    // The editor is a step in the browser's history, so the phone's Back gesture or the
+    // Back button leaves it as Cancel does. Leaving it any other way takes that step back
+    // out; the popstate that follows is ours and is let pass. Not in the Dev panel's
+    // preview frame, whose history is shared with the page around it.
+    let editorInHistory = false;
+    let ownPops = 0;
+
+    function enterEditorHistory() {
+      if (IN_FRAME || editorInHistory) return;
+      history.pushState({ editor: true }, '');
+      editorInHistory = true;
+    }
+
+    function leaveEditorHistory() {
+      if (!editorInHistory) return;
+      editorInHistory = false;
+      ownPops++;
+      history.back();
+    }
+
     function openEditor(shotRows = null, leftOut = false) {
       showImportMessage();
       const from = shotRows || (guesses && !guesses.random ? guesses.rows : []);
@@ -3546,6 +3567,7 @@
       tidyGuessRows();
       if (cardState !== 'edit') editFrom = cardState;
       cardState = 'edit';
+      enterEditorHistory();
       renderSteps();
       focusGuessInput();
     }
@@ -3556,13 +3578,16 @@
       editRows = [];
       guesses = { rows, step: rows.length, random: false };
       cardState = 'summary';
+      leaveEditorHistory();
       countOnce('first-clue');
       showGuessStep();
     }
 
     function cancelEditor() {
+      if (cardState !== 'edit') return;
       editRows = [];
       cardState = editFrom;
+      leaveEditorHistory();
       renderSteps();
     }
 
@@ -3650,7 +3675,7 @@
     // before is dismissed.
     const TIPS = {
       intro: () => 'Stuck on a Wordle? Enter your guesses and this sandbox shows every way your yellow letters ' +
-        'can still fit, and lets you try words on a board before you spend a guess.',
+        'can still fit, and lets you try words on a board before you spend a guess. New here? Practice puzzle shows how it works.',
       board: () => movable.length
         ? `This is one way your yellow letters could fit. Drag a yellow tile to another slot. ${TAP} an empty slot, then a letter below, to try one there. Cycle through the legal arrangements with the ‹ and › arrows below.`
         : `Your green letters are in place. ${TAP} an empty slot, then a letter below, to try one there.`,
@@ -3987,6 +4012,15 @@
     $('editCluesBtn').addEventListener('click', () => openEditor());
     $('useCluesBtn').addEventListener('click', useEditedClues);
     $('cancelEditBtn').addEventListener('click', cancelEditor);
+    window.addEventListener('popstate', () => {
+      if (ownPops) {
+        ownPops--;
+        return;
+      }
+      // Back, with the editor open: its step is already gone from the history.
+      editorInHistory = false;
+      cancelEditor();
+    });
     // The board's and the arrangements' headings fold and unfold them.
     $('boardToggle').addEventListener('click', () => {
       stepOverride.board = $('boardBody').hidden;
