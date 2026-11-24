@@ -428,20 +428,44 @@ test('trial drag swaps letters, preserves fixed greens and flags banned destinat
   await expect(page.locator('#boardStatus')).toContainText("E can't go in slot 2");
 });
 
-test('full board checks the real word list; changing arrangement clears displaced trials', async ({ page }) => {
+test('full board checks the real word list; another arrangement clears the tried letters, a dragged tile keeps them', async ({ page }) => {
   await open(page, ONLY_Q_GRAY);
   for (const value of 'APPLE') await letter(page, value).click();
   await expect(page.locator('#boardWord')).toHaveText(/^APPLE ✓ is in the word list\./);
   await expect(boardSlot(page, 1)).toHaveAttribute('aria-label', 'Slot 1: A, tried');
   await letter(page, 'Z').click();
   await expect(page.locator('#board .trial')).toHaveCount(5);
-  // A yellow tile moved onto a tried letter takes its slot.
+  // Another arrangement, from the arrows or the list, starts the board clean: the letters
+  // tried were chosen around the old one's tiles.
   await open(page, '?green=%3F%3F%3F%3F%3F&ban0=Z&yellow=Z');
   await expect(page.locator('#board .yellow')).toHaveText('Z');
-  for (const value of 'APPL') await letter(page, value).click();
-  await expect(page.locator('#board .trial')).toHaveCount(4);
+  const fill = async () => {
+    for (const value of 'APPL') await letter(page, value).click();
+    await expect(page.locator('#board .trial')).toHaveCount(4);
+  };
+  await fill();
   await page.getByRole('button', { name: 'Next arrangement', exact: true }).click();
-  await expect(page.locator('#board .trial')).toHaveCount(3);
+  await expect(page.locator('#arrIndex')).toHaveText('Arrangement 2 of 4');
+  await expect(page.locator('#board .trial')).toHaveCount(0);
+  await fill();
+  await arrangements(page).first().click();
+  await expect(page.locator('#arrIndex')).toHaveText('Arrangement 1 of 4');
+  await expect(page.locator('#board .trial')).toHaveCount(0);
+  // The arrangement already on the board keeps them when picked again.
+  await fill();
+  await arrangements(page).first().click();
+  await expect(page.locator('#board .trial')).toHaveCount(4);
+  // A chosen slot is forgotten with them.
+  await page.getByRole('button', { name: /^Remove P from slot/ }).first().click();
+  await expect(page.locator('#board .slot.selected')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Next arrangement', exact: true }).click();
+  await expect(page.locator('#board .slot.selected')).toHaveCount(0);
+  // Dragging a tile is different: it swaps places with the tried letter it lands on, and all are kept.
+  await fill();
+  const target = await page.locator('#board .slot').filter({ has: page.locator('.trial', { hasText: 'L' }) }).getAttribute('data-pos');
+  await page.locator('#board .yellow').dragTo(boardSlot(page, Number(target) + 1));
+  await expect(boardSlot(page, Number(target) + 1)).toHaveText('Z');
+  await expect(page.locator('#board .trial')).toHaveCount(4);
 });
 
 test('a full board says when the word was last a Wordle answer', async ({ page }) => {
