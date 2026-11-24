@@ -22,7 +22,7 @@ Before the summary, the card is the only panel on the page. The board, the arran
 ### Chooser
 
 - **Paste screenshot** and **Choose image** read the screenshot and go straight to the summary, with no review.
-  - Exception (proposed): if the reader flagged any letter as unsure, open the guess editor with those tiles marked, since the summary would otherwise show a guess that may be wrong.
+  - Exception: if the reader flagged any letter as unsure, the guess editor opens instead, filled with what was read, the unsure tiles marked, and a line saying how many letters to check. It is the ordinary editor, not a separate mode.
   - A failure (no image on the clipboard, unreadable image) shows a message in the chooser and stays there.
 - **Type clues** opens the guess editor, empty.
 - **Practice puzzle** opens the practice review.
@@ -68,11 +68,23 @@ Today the guesses live only in memory (`importHistory`) and are dropped on reloa
 - The saved state stores the guesses, the selected guess and whether it is a practice puzzle.
 - Links gain a guesses parameter (words and colours). The old `green` / `ban<i>` / `yellow` / `gray` parameters are still written and still read, so old links open and new links degrade gracefully.
 
+## Removed
+
+- **The green / yellow / gray form**, replaced by the guess editor.
+- **Excluding a letter from the letters panel** (hold or right-click to mark it gray, and letting a gray letter back in). Grays come only from the guesses.
+- **The double-letter count override.** Counts are derived from the guesses.
+- **Step numbers** on the panels.
+
+## Decided without asking
+
+- The editor does not check guesses against a word list; any five letters are accepted.
+- The board and arrangements panels keep their fold toggles and lose their numbers.
+- The first-time tips are rewritten for the new flow; the chooser carries the one-line introduction.
+
 ## Open questions
 
-1. **Unsure letters after Paste or Choose image:** open the editor with them marked (proposed above), or go to the summary regardless?
-2. **Excluding a letter from the letters panel** (hold or right-click marks it gray). Today that counts as a manual edit and discards the guesses. Proposed: keep it as an overlay on top of the guesses, cleared by Start over, shown in Out with a different outline.
-3. **Double-letter counts.** The old form let the user override how many tiles a letter has. With guesses the counts are derived. Proposed: drop the override.
+1. **Practice puzzles.** Editing one would make its colours disagree with the hidden answer, so the summary shows New puzzle in place of Edit. Given that, should Practice puzzle skip its review and go straight to the summary, as Paste does? That removes a state and makes each further puzzle one tap.
+2. **Two phone previews.** `?view=mobile` and the Dev panel's Phone width overlap. Out of scope here; worth settling before more is built on either.
 
 ## Build order
 
