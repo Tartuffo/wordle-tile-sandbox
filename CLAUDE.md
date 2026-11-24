@@ -2,6 +2,10 @@
 
 A single-file static web app: `index.html` holds the markup, styles and script. There is no build step. Playwright browser tests are in `tests/sandbox.spec.js`; run them with `npm test` (in a cloud session, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium` first). The README's "What it does" section and the `?` help dialogs in `index.html` describe every user-facing behaviour; keep both in step with any change to it.
 
+## Open work
+
+`docs/next-steps.md` lists where the work stands and what is still to do, including two git tags that have to be created from a laptop. Read it at the start of a session, remind the owner of anything in it that is waiting on them, and update it as items are done.
+
 ## Preview links
 
 After every push that changes the UI, give a preview link that opens the pushed commit through raw.githack, so it shows exactly that commit and not whatever the branch later becomes:
