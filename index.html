@@ -604,7 +604,11 @@
       opacity: 1;
     }
 
-    .key { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none; touch-action: manipulation; }
+    /* Keys are held as well as tapped, so nothing about them may start a text selection or
+       the callout. iOS browsers, all WebKit, only honor the prefixed user-select, and a
+       hold on a key can otherwise select the label beside it: hence the whole letters body. */
+    .key { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+    #lettersBody, #lettersBody * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
     .key:active:not(.out) { filter: brightness(.88); }
     .key.shake, .tile.shake { animation: shake .3s; }
 
@@ -966,7 +970,7 @@
     /* No word in the dictionary fits: kept visible but dimmed, since the list can miss words. */
     .arr.noword { opacity: .4; text-decoration: line-through; }
 
-    .arr { -webkit-touch-callout: none; user-select: none; }
+    .arr, #list, #list * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }   /* held, like the keys */
 
     .words-dialog {
       width: min(92vw, 520px);
