@@ -428,7 +428,7 @@ test('trial drag swaps letters, preserves fixed greens and flags banned destinat
   await expect(page.locator('#boardStatus')).toContainText("E can't go in slot 2");
 });
 
-test('full board checks the real word list; another arrangement clears the tried letters, a dragged tile keeps them', async ({ page }) => {
+test('full board checks the real word list; another arrangement clears the tried letters, a dragged tile replaces the one it lands on', async ({ page }) => {
   await open(page, ONLY_Q_GRAY);
   for (const value of 'APPLE') await letter(page, value).click();
   await expect(page.locator('#boardWord')).toHaveText(/^APPLE ✓ is in the word list\./);
@@ -460,12 +460,15 @@ test('full board checks the real word list; another arrangement clears the tried
   await expect(page.locator('#board .slot.selected')).toHaveCount(1);
   await page.getByRole('button', { name: 'Next arrangement', exact: true }).click();
   await expect(page.locator('#board .slot.selected')).toHaveCount(0);
-  // Dragging a tile is different: it swaps places with the tried letter it lands on, and all are kept.
+  // Dragging a yellow tile is different: it replaces the tried letter it is dropped on, which
+  // does not move to the slot the tile left, and the other tried letters stay.
   await fill();
+  const from = await page.locator('#board .slot').filter({ has: page.locator('.yellow') }).getAttribute('data-pos');
   const target = await page.locator('#board .slot').filter({ has: page.locator('.trial', { hasText: 'L' }) }).getAttribute('data-pos');
   await page.locator('#board .yellow').dragTo(boardSlot(page, Number(target) + 1));
   await expect(boardSlot(page, Number(target) + 1)).toHaveText('Z');
-  await expect(page.locator('#board .trial')).toHaveCount(4);
+  await expect(page.locator('#board .trial')).toHaveText(['A', 'P', 'P']);
+  await expect(boardSlot(page, Number(from) + 1)).toHaveText('');
 });
 
 test('a full board says when the word was last a Wordle answer', async ({ page }) => {
