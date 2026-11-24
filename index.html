@@ -445,8 +445,25 @@
       align-items: center;
     }
 
-    /* Each panel is a numbered step: a header that folds the body, and a footer for what
-       must stay reachable while it is folded (the guess stepper and Start over). */
+    /* The ways to give the clues. Practice puzzle is set apart: it isn't your game. */
+    .chooser-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .chooser-row .apart { margin-left: auto; }
+    #cluesTitle { margin-right: auto; }   /* the link and help buttons sit at the right */
+    .chooser[hidden], #cluesDone[hidden] { display: none; }
+    .chooser .clue-intro { margin: 12px 0 10px; }
+    .edit-actions { margin-top: 14px; }
+    .import-msg { margin: 10px 0 0; }
+    .import-msg:empty { display: none; }
+
+    /* The clues card shows one thing at a time: the ways to give the clues, the form to type
+       them in, or their summary. The board and arrangements panels have a header that folds
+       the body. */
     .step-head {
       display: flex;
       align-items: center;
@@ -466,25 +483,6 @@
       text-align: left;
       -webkit-tap-highlight-color: transparent;
     }
-
-    .step-num {
-      flex: none;
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
-      display: grid;
-      place-items: center;
-      background: var(--accent);
-      color: var(--on-accent);
-      font-size: 14px;
-      font-weight: 800;
-    }
-
-    /* A step that isn't reachable yet (no clues, no yellow tiles) is dimmed; a done step is ticked. */
-    .step.pending .step-num { background: var(--panel-2); color: var(--muted); border: 1px solid var(--border); }
-    .step.done .step-num::before { content: '✓'; }
-    .step.done .step-num { font-size: 0; }
-    .step.done .step-num::before { font-size: 14px; }
 
     .step-title {
       margin: 0;
@@ -508,10 +506,10 @@
     .step-head .help-btn { margin-left: auto; }
     .step-head .help-btn ~ .help-btn, .step-head .clue-link-btn ~ .help-btn { margin-left: 0; }
     .step-body { margin-top: 14px; }
-    .step-body[hidden], .step-placeholder[hidden], .clue-summary[hidden] { display: none; }
+    .step-body[hidden], .step-placeholder[hidden] { display: none; }
 
     .step-placeholder {
-      margin: 10px 0 0 36px;
+      margin: 10px 0 0;
       color: var(--muted);
       font-size: 14px;
       line-height: 1.4;
@@ -531,12 +529,12 @@
     .step-foot button.link[hidden] { display: none; }
     .clue-intro { margin: 0 0 8px; }
     .clue-intro + .toolbar-row { margin-bottom: 12px; }
-    .clue-note { margin: 8px 0 0 36px; font-size: 14px; }
+    .clue-note { margin: 8px 0 0; font-size: 14px; }
     .clue-note:empty { display: none; }
 
-    /* Step 1 folded: the clues in miniature, then the step's foot (Edit clues, ‹ Guess › and
-       Start over) on the same row when it fits, bottom-aligned with the clue box; on a phone
-       the foot wraps to a row of its own, so Edit clues and Start over always share a line. */
+    /* The summary: the clues in miniature, then the foot (Edit clues, ‹ Guess › and Start
+       over) on the same row when it fits, bottom-aligned with the clue box; on a phone the
+       foot wraps to a row of its own, so Edit clues and Start over always share a line. */
     .clue-bottom {
       display: flex;
       flex-wrap: wrap;
@@ -545,10 +543,8 @@
       margin-top: 10px;
     }
 
-    .clue-bottom:has(.clue-summary[hidden]) { margin-top: 14px; }
     .clue-bottom .step-foot { flex: 1 1 auto; margin: 0; }
-    .clue-summary { margin: 0 0 0 36px; }
-    .clue-summary[hidden] { display: none; }
+    .clue-summary { margin: 0; }
 
     .clue-chips { display: inline-flex; flex-wrap: wrap; align-items: flex-end; gap: 4px 10px; }
     .clue-chips:empty { display: none; }
@@ -1058,7 +1054,7 @@
     }
     .help-btn:hover { color: var(--accent); border-color: var(--accent); }
     .odds-head .help-btn { margin-left: auto; align-self: center; }
-    /* Copy link: an icon in the step 1 header, with a brief note beside it. */
+    /* Copy link: an icon in the clues card's header, with a brief note beside it. */
     .clue-link-btn {
       width: 28px;
       height: 28px;
@@ -1327,8 +1323,10 @@
     @container (max-width: 452px) {
       .app { --label-w: 54px; --gap: 5px; }
       .odds-entry .pc { display: none; }
-      /* The line above the buttons says "paste or import a screenshot", so the short labels are enough. */
-      .toolbar-row .wide { display: none; }
+      /* On a phone the ways to give the clues are a column of full-width buttons. */
+      .chooser-row { flex-direction: column; align-items: stretch; }
+      .chooser-row button { padding-top: 12px; padding-bottom: 12px; }
+      .chooser-row .apart { margin: 6px 0 0; }
       .panel { padding: 12px; }
       .subtitle { font-size: 14px; }
     }
@@ -1358,25 +1356,24 @@
 
     <section id="cluesPanel" class="panel step" aria-label="Clues">
       <div class="step-head">
-        <button id="cluesToggle" type="button" class="step-toggle" aria-expanded="true" aria-controls="cluesBody">
-          <span class="step-num" aria-hidden="true">1</span>
-          <h2 class="step-title">Enter your clues</h2>
-          <span class="step-chev" aria-hidden="true"></span>
-        </button>
+        <h2 id="cluesTitle" class="step-title">Enter your clues</h2>
         <span id="clueLinkNote" class="clue-link-note" role="status"></span>
         <button id="clueLinkBtn" class="clue-link-btn" hidden aria-label="Copy link" title="Copy a link to these clues"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
         <button type="button" class="help-btn" data-help="cluesHelp" aria-label="About entering clues" title="About entering clues">?</button>
       </div>
-      <p id="clueNote" class="hint clue-note" role="status"></p>
-      <div id="cluesBody" class="step-body">
-        <p class="hint clue-intro">Paste or import a screenshot of your game, or let Random make up a practice puzzle.</p>
-        <div id="cluesToolbar" class="toolbar-row">
-          <button id="pasteBtn" aria-label="Paste screenshot" title="Read your clues from a screenshot on the clipboard">Paste<span class="wide"> screenshot</span></button>
-          <button id="importBtn" aria-label="Import file" title="Read your clues from a saved Wordle screenshot">Import<span class="wide"> file</span></button>
+      <p id="importMsg" class="status import-msg" role="status"></p>
+      <div id="chooser" class="chooser">
+        <p class="hint clue-intro">Start from a screenshot of your Wordle game, type your clues in, or practice on a made-up puzzle.</p>
+        <div id="cluesToolbar" class="chooser-row">
+          <button id="pasteBtn" title="Read your clues from a screenshot on the clipboard">Paste screenshot</button>
+          <button id="importBtn" title="Read your clues from a saved Wordle screenshot">Choose image</button>
           <input id="importFile" type="file" accept="image/*" hidden>
-          <button id="randomBtn" title="Make up a puzzle: one or two guesses against a past Wordle answer" disabled>Random</button>
+          <button id="typeBtn" title="Enter the green, yellow and gray letters by hand">Type clues</button>
+          <button id="randomBtn" class="apart" title="Make up a puzzle: one or two guesses against a past Wordle answer" disabled>Practice puzzle</button>
         </div>
-        <p id="typeIntro" class="hint clue-intro">Or copy your colors by hand: each green and yellow letter in its slot, then the grays.</p>
+      </div>
+      <div id="cluesBody" class="step-body" hidden>
+        <p id="typeIntro" class="hint clue-intro">Copy your colors by hand: each green and yellow letter in its slot, then the grays.</p>
         <div id="slotNums" class="row-grid slot-nums"></div>
         <div id="greenRow" class="row-grid"></div>
         <div id="yellowRow" class="row-grid"></div>
@@ -1390,9 +1387,15 @@
           <div id="tileChips" class="tile-chips"></div>
         </div>
         <div id="clueStatus" class="status" role="status"></div>
+        <div class="import-actions edit-actions">
+          <button id="useCluesBtn" class="primary" disabled>Use these clues</button>
+          <button id="cancelEditBtn">Cancel</button>
+        </div>
       </div>
+      <div id="cluesDone" hidden>
+      <p id="clueNote" class="hint clue-note" role="status"></p>
       <div class="clue-bottom">
-        <div id="cluesSummary" class="clue-summary" hidden>
+        <div id="cluesSummary" class="clue-summary">
           <span id="clueChips" class="clue-chips" aria-label="Your clues"></span>
         </div>
         <div class="step-foot">
@@ -1406,17 +1409,16 @@
           <button id="clearBtn" title="Clear every clue and the board">Start over</button>
         </div>
       </div>
+      </div>
     </section>
 
-    <section id="boardPanel" class="panel step" aria-label="Board">
+    <section id="boardPanel" class="panel step" aria-label="Board" hidden>
       <div class="step-head">
         <button id="boardToggle" type="button" class="step-toggle" aria-expanded="true" aria-controls="boardBody">
-          <span class="step-num" aria-hidden="true">2</span>
           <h2 class="step-title">Try letters on the board</h2>
           <span class="step-chev" aria-hidden="true"></span>
         </button>
       </div>
-      <p id="boardPlaceholder" class="step-placeholder" hidden>Enter a clue above and the board appears here, or <button type="button" id="boardAnywayBtn" class="link">open it now</button> to try a word without clues.</p>
       <div id="boardBody" class="step-body">
         <div id="board" class="row-grid" aria-label="Tile board"></div>
         <p id="boardNote" class="board-note">
@@ -1447,10 +1449,9 @@
       </div>
     </section>
 
-    <section id="resultsPanel" class="panel step" aria-label="Arrangements">
+    <section id="resultsPanel" class="panel step" aria-label="Arrangements" hidden>
       <div class="step-head">
         <button id="resultsToggle" type="button" class="step-toggle" aria-expanded="true" aria-controls="resultsBody">
-          <span class="step-num" aria-hidden="true">3</span>
           <h2 class="step-title">Browse every legal arrangement</h2>
           <span class="step-chev" aria-hidden="true"></span>
         </button>
@@ -1495,7 +1496,7 @@
       </div>
     </section>
 
-    <section class="panel" aria-label="Reference tables">
+    <section id="analysisPanel" class="panel" aria-label="Reference tables" hidden>
       <div class="analysis-toggle">
         <button id="analysisBtn" aria-expanded="false" aria-controls="analysisBody">Reference tables</button>
         <span class="hint">Letter and vowel statistics from Wordle’s answer list</span>
@@ -1565,10 +1566,11 @@
   <dialog id="cluesHelp" class="words-dialog help-dialog" aria-labelledby="cluesHelpTitle">
     <h2 id="cluesHelpTitle">Entering clues</h2>
     <div class="help-body">
-      <p><b>From a screenshot:</b> Paste screenshot reads one you’ve copied, and Import file opens a saved one; on a computer, Ctrl/⌘+V also works. Check the letters, fix any that were misread, then choose Use these clues. If the puzzle was solved, the all-green row is left out, so the clues are as they stood just before the answer.</p>
-      <p><b>Random</b> makes up a puzzle to practice on: one or two guesses against a past Wordle answer, which stays hidden. It’s chosen so that from a few to a few dozen arrangements fit a word. A line under the heading says which guesses were made up, and New puzzle draws another.</p>
-      <p><b>‹ Guess 2/3 ›</b> appears after a screenshot or Random: the clues as they stood after each guess, here after the second of three. ‹ and › step back and forth, say to see how much one guess narrowed things down. Editing a clue by hand ends the stepping and keeps the clues shown.</p>
-      <p><b>By hand</b>, copy the colors Wordle gave your letters:</p>
+      <p>The card first offers four ways to give your clues; once they are in, it shows a summary of them and the board and the arrangements appear below.</p>
+      <p><b>From a screenshot:</b> Paste screenshot reads one you’ve copied, and Choose image opens a saved one; on a computer, Ctrl/⌘+V also works. Check the letters, fix any that were misread, then choose Use these clues. If the puzzle was solved, the all-green row is left out, so the clues are as they stood just before the answer.</p>
+      <p><b>Practice puzzle</b> makes up a puzzle to practice on: one or two guesses against a past Wordle answer, which stays hidden. It’s chosen so that from a few to a few dozen arrangements fit a word. A line under the heading says which guesses were made up, and New puzzle, in place of Edit clues, draws another.</p>
+      <p><b>‹ Guess 2/3 ›</b> appears after a screenshot or a practice puzzle: the clues as they stood after each guess, here after the second of three. ‹ and › step back and forth, say to see how much one guess narrowed things down. Editing a clue by hand ends the stepping and keeps the clues shown.</p>
+      <p><b>Type clues</b> opens a form to copy the colors Wordle gave your letters. Use these clues takes them, once there is a clue and nothing contradicts; Cancel leaves the clues as they were.</p>
       <dl>
         <dt>Green (right spot)</dt>
         <dd>The letter in each slot you’ve solved. Typing moves to the next slot; space skips one.</dd>
@@ -1579,7 +1581,7 @@
         <dt>Double letters</dt>
         <dd>A yellow letter is one tile on the board, or none if it’s already green. When a letter could be in the word twice (yellow in two slots, or green in one and yellow in another), this row appears: press + to add a tile for the second copy, and − to take it away again.</dd>
       </dl>
-      <p>After a screenshot, Random or a shared link, this step folds to a summary of the clues: a stack with a column per slot, each showing its green letter or else the letters that were yellow there, then the gray letters; Edit clues or the step’s heading opens it again. Start over clears everything, board included. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day. The guesses from a screenshot or Random are kept and shared with them, so the guess stepping still works after a reload or from a link.</p>
+      <p>The summary is a stack with a column per slot, each showing its green letter or else the letters that were yellow there, then the gray letters. Edit clues opens the form on them. Start over clears everything, board included, and goes back to the four ways in. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day. The guesses from a screenshot or a practice puzzle are kept and shared with them, so the guess stepping still works after a reload or from a link.</p>
       <p><button type="button" id="tipsAgainBtn" class="link">Show the first-time tips again</button></p>
     </div>
     <form method="dialog"><button>Close</button></form>
@@ -1717,7 +1719,8 @@
     let letterRanking = null;     // [{ letter, p }] by share of answers containing the letter
     let gridFirst = false;        // the where-each-letter-can-go grid above the arrangement list
     let analysisOpen = false;     // the reference tables shown (closed by default)
-    let cluesCollapsed = false;   // step 1 folded to a summary line, after an import, Random or a link
+    let cardState = 'choose';     // the clues card: 'choose' a way to give them, 'edit' them by hand, or their 'summary'
+    let editBackup = null;        // the clues as they were when the form opened, for Cancel, with the state to return to
     let stepOverride = { board: null, results: null };  // a step the user opened or closed by hand
     let selectedPos = null;       // board slot chosen for the next letter, or null for the first blank
     let shownOrder = [];          // the arrangements in the order the list shows them
@@ -3427,23 +3430,24 @@
       return findTileRows(img).map(row => row.map(tile => ({ color: tile.color, ...readTileLetter(img, tile) })));
     }
 
-    function showImportMessage(text) {
-      showImportPanel();
-      $('importRows').innerHTML = '';
-      $('importNote').textContent = text;
-      $('importUseBtn').disabled = true;
+    // A screenshot that couldn't be had or read: said in the clues card, which stays as it was,
+    // until the next attempt or another way in is chosen.
+    function showImportMessage(text = '') {
+      closeImport();
+      $('importMsg').textContent = text;
     }
 
     // Reads a screenshot straight from the clipboard, so it never has to be saved to
     // Photos. On iPhone: take the screenshot, tap its thumbnail, Done, Copy and Delete.
     // Safari then asks for a tap on "Paste" before handing the image over.
     async function pasteScreenshot() {
+      showImportMessage();
       const howTo = 'On iPhone: take a screenshot, tap its thumbnail, tap Done, then Copy and Delete.';
       let items;
       try {
         items = await navigator.clipboard.read();
       } catch {
-        showImportMessage('Couldn\u2019t read the clipboard. Try Import file with a saved screenshot; on a computer you can also paste with Ctrl/\u2318+V.');
+        showImportMessage('Couldn\u2019t read the clipboard. Try Choose image with a saved screenshot; on a computer you can also paste with Ctrl/\u2318+V.');
         return;
       }
       for (const item of items) {
@@ -3453,11 +3457,12 @@
           return;
         }
       }
-      showImportMessage(`There\u2019s no image on the clipboard. ${howTo} Or use Import file.`);
+      showImportMessage(`There\u2019s no image on the clipboard. ${howTo} Or use Choose image.`);
     }
 
     async function importScreenshot(file) {
       if (!file || !file.type.startsWith('image/')) return;
+      showImportMessage();
       showImportPanel();
       $('importRows').innerHTML = '';
       $('importNote').textContent = 'Reading screenshot…';
@@ -3477,9 +3482,9 @@
       importRows = rows;
 
       if (!rows.length) {
-        $('importNote').textContent = solved
+        showImportMessage(solved
           ? 'Solved on the first guess; there are no earlier clues to import.'
-          : 'Couldn’t find a Wordle grid in that image. Try a full, uncropped screenshot.';
+          : 'Couldn’t find a Wordle grid in that image. Try a full, uncropped screenshot.');
         return;
       }
 
@@ -3493,8 +3498,10 @@
       $('importUseBtn').disabled = false;
     }
 
+    // While a screenshot is under review its panel stands in for the clues card.
     function showImportPanel() {
       $('importPanel').hidden = false;
+      $('cluesPanel').hidden = true;
       $('importPanel').scrollIntoView({ block: 'nearest' });
     }
 
@@ -3532,7 +3539,8 @@
 
     function applyImportedGuesses() {
       guesses = { rows: importRows.map(row => row.map(t => ({ ...t }))), step: importRows.length };
-      cluesCollapsed = true;
+      cardState = 'summary';
+      editBackup = null;
       countOnce('import');
       closeImport();
       showGuessStep();
@@ -3643,6 +3651,7 @@
 
     function closeImport() {
       $('importPanel').hidden = true;
+      $('cluesPanel').hidden = false;
       $('importFile').value = '';
       importRows = [];
     }
@@ -3682,6 +3691,7 @@
       const strength = w => new Set(w).size < len ? 0 : [...w].reduce((sum, l) => sum + share[l], 0);
       const openers = [...answerWords].sort((a, b) => strength(b) - strength(a)).slice(0, RANDOM_OPENERS);
       const [lo, hi] = pick(RANDOM_BANDS);
+      showImportMessage();
       const saved = { greens, yellows, grays, countOverrides, trials };
       const known = () => greens.filter(Boolean).length + movable.length;
       const tryClues = rows => {
@@ -3707,7 +3717,8 @@
         if (fitting < lo || fitting > hi) continue;
 
         guesses = { rows, step: rows.length, random: true };
-        cluesCollapsed = true;
+        cardState = 'summary';
+        editBackup = null;
         trials = Array(len).fill('');
         selectedPos = null;
         countOnce('random');
@@ -3744,41 +3755,75 @@
       return greens.some(Boolean) || yellows.some(Boolean) || !!grays;
     }
 
-    // Each panel is a numbered step. Step 1 folds to a summary once the clues came in whole
-    // (an import, Random or a link), never while they are being typed. Steps 2 and 3 open
-    // once there is something to show, or when opened by hand.
+    // The clues card is the only panel until the clues are in: first the ways to give them,
+    // then (for Type clues, or Edit clues later) the form, then their summary. The board, the
+    // arrangements and the reference tables appear with the summary. The board and the
+    // arrangements fold by their headings; the arrangements start folded when there is no
+    // yellow letter to arrange.
     function renderSteps() {
-      const clues = hasClues();
+      if (cardState === 'summary' && !hasClues()) cardState = 'choose';
+      const summary = cardState === 'summary';
       const results = movable.length > 0;
 
-      const folded = cluesCollapsed && clues;
-      $('cluesBody').hidden = folded;
-      $('cluesSummary').hidden = !folded;
-      $('editCluesBtn').hidden = !folded;
-      $('cluesToggle').setAttribute('aria-expanded', String(!folded));
-      $('cluesPanel').classList.toggle('done', clues);
-      if (folded) renderClueChips();
-      $('newPuzzleBtn').hidden = !(folded && guesses?.random);
+      $('cluesTitle').textContent = summary ? 'Your clues' : 'Enter your clues';
+      $('chooser').hidden = cardState !== 'choose';
+      $('cluesBody').hidden = cardState !== 'edit';
+      $('cluesDone').hidden = !summary;
+      $('useCluesBtn').disabled = !hasClues() || findClueErrors().length > 0;
+      if (summary) renderClueChips();
+      // A practice puzzle's colors come from its hidden answer, so it is redrawn, not edited.
+      const practice = !!guesses?.random;
+      $('editCluesBtn').hidden = practice;
+      $('newPuzzleBtn').hidden = !practice;
 
-      const boardOpen = stepOverride.board ?? clues;
+      for (const id of ['boardPanel', 'resultsPanel', 'analysisPanel']) $(id).hidden = !summary;
+
+      const boardOpen = stepOverride.board ?? true;
       $('boardBody').hidden = !boardOpen;
-      $('boardPlaceholder').hidden = boardOpen;
       $('boardToggle').setAttribute('aria-expanded', String(boardOpen));
-      $('boardPanel').classList.toggle('pending', !clues);
 
       const resultsOpen = stepOverride.results ?? results;
       $('resultsBody').hidden = !resultsOpen;
       $('resultsPlaceholder').hidden = resultsOpen;
-      $('resultsPlaceholder').textContent = clues
-        ? 'Add a yellow letter above and every legal way it can go is listed here.'
-        : 'Enter your clues above and every legal way the yellow letters can go is listed here.';
+      $('resultsPlaceholder').textContent = results
+        ? ''
+        : 'Your clues have no yellow letter, so there is nothing to arrange.';
       $('resultsToggle').setAttribute('aria-expanded', String(resultsOpen));
-      $('resultsPanel').classList.toggle('pending', !results);
 
       offerTips();
     }
 
-    // The clues in miniature, for the folded step 1: a stack with a column per slot, the green
+    // The clues with what hangs on them, to put back if the form is cancelled.
+    function snapshotClues() {
+      return { greens: [...greens], yellows: [...yellows], grays, countOverrides: { ...countOverrides },
+        guesses: guesses && { ...guesses }, trials: [...trials], pins: new Map(pins) };
+    }
+
+    function openEditor() {
+      showImportMessage();
+      editBackup = { ...snapshotClues(), from: cardState };
+      cardState = 'edit';
+      renderSteps();
+      focusCell('green', 0);
+    }
+
+    function useEditedClues() {
+      cardState = 'summary';
+      editBackup = null;
+      renderSteps();
+    }
+
+    function cancelEditor() {
+      if (!editBackup) return;
+      ({ greens, yellows, grays, countOverrides, guesses, trials, pins } = editBackup);
+      cardState = editBackup.from;
+      editBackup = null;
+      renderClueInputs();
+      update();
+      renderGuessNav();
+    }
+
+    // The clues in miniature, for the summary: a stack with a column per slot, the green
     // letter if there is one, else the letters that were yellow there piled up, else a dot;
     // then any letter counted twice, then the gray letters in alphabetical order.
     function renderClueChips() {
@@ -3830,9 +3875,9 @@
     // before is dismissed.
     const TIPS = {
       intro: () => 'Stuck on a Wordle? Enter your guesses and this sandbox shows every way your yellow letters ' +
-        'can still fit, and lets you try words on a board before you spend a guess. Three steps, top to bottom.',
+        'can still fit, and lets you try words on a board before you spend a guess.',
       clues: () => 'Copy your colors by hand: green letters in their slot, yellow letters under each slot where ' +
-        'they were yellow, gray letters in the gray row. Or paste a screenshot, or press Random to practice.',
+        'they were yellow, gray letters in the gray row. Then choose Use these clues.',
       board: () => movable.length
         ? `This is one way your yellow letters could fit. Drag a yellow tile to another slot. ${TAP} an empty slot, then a letter below, to try one there. Cycle through the legal arrangements with the ‹ and › arrows below.`
         : `Your green letters are in place. ${TAP} an empty slot, then a letter below, to try one there.`,
@@ -4127,29 +4172,24 @@
       countOverrides = {};
       pins.clear();
       listExpanded = false;
-      cluesCollapsed = false;
+      guesses = null;
+      cardState = 'choose';
+      editBackup = null;
       stepOverride = { board: null, results: null };
       selectedPos = null;
       renderClueInputs();
-      userEdit();
-      focusCell('green', 0);
+      update();
+      renderGuessNav();
     });
 
-    // Step headers fold and unfold their step; Edit clues and "open it now" unfold one.
-    $('cluesToggle').addEventListener('click', () => {
-      cluesCollapsed = !cluesCollapsed;
-      renderSteps();
-    });
-    $('editCluesBtn').addEventListener('click', () => {
-      cluesCollapsed = false;
-      renderSteps();
-    });
+    // Type clues and Edit clues open the form; it closes on Use these clues or Cancel.
+    $('typeBtn').addEventListener('click', openEditor);
+    $('editCluesBtn').addEventListener('click', openEditor);
+    $('useCluesBtn').addEventListener('click', useEditedClues);
+    $('cancelEditBtn').addEventListener('click', cancelEditor);
+    // The board's and the arrangements' headings fold and unfold them.
     $('boardToggle').addEventListener('click', () => {
       stepOverride.board = $('boardBody').hidden;
-      renderSteps();
-    });
-    $('boardAnywayBtn').addEventListener('click', () => {
-      stepOverride.board = true;
       renderSteps();
     });
     $('resultsToggle').addEventListener('click', () => {
@@ -4232,6 +4272,7 @@
     $('randomBtn').addEventListener('click', randomExample);
     $('newPuzzleBtn').addEventListener('click', randomExample);
     $('pasteBtn').hidden = !navigator.clipboard?.read;
+    $($('pasteBtn').hidden ? 'importBtn' : 'pasteBtn').classList.add('primary');   // the one to reach for first
     $('importFile').addEventListener('change', e => importScreenshot(e.target.files[0]));
     $('importUseBtn').addEventListener('click', applyImportedGuesses);
     $('importCancelBtn').addEventListener('click', closeImport);
@@ -4332,9 +4373,8 @@
     });
     window.addEventListener('storage', e => {
       if (e.key !== STATE_KEY || !(IN_FRAME || phoneWidth())) return;
-      const had = !!guesses;
       if (!loadSavedState()) return;
-      if (guesses && !had) cluesCollapsed = true;   // guesses arrived whole, as from an import
+      if (cardState !== 'edit') cardState = hasClues() ? 'summary' : 'choose';
       renderClueInputs();
       update();
       renderGuessNav();
@@ -4367,12 +4407,9 @@
     // ── Init ──────────────────────────────────────────────────────────────────
 
     fitSlots();
-    if (loadFromURL()) {
-      cluesCollapsed = true;
-      saveState();
-    } else if (loadSavedState() && guesses) {
-      cluesCollapsed = true;
-    }
+    if (loadFromURL()) saveState();
+    else loadSavedState();
+    if (hasClues()) cardState = 'summary';
     try {
       const saved = localStorage.getItem(WORD_MODE_KEY);
       if (['dim', 'hide', 'off'].includes(saved)) wordMode = saved;
