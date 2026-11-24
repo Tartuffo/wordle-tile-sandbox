@@ -71,13 +71,12 @@ async function open(page, query = '') {
   await page.goto('/' + query);
   await loaded;
 }
+// A screenshot that reads cleanly goes straight to the summary.
 async function importImage(page, name) {
   await page.locator('#importFile').setInputFiles(fixture(name));
-  await expect(page.getByRole('button', { name: 'Use these clues' })).toBeEnabled();
+  await expect(page.locator('#cluesSummary')).toBeVisible();
 }
-async function values(locator) {
-  return locator.evaluateAll(inputs => inputs.map(input => input.value));
-}
+const guessCode = page => page.evaluate(() => encodeGuesses(guesses.rows));
 
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-10-02T12:00:00Z'));
@@ -468,16 +467,13 @@ test('a full board says when the word was last a Wordle answer', async ({ page }
   await expect(note).toHaveText(`Not a Wordle answer through ${date(through)}.`);
 });
 
-test('PNG import reads colors/letters, omits solved row; a guess word shows the clues after it; Edit clues is for typed guesses and opens them in the editor', async ({ page }) => {
+test('PNG import reads colors/letters straight into the summary, omits solved row; a guess word shows the clues after it; Edit clues is for typed guesses and opens them in the editor', async ({ page }) => {
   await open(page);
+  // No review: the letters and colors read go straight to the summary.
   await importImage(page, 'guesses.png');
-  expect(await values(page.locator('#importRows input'))).toEqual([...'CRANEBEEFY']);
-  await expect(page.locator('#importRows .green')).toHaveCount(3);
-  await expect(page.locator('#importRows .yellow')).toHaveCount(2);
-  await expect(page.locator('#importNote')).toContainText('The solved row was left out');
-  await page.getByRole('button', { name: 'Use these clues' }).click();
   await expectGuesses(page, ['CRANE', 'BEEFY']);
-  await expect(page.locator('#clueNote')).toHaveText('');
+  expect(await guessCode(page)).toBe('CRANE01001.BEEFY22002');
+  await expect(page.locator('#clueNote')).toHaveText('The solved row was left out.');
   // BEEFY's second E was gray: kept, since it caps the E count at the green one, but E is
   // in the word, so the summary doesn't list it as out.
   await expectClues(page, { green: 'BE??Y', gray: 'ACEFN' });
@@ -489,7 +485,7 @@ test('PNG import reads colors/letters, omits solved row; a guess word shows the 
   await expect(guessWord(page, 'CRANE')).toHaveClass(/shown/);
   await expect(guessWord(page, 'CRANE')).toHaveAttribute('aria-pressed', 'true');
   await expect(guessWord(page, 'BEEFY')).toHaveAttribute('aria-pressed', 'false');
-  await expect(page.locator('#clueNote')).toHaveText('Showing the clues after guess 1 of 2.');
+  await expect(page.locator('#clueNote')).toHaveText('The solved row was left out. Showing the clues after guess 1 of 2.');
   await expectClues(page, { green: '?????', yellow: '- R - - E' });
   // A screenshot was read whole: there is no Edit clues for it, only Start over.
   await expect(page.getByRole('button', { name: 'Edit clues', exact: true })).toBeHidden();
@@ -520,7 +516,6 @@ test('guesses survive a reload and travel in the link, with the step and the pra
   });
   await open(page);
   await importImage(page, 'guesses.png');
-  await page.getByRole('button', { name: 'Use these clues' }).click();
   await guessWord(page, 'CRANE').click();
   await expectGuesses(page, ['CRANE', 'BEEFY'], 1);
 
@@ -581,24 +576,73 @@ test('guesses survive a reload and travel in the link, with the step and the pra
   await expectClues(page, { green: 'BE?RY' });
 });
 
-test('import cancel preserves clues and invalid images can be retried', async ({ page }) => {
+test('an image with no grid is said in the card, which stays as it was; a good one replaces what was being typed', async ({ page }) => {
   await open(page);
   await typeClues(page);
   await page.keyboard.type('a');
-  // The review stands in for the clues card; Cancel brings the card back as it was.
-  await importImage(page, 'guesses.png');
-  await expect(page.locator('#cluesPanel')).toBeHidden();
-  await cancel(page);
+  await page.locator('#importFile').setInputFiles({ name: 'broken.png', mimeType: 'image/png', buffer: Buffer.from('invalid image') });
+  await expect(page.locator('#importMsg')).toHaveText('Couldn’t find a Wordle grid in that image. Try a full, uncropped screenshot.');
+  await expect(page.locator('#importMsg')).not.toHaveClass(/busy/);
   await expect(page.locator('#cluesBody')).toBeVisible();
   expect(await guessWords(page)).toEqual(['A····']);
-  // An image with no grid is said in the card, with no review to cancel.
-  await page.locator('#importFile').setInputFiles({ name: 'broken.png', mimeType: 'image/png', buffer: Buffer.from('invalid image') });
-  await expect(page.locator('#importMsg')).toContainText('Couldn’t find a Wordle grid');
-  await expect(page.locator('#importPanel')).toBeHidden();
-  await expect(page.locator('#cluesBody')).toBeVisible();
   await importImage(page, 'guesses.png');
   await expect(page.locator('#importMsg')).toHaveText('');
-  await expect(page.locator('#importRows input')).toHaveCount(10);
+  await expectGuesses(page, ['CRANE', 'BEEFY']);
+  await expect(page.locator('#cluesBody')).toBeHidden();
+});
+
+test('a screenshot with letters that were hard to read opens the editor on it, those tiles outlined; used from there it counts as typed', async ({ page }) => {
+  await open(page);
+  // Stand in for the reader: a first guess with the given letters unsure (and its R misread
+  // as P), BEEFY sure, then the solved row.
+  const stubRead = unsure => page.evaluate(unsure => {
+    const row = (word, colors, doubt = '') => [...word].map((letter, i) =>
+      ({ letter, color: ['gray', 'yellow', 'green'][colors[i]], unsure: doubt.includes(letter) }));
+    window.readScreenshot = async () => [row('CPANE', '01001', unsure), row('BEEFY', '22002'), row('BERRY', '22222')];
+  }, unsure);
+  const png = { name: 'shot.png', mimeType: 'image/png', buffer: Buffer.from('stubbed') };
+  const note = page.locator('#guessNote');
+  await stubRead('PE');
+  await page.locator('#importFile').setInputFiles(png);
+
+  await expect(page.locator('#cluesBody')).toBeVisible();
+  expect(await guessWords(page)).toEqual(['CPANE', 'BEEFY', '·····']);
+  await expect(page.locator('#guessRows .guess-tile.unsure')).toHaveText(['P', 'E']);
+  await expect(guessTile(page, 1, 2)).toHaveAttribute('aria-label', 'Guess 1, slot 2: P, yellow, hard to read');
+  await expect(note).toHaveText('Read from your screenshot. 2 letters were hard to read and are outlined in red. ' +
+    'If one is wrong, hold or right-click it and type the right one. The solved row was left out.');
+  // The marks are advice: the guesses can be used as they are.
+  await expect(page.getByRole('button', { name: 'Use these clues', exact: true })).toBeEnabled();
+
+  // Retyping a marked letter clears its mark and keeps the slot's color.
+  await guessTile(page, 1, 2).click({ button: 'right' });
+  await page.keyboard.type('r');
+  expect(await guessWords(page)).toEqual(['CRANE', 'BEEFY', '·····']);
+  await expect(guessTile(page, 1, 2)).toHaveClass(/yellow/);
+  await expect(page.locator('#guessRows .guess-tile.unsure')).toHaveText(['E']);
+  await expect(note).toContainText('One letter was hard to read and is outlined in red. If it is wrong,');
+  await useClues(page);
+  await expectGuesses(page, ['CRANE', 'BEEFY']);
+  expect(await guessCode(page)).toBe('CRANE01001.BEEFY22002');
+  // Having been through the editor, they are typed guesses: Edit clues is there, with no marks left.
+  await editClues(page);
+  await expect(page.locator('#guessRows .guess-tile.unsure')).toHaveCount(0);
+  await expect(note).toHaveText('');
+  await cancel(page);
+
+  // Cancel on a doubtful read leaves things as they were: here, the summary.
+  await stubRead('A');
+  await page.locator('#importFile').setInputFiles(png);
+  await expect(page.locator('#guessRows .guess-tile.unsure')).toHaveText(['A']);
+  await cancel(page);
+  await expect(page.locator('#cluesSummary')).toBeVisible();
+  expect(await guessCode(page)).toBe('CRANE01001.BEEFY22002');
+
+  // A sure read needs no editor, and has no Edit clues.
+  await stubRead('');
+  await page.locator('#importFile').setInputFiles(png);
+  await expectGuesses(page, ['CPANE', 'BEEFY']);
+  await expect(page.getByRole('button', { name: 'Edit clues', exact: true })).toBeHidden();
 });
 
 test('a gray duplicate caps the count: BEEFY against BERRY rules out BEERY', async ({ page }) => {
@@ -607,8 +651,7 @@ test('a gray duplicate caps the count: BEEFY against BERRY rules out BEERY', asy
   await page.route('**/words/5.txt', route => route.fulfill({ body: 'BEERY\n', contentType: 'text/plain' }));
   await open(page);
   await importImage(page, 'duplicate-cap.png');
-  expect(await values(page.locator('#importRows input'))).toEqual([...'RANTSBEEFY']);
-  await page.getByRole('button', { name: 'Use these clues' }).click();
+  await expectGuesses(page, ['RANTS', 'BEEFY']);
   // The gray E is kept: it is what caps the count.
   await expectClues(page, { green: 'BE??Y', yellow: 'R - - - -', gray: 'AEFNST' });
   await expect(page.locator('#clueStatus')).toHaveText('');
@@ -721,12 +764,11 @@ test('Paste screenshot reads an image from the clipboard and explains when there
   await putOnClipboard(page, { text: 'hello' });
   await page.getByRole('button', { name: 'Paste screenshot' }).click();
   await expect(page.locator('#importMsg')).toContainText('no image on the clipboard');
-  await expect(page.locator('#importPanel')).toBeHidden();
   await expect(page.locator('#chooser')).toBeVisible();
   await putOnClipboard(page, { image: 'guesses.png' });
   await page.getByRole('button', { name: 'Paste screenshot' }).click();
-  await expect(page.getByRole('button', { name: 'Use these clues' })).toBeEnabled();
-  expect(await values(page.locator('#importRows input'))).toEqual([...'CRANEBEEFY']);
+  await expectGuesses(page, ['CRANE', 'BEEFY']);
+  await expect(page.locator('#importMsg')).toHaveText('');
 });
 
 test('keyboard paste of an image imports it', async ({ page, context }) => {
@@ -735,8 +777,8 @@ test('keyboard paste of an image imports it', async ({ page, context }) => {
   await putOnClipboard(page, { image: 'guesses.png' });
   await page.locator('body').click({ position: { x: 5, y: 5 } });
   await page.keyboard.press('ControlOrMeta+V');
-  await expect(page.getByRole('button', { name: 'Use these clues' })).toBeEnabled();
-  expect(await values(page.locator('#importRows input'))).toEqual([...'CRANEBEEFY']);
+  await expectGuesses(page, ['CRANE', 'BEEFY']);
+  await expect(page.locator('#importMsg')).toHaveText('');
 });
 
 test('the letters help button opens a dialog explaining the views', async ({ page }) => {

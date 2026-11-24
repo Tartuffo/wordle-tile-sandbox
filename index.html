@@ -349,6 +349,11 @@
     /* A gap is tinted with the color it is keeping for the next letter typed there. */
     .guess-tile.keeps-yellow { border-color: var(--yellow); background: color-mix(in srgb, var(--yellow) 35%, var(--panel-2)); }
     .guess-tile.keeps-green { border-color: var(--green); background: color-mix(in srgb, var(--green) 35%, var(--panel-2)); }
+    /* A letter the screenshot reader wasn't sure of. */
+    .guess-tile.unsure { box-shadow: 0 0 0 3px var(--danger); }
+    .guess-note { margin: 10px 0 0; font-size: 14px; color: var(--text); }
+    .guess-note:empty { display: none; }
+    .import-msg.busy { color: var(--muted); }
     /* Where the next letter goes. */
     .guess-tile.next {
       border-color: var(--accent);
@@ -1065,35 +1070,6 @@
 
     .list-more { margin-top: 10px; }
 
-    .import-rows { display: grid; gap: var(--gap); margin: 10px 0; }
-
-    .import-row {
-      display: grid;
-      grid-template-columns: repeat(var(--n), minmax(0, 52px));
-      gap: var(--gap);
-    }
-
-    .import-tile {
-      aspect-ratio: 1 / 1;
-      width: 100%;
-      min-width: 0;
-      padding: 0;
-      border: 2px solid transparent;
-      border-radius: 6px;
-      color: #fff;
-      font-size: 22px;
-      font-weight: 900;
-      text-align: center;
-      text-transform: uppercase;
-      outline: none;
-    }
-
-    .import-tile.green { background: var(--green); }
-    .import-tile.yellow { background: var(--yellow); }
-    .import-tile.gray { background: var(--gray); }
-    .import-tile.unsure { border-color: var(--danger); }
-    .import-tile:focus { border-color: var(--accent); }
-
     .import-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
     button.primary {
@@ -1275,15 +1251,6 @@
     <p id="viewNote" class="hint view-note" hidden></p>
     <p id="subtitle" class="subtitle">Work out where your yellow letters can go, and try your next guess before you play it.</p>
 
-    <section id="importPanel" class="panel" aria-label="Import screenshot" hidden>
-      <p id="importNote" class="hint" role="status"></p>
-      <div id="importRows" class="import-rows"></div>
-      <div class="import-actions">
-        <button id="importUseBtn" class="primary">Use these clues</button>
-        <button id="importCancelBtn">Cancel</button>
-      </div>
-    </section>
-
     <section id="cluesPanel" class="panel step" aria-label="Clues">
       <div class="step-head">
         <h2 id="cluesTitle" class="step-title">Enter your clues</h2>
@@ -1305,6 +1272,7 @@
       </div>
       <div id="cluesBody" class="step-body" hidden>
         <p id="typeIntro" class="hint clue-intro">Type each guess you played. Then <span class="tap">tap</span> its letters until they match Wordle’s colors: once for yellow, twice for green. <span id="holdHint"></span></p>
+        <p id="guessNote" class="hint guess-note" role="status"></p>
         <div id="guessRows" class="guess-rows" aria-label="Your guesses"></div>
         <input id="guessInput" class="guess-input" type="text" autocomplete="off" autocapitalize="characters" autocorrect="off"
                spellcheck="false" enterkeyhint="done" aria-label="Type a guess">
@@ -1494,12 +1462,12 @@
     <h2 id="cluesHelpTitle">Entering clues</h2>
     <div class="help-body">
       <p>The card first offers four ways to give your clues; once they are in, it shows a summary of them and the board and the arrangements appear below.</p>
-      <p><b>From a screenshot:</b> Paste screenshot reads one you’ve copied, and Choose image opens a saved one; on a computer, Ctrl/⌘+V also works. Check the letters, fix any that were misread, then choose Use these clues. If the puzzle was solved, the all-green row is left out, so the clues are as they stood just before the answer.</p>
+      <p><b>From a screenshot:</b> Paste screenshot reads one you’ve copied, and Choose image opens a saved one; on a computer, Ctrl/⌘+V also works. The guesses go straight to the summary. If a letter was hard to read, the guesses open in the editor instead with that letter outlined in red: if it is wrong, hold it and type the right one, then choose Use these clues. If the puzzle was solved, the all-green row is left out, so the clues are as they stood just before the answer.</p>
       <p><b>Practice puzzle</b> makes up a puzzle to practice on: one or two guesses against a past Wordle answer, which stays hidden. It’s chosen so that from a few to a few dozen arrangements fit a word. A line under the heading says which guesses were made up, and New puzzle, in place of Edit clues, draws another.</p>
       <p><b>Type clues</b> opens rows of tiles like Wordle’s. Type each guess you played; a full row opens the next, up to six. Then <span class="tap">tap</span> a letter to give it the color Wordle did: once for yellow, twice for green, a third time for gray again. To fix one letter, hold it (or right-click it): it is cleared, the rest of the guess stays, and the next letter you type goes there, in the color the slot had. Backspace takes back the letter before the marked tile, and × empties a guess so you can retype it in the same place. Use these clues takes the guesses once each started one is finished and none contradicts another; if they do, a line under the rows says how. Cancel leaves the clues as they were.</p>
       <p>Double letters need no extra step: two yellow copies of a letter in one guess are two tiles on the board, and a gray copy beside a green or yellow one says the word has no more of that letter.</p>
       <p><b>Guesses</b> lists the words you played. <span class="tap">Tap</span> one to see the clues as they stood after it, say to see how much a guess narrowed things down: the later guesses go faint and a line says which guess is shown. <span class="tap">Tap</span> the last one to count them all again.</p>
-      <p><b>In</b> is a stack with a column per slot, each showing its green letter or else the letters that were yellow there, with any letter the word has twice beside it. <b>Out</b> is the letters that aren’t in the word. Edit clues opens the guesses you typed again, to change or add to them. Clues read from a screenshot have no Edit clues: start over and paste the newer screenshot. Nor do clues from a link that carries no guesses. Start over clears everything, board included, and goes back to the four ways in; Undo there puts it all back, until you use other clues or leave the page. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day. Your guesses are kept and shared with them, along with which one is shown.</p>
+      <p><b>In</b> is a stack with a column per slot, each showing its green letter or else the letters that were yellow there, with any letter the word has twice beside it. <b>Out</b> is the letters that aren’t in the word. Edit clues opens the guesses you typed again, to change or add to them. Clues read straight from a screenshot have no Edit clues: start over and paste the newer screenshot. Nor do clues from a link that carries no guesses. Start over clears everything, board included, and goes back to the four ways in; Undo there puts it all back, until you use other clues or leave the page. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day. Your guesses are kept and shared with them, along with which one is shown.</p>
       <p><button type="button" id="tipsAgainBtn" class="link">Show the first-time tips again</button></p>
     </div>
     <form method="dialog"><button>Close</button></form>
@@ -1967,7 +1935,7 @@
     // A row is always len tiles, each a letter (or '' for a gap) and a color. The color
     // belongs to the slot: it stays when the letter is taken out and comes back with the
     // next letter typed there, since it was copied from Wordle's tile in that place.
-    const blankGuessRow = () => Array.from({ length: len }, () => ({ letter: '', color: 'gray' }));
+    const blankGuessRow = () => Array.from({ length: len }, () => ({ letter: '', color: 'gray', unsure: false }));
     const guessRowFull = row => row.every(t => t.letter);
     const guessRowEmpty = row => !row.some(t => t.letter);
 
@@ -1989,7 +1957,7 @@
     function typeGuessLetter(letter) {
       const at = guessCursor();
       if (!at) return;
-      editRows[at.r][at.i].letter = letter;
+      Object.assign(editRows[at.r][at.i], { letter, unsure: false });
       tidyGuessRows();
     }
 
@@ -2000,7 +1968,7 @@
       for (let r = at.r, from = at.i - 1; r >= 0; r--, from = len - 1) {
         const i = editRows[r].findLastIndex((t, k) => k <= from && t.letter);
         if (i >= 0) {
-          editRows[r][i].letter = '';
+          Object.assign(editRows[r][i], { letter: '', unsure: false });
           break;
         }
       }
@@ -2009,7 +1977,7 @@
 
     // Holding a letter takes just that one out, leaving the rest of the guess and its colors.
     function clearGuessLetter(r, i) {
-      editRows[r][i].letter = '';
+      Object.assign(editRows[r][i], { letter: '', unsure: false });
       tidyGuessRows();
     }
 
@@ -2053,6 +2021,8 @@
     }
 
     let guessHeld = false;   // a hold just cleared a letter, so the release after it is not a tap
+    let editFromShot = false;   // the editor was opened on a screenshot read with unsure letters
+    let editLeftOut = false;    // ... from which a solved row was left out
 
     function renderGuessRows() {
       const wrap = $('guessRows');
@@ -2066,9 +2036,10 @@
           tile.type = 'button';
           // A gap is tinted with the color it is keeping for the next letter.
           tile.className = `guess-tile ${t.letter ? t.color : `empty keeps-${t.color}`}`;
+          if (t.unsure) tile.classList.add('unsure');
           if (at && r === at.r && i === at.i) tile.classList.add('next');
           tile.textContent = t.letter;
-          tile.setAttribute('aria-label', `Guess ${r + 1}, slot ${i + 1}: ${t.letter || 'empty'}, ${t.color}`);
+          tile.setAttribute('aria-label', `Guess ${r + 1}, slot ${i + 1}: ${t.letter || 'empty'}, ${t.color}${t.unsure ? ', hard to read' : ''}`);
           if (t.letter) {
             tile.title = `${TAP} to change the color; ${CLICK ? 'hold or right-click' : 'hold'} to clear the letter`;
             addHold(tile, () => {
@@ -2104,6 +2075,16 @@
         }
         wrap.appendChild(rowEl);
       });
+
+      // After a screenshot: which letters to check, until each is retyped or the guesses are used.
+      const unsure = editRows.flat().filter(t => t.unsure).length;
+      const hold = CLICK ? 'hold or right-click' : 'hold';
+      $('guessNote').textContent = [
+        editFromShot ? 'Read from your screenshot.' : '',
+        unsure === 1 ? `One letter was hard to read and is outlined in red. If it is wrong, ${hold} it and type the right one.` : '',
+        unsure > 1 ? `${unsure} letters were hard to read and are outlined in red. If one is wrong, ${hold} it and type the right one.` : '',
+        editFromShot && editLeftOut ? 'The solved row was left out.' : '',
+      ].filter(Boolean).join(' ');
 
       const started = editRows.filter(row => !guessRowEmpty(row));
       const whole = started.length > 0 && started.every(guessRowFull);
@@ -3115,7 +3096,6 @@
       Z: '00aeeeeeeeeeeeeeeec000bfffffffffffffffe000bffffffffffffffe6000bffffffffffffff70000011111118fffffc0000000000003fffffe2000000000001dfffff60000000000009fffffa0000000000004fffffd1000000000001efffff40000000000009fffffa0000000000004fffffd1000000000001efffff4000000000000afffff80000000000005fffffc0000000000002efffff3111111110000bfffffffffffffff800affffffffffffffff900fffffffffffffffff900dffffffffffffffff70',
     };
     let glyphTemplates = null;
-    let importRows = [];           // [[{ letter, color, unsure }]] under review
     let guesses = null;            // { rows, step, random, imported }: the guesses the clues come from, and how many are
                                    // applied. Null when the clues came from a link without guesses.
 
@@ -3273,11 +3253,12 @@
       return findTileRows(img).map(row => row.map(tile => ({ color: tile.color, ...readTileLetter(img, tile) })));
     }
 
-    // A screenshot that couldn't be had or read: said in the clues card, which stays as it was,
-    // until the next attempt or another way in is chosen.
-    function showImportMessage(text = '') {
-      closeImport();
+    // A screenshot that couldn't be had or read is said in the clues card, which stays as it
+    // was, until the next attempt or another way in is chosen. busy is for the wait while
+    // one is read, which is no error.
+    function showImportMessage(text = '', busy = false) {
       $('importMsg').textContent = text;
+      $('importMsg').classList.toggle('busy', busy);
     }
 
     // Reads a screenshot straight from the clipboard, so it never has to be saved to
@@ -3303,26 +3284,25 @@
       showImportMessage(`There\u2019s no image on the clipboard. ${howTo} Or use Choose image.`);
     }
 
+    // A screenshot that reads cleanly goes straight to the summary. If the reader wasn't
+    // sure of a letter, the guess editor opens on what it read instead, those tiles marked.
     async function importScreenshot(file) {
       if (!file || !file.type.startsWith('image/')) return;
-      showImportMessage();
-      showImportPanel();
-      $('importRows').innerHTML = '';
-      $('importNote').textContent = 'Reading screenshot…';
-      $('importUseBtn').disabled = true;
+      showImportMessage('Reading screenshot…', true);
 
       let rows;
       try {
-        rows = await readScreenshot(file);
+        rows = (await readScreenshot(file)).filter(row => row.length === len && row.every(t => t.letter));
       } catch {
         rows = [];
       }
+      $('importFile').value = '';
 
       // A solved row adds nothing to plan with, so keep only the guesses before it.
       const solvedAt = rows.findIndex(r => r.every(t => t.color === 'green'));
       const solved = solvedAt >= 0;
       if (solved) rows = rows.slice(0, solvedAt);
-      importRows = rows;
+      rows = rows.slice(0, MAX_GUESSES);
 
       if (!rows.length) {
         showImportMessage(solved
@@ -3331,60 +3311,15 @@
         return;
       }
 
-      renderImportRows();
-      const unsure = rows.flat().some(t => t.unsure);
-      $('importNote').textContent = [
-        `Check the letters against your game; ${tap} a tile to fix one.`,
-        unsure ? 'Outlined tiles were hard to read.' : '',
-        solved ? 'The solved row was left out.' : '',
-      ].filter(Boolean).join(' ');
-      $('importUseBtn').disabled = false;
-    }
-
-    // While a screenshot is under review its panel stands in for the clues card.
-    function showImportPanel() {
-      $('importPanel').hidden = false;
-      $('cluesPanel').hidden = true;
-      $('importPanel').scrollIntoView({ block: 'nearest' });
-    }
-
-    function renderImportRows() {
-      const wrap = $('importRows');
-      wrap.innerHTML = '';
-      importRows.forEach((row, r) => {
-        const rowEl = document.createElement('div');
-        rowEl.className = 'import-row';
-        rowEl.style.setProperty('--n', row.length);
-        row.forEach((tile, i) => {
-          const input = document.createElement('input');
-          input.type = 'text';
-          input.className = `import-tile ${tile.color}`;
-          if (tile.unsure) input.classList.add('unsure');
-          input.value = tile.letter;
-          input.autocomplete = 'off';
-          input.spellcheck = false;
-          input.setAttribute('autocapitalize', 'characters');
-          input.setAttribute('aria-label', `Guess ${r + 1}, slot ${i + 1}, ${tile.color}`);
-          input.addEventListener('focus', () => input.select());
-          input.addEventListener('input', e => {
-            const letter = (e.data || input.value).toUpperCase().replace(/[^A-Z]/g, '').slice(-1);
-            tile.letter = letter;
-            tile.unsure = false;
-            input.value = letter;
-            input.classList.remove('unsure');
-            $('importUseBtn').disabled = importRows.flat().some(t => !t.letter);
-          });
-          rowEl.appendChild(input);
-        });
-        wrap.appendChild(rowEl);
-      });
-    }
-
-    function applyImportedGuesses() {
-      guesses = { rows: importRows.map(row => row.map(t => ({ ...t }))), step: importRows.length, imported: true };
-      cardState = 'summary';
+      showImportMessage();
       countOnce('import');
-      closeImport();
+      if (rows.flat().some(t => t.unsure)) {
+        openEditor(rows, solved);
+        return;
+      }
+      guesses = { rows: rows.map(row => row.map(t => ({ letter: t.letter, color: t.color }))), step: rows.length, imported: true, leftOut: solved };
+      cardState = 'summary';
+      editRows = [];
       showGuessStep();
     }
 
@@ -3463,13 +3398,6 @@
       showGuessStep();
     }
 
-    function closeImport() {
-      $('importPanel').hidden = true;
-      $('cluesPanel').hidden = false;
-      $('importFile').value = '';
-      importRows = [];
-    }
-
     // ── Random example ────────────────────────────────────────────────────────
 
     const RANDOM_OPENERS = 400;                        // first guesses: the answers richest in common letters
@@ -3535,7 +3463,6 @@
           trials = Array(len).fill('');
         selectedPos = null;
         countOnce('random');
-        closeImport();
         showGuessStep();
         return;
       }
@@ -3608,19 +3535,24 @@
       offerTips();
     }
 
-    // The editor opens on the guesses there are, all of them whatever the step, or empty.
-    function openEditor() {
+    // The editor opens on the guesses there are, all of them whatever the step, or empty;
+    // or on the rows read from a screenshot when some letter of theirs needs checking.
+    function openEditor(shotRows = null, leftOut = false) {
       showImportMessage();
-      editRows = guesses && !guesses.random ? guesses.rows.map(row => row.map(t => ({ letter: t.letter, color: t.color }))) : [];
+      const from = shotRows || (guesses && !guesses.random ? guesses.rows : []);
+      editRows = from.map(row => row.map(t => ({ letter: t.letter, color: t.color, unsure: !!t.unsure })));
+      editFromShot = !!shotRows;
+      editLeftOut = leftOut;
       tidyGuessRows();
-      editFrom = cardState;
+      if (cardState !== 'edit') editFrom = cardState;
       cardState = 'edit';
       renderSteps();
       focusGuessInput();
     }
 
     function useEditedClues() {
-      const rows = editRows.filter(guessRowFull);
+      // Guesses that went through the editor count as typed, a checked screenshot's too.
+      const rows = editRows.filter(guessRowFull).map(row => row.map(t => ({ letter: t.letter, color: t.color })));
       editRows = [];
       guesses = { rows, step: rows.length, random: false };
       cardState = 'summary';
@@ -3643,6 +3575,7 @@
       const total = guesses ? guesses.rows.length : 0;
       $('clueNote').textContent = [
         guesses?.random ? 'Practice puzzle. The answer is hidden.' : '',
+        guesses?.leftOut ? 'The solved row was left out.' : '',
         guesses && guesses.step < total ? `Showing the clues after guess ${guesses.step} of ${total}.` : '',
       ].filter(Boolean).join(' ');
 
@@ -4050,8 +3983,8 @@
       if (!e.target.closest('button')) focusGuessInput();
     });
     $('holdHint').textContent = `${CLICK ? 'Hold or right-click' : 'Hold'} a letter to clear it and type another.`;
-    $('typeBtn').addEventListener('click', openEditor);
-    $('editCluesBtn').addEventListener('click', openEditor);
+    $('typeBtn').addEventListener('click', () => openEditor());
+    $('editCluesBtn').addEventListener('click', () => openEditor());
     $('useCluesBtn').addEventListener('click', useEditedClues);
     $('cancelEditBtn').addEventListener('click', cancelEditor);
     // The board's and the arrangements' headings fold and unfold them.
@@ -4130,8 +4063,6 @@
     $('pasteBtn').hidden = !navigator.clipboard?.read;
     $($('pasteBtn').hidden ? 'importBtn' : 'pasteBtn').classList.add('primary');   // the one to reach for first
     $('importFile').addEventListener('change', e => importScreenshot(e.target.files[0]));
-    $('importUseBtn').addEventListener('click', applyImportedGuesses);
-    $('importCancelBtn').addEventListener('click', closeImport);
     $('arrPrevBtn').addEventListener('click', () => stepArrangement(-1));
     $('arrNextBtn').addEventListener('click', () => stepArrangement(1));
 
