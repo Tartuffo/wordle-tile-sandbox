@@ -927,17 +927,18 @@ test('vowel odds: filtering counts words, not letters, and options sort by proba
   expect(result.rank).toEqual(['P300', 'R300', 'Y300']);
 });
 
-test('Rank letters view ranks over the answers that fit the clues, grays last and disabled; the reference table is over all answers', async ({ page }) => {
+test('Rank letters view ranks over the answers that fit the clues and leaves the gray letters out; the reference table is over all answers', async ({ page }) => {
   await open(page, '?len=5&green=%3F%3F%3F%3F%3F&gray=EZ');
   const fits = fitting({ gray: 'EZ' });
   const share = l => fits.filter(w => w.includes(l)).length;
-  const expected = rankOf(fits, 'EZ');
+  const expected = rankOf(fits, 'EZ').filter(l => !'EZ'.includes(l));
+  expect(expected).toHaveLength(24);
   await page.locator('#lettersSeg').getByRole('button', { name: 'Rank', exact: true }).click();
   await expect(page.locator('#lettersBody .key')).toHaveText(expected);
   await expect(page.locator('#lettersBody .vc-label')).toHaveText(['Top 12', '', 'Then']);
   await expect(page.locator('#rankNote')).toHaveText(`Ranked over the ${fits.length} answers that fit your clues.`);
-  await expect(letter(page, 'E')).toBeDisabled();
-  expect(expected.slice(-2).sort()).toEqual(['E', 'Z']);
+  await expect(letter(page, 'E')).toHaveCount(0);
+  await expect(letter(page, 'Z')).toHaveCount(0);
   await expect(letter(page, expected[1])).toHaveAttribute('title',
     `Click to try ${expected[1]} in the chosen slot, or the first blank one that allows it. ${expected[1]} is in ${percent(share(expected[1]), fits.length)} of the answers that fit your clues.`);
   await letter(page, expected[1]).click();
@@ -1362,21 +1363,70 @@ test('board: a chosen slot takes the next letter, × removes a tried one, and th
   await expect(page.locator('#arrIndex')).toHaveText(/^Arrangement \d of 3$/);
 });
 
-test('a gray letter stays off the board, and holding or right-clicking a letter changes nothing', async ({ page }) => {
+test('a gray letter stays off the board; holding or right-clicking a letter shows its share of the answers left, in every view', async ({ page }) => {
   await open(page, '?green=B%3F%3F%3F%3F&ban1=E&yellow=E&gray=S');
+  const fits = fitting({ green: 'B????', bans: { 1: 'E' }, yellow: 'E', gray: 'S' });
+  const share = l => percent(fits.filter(w => w.includes(l)).length, fits.length);
+  const pop = page.locator('#letterPop');
+  const view = name => page.locator('#lettersSeg').getByRole('button', { name, exact: true }).click();
   await expect(page.locator('#lettersTitle')).toHaveText('25 available letters');
   await expect(letter(page, 'S')).toHaveAttribute('aria-disabled', 'true');
   await expect(letter(page, 'S')).toHaveAttribute('title', 'S is gray');
   await letter(page, 'S').click({ force: true });  // force: it is aria-disabled
   await expect(page.locator('#board .trial')).toHaveCount(0);
-  // Grays come only from the guesses now.
-  await letter(page, 'T').click({ button: 'right' });
+  await expect(pop).toBeHidden();
+
+  // Held, a letter says its share in a bubble above its key; the release doesn't put it on the board.
   await letter(page, 'A').hover();
   await page.mouse.down();
-  await page.waitForTimeout(700);
+  await expect(pop).toHaveText(`A is in ${share('A')} of the ${fits.length} answers that fit your clues.`);
   await page.mouse.up();
+  await expect(pop).toBeVisible();
+  await expect(page.locator('#board .trial')).toHaveCount(0);
+  const keyBox = await letter(page, 'A').boundingBox();
+  const popBox = await pop.boundingBox();
+  expect(popBox.y + popBox.height).toBeLessThanOrEqual(keyBox.y);
+  // The next press anywhere puts it away; a short press still tries the letter.
+  await letter(page, 'O').click();
+  await expect(pop).toBeHidden();
+  await expect(page.locator('#board .trial')).toHaveText(['O']);
+  // A right-click does the same as a hold, for a gray key too. Nothing about the clues changes.
+  await letter(page, 'T').click({ button: 'right' });
+  await expect(pop).toHaveText(`T is in ${share('T')} of the ${fits.length} answers that fit your clues.`);
+  await letter(page, 'S').click({ button: 'right', force: true });
+  await expect(pop).toHaveText('S is gray: it isn’t in the word.');
   await expectClues(page, { gray: 'S' });
-  await expect(page.locator('#lettersTitle')).toHaveText('25 available letters');
+
+  // The same in V/C and Rank, and with a mouse the hover text says it as well.
+  for (const name of ['Vowels and consonants (V/C)', 'Rank']) {
+    await view(name);
+    await expect(pop).toBeHidden();
+    await expect(letter(page, 'S')).toHaveCount(0);   // neither view lists a gray letter
+    await letter(page, 'E').click({ button: 'right' });
+    await expect(pop).toHaveText(`E is in 100% of the ${fits.length} answers that fit your clues.`);
+    await expect(letter(page, 'R')).toHaveAttribute('title', new RegExp(`R is in ${share('R')} of the answers that fit your clues\\.$`));
+  }
+});
+
+test('on a touch screen, holding a letter shows its share and the release is not a tap', async ({ browser }) => {
+  const context = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 800 } });
+  const phone = await context.newPage();
+  await phone.goto('http://127.0.0.1:4173/?green=B%3F%3F%3F%3F&ban1=E&yellow=E&gray=S');
+  await phone.locator('.tip button').tap();
+  const key = letter(phone, 'A');
+  const box = await key.boundingBox();
+  const client = await context.newCDPSession(phone);
+  await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: box.x + box.width / 2, y: box.y + box.height / 2 }] });
+  await expect(phone.locator('#letterPop')).toContainText(/^A is in \d+% of the \d+ answers that fit your clues\.$/);
+  await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await phone.waitForTimeout(600);   // past the moment a click from that release would have come
+  await expect(phone.locator('#board .trial')).toHaveCount(0);
+  await expect(phone.locator('#letterPop')).toBeVisible();
+  // A quick tap is still a tap.
+  await key.tap();
+  await expect(phone.locator('#board .trial')).toHaveText(['A']);
+  await expect(phone.locator('#letterPop')).toBeHidden();
+  await context.close();
 });
 
 test('arrangements no word fits are hidden by default; Dim is remembered; the old key is ignored', async ({ page }) => {
@@ -1482,7 +1532,7 @@ test('Rank view: known letters lead at their share, it follows the clues, and fa
   const fits = fitting({ green: 'M????', bans: { 2: 'A', 3: 'A' }, yellow: 'AA', gray: 'EST' });
   expect(fits.length).toBeGreaterThan(0);
   expect(fits.every(w => w[0] === 'M' && [...w].filter(l => l === 'A').length >= 2)).toBe(true);
-  await expect(page.locator('#lettersBody .key')).toHaveText(rankOf(fits, 'EST'));
+  await expect(page.locator('#lettersBody .key')).toHaveText(rankOf(fits, 'EST').filter(l => !'EST'.includes(l)));
   await expect(page.locator('#rankNote')).toHaveText(`Ranked over the ${fits.length} answers that fit your clues.`);
   await expect(page.locator('#lettersBody .key').nth(0)).toHaveClass(/green|yellow/);
   await expect(page.locator('#lettersBody .key').nth(1)).toHaveClass(/green|yellow/);
@@ -1492,14 +1542,15 @@ test('Rank view: known letters lead at their share, it follows the clues, and fa
   await open(page, link('M????', 'ESTR'));
   const fewer = fits.filter(w => !w.includes('R'));
   await expect(page.locator('#rankNote')).toHaveText(`Ranked over the ${fewer.length} answers that fit your clues.`);
-  await expect(page.locator('#lettersBody .key')).toHaveText(rankOf(fewer, 'ESTR'));
+  await expect(page.locator('#lettersBody .key')).toHaveText(rankOf(fewer, 'ESTR').filter(l => !'ESTR'.includes(l)));
 
   // Every letter but M, A and Y gray leaves MAMMA alone; a green Y leaves nothing, and Rank says so.
   await open(page, link('M????', 'BCDFGHJKLNPQRSTVWXYZEIOU'));
   await expect(page.locator('#rankNote')).toHaveText('Ranked over the 1 answers that fit your clues.');
   await open(page, link('MY???', 'BCDFGHJKLNPQRSTVWXYZEIOU'));
   await expect(page.locator('#rankNote')).toHaveText('No answer fits your clues, so this is the order over all answers.');
-  await expect(page.locator('#lettersBody .key')).toHaveText(rankOf(answerWords));
+  // Of all the letters only M, A and Y aren't gray, so only they are listed, in the overall order.
+  await expect(page.locator('#lettersBody .key')).toHaveText(rankOf(answerWords).filter(l => 'MAY'.includes(l)));
 
   // With no clues at all, the order is over all answers too.
   await startOver(page);
@@ -1517,9 +1568,11 @@ test('without the answer list, the reference tables explain and Rank falls back 
   await expect(page.locator('#oddsBody')).toBeHidden();
   await page.locator('#lettersSeg').getByRole('button', { name: 'Rank', exact: true }).click();
   await expect(page.locator('#lettersBody .key').first()).toHaveText('E');
-  await expect(page.locator('#lettersBody .key')).toHaveCount(26);
+  await expect(page.locator('#lettersBody .key')).toHaveCount(25);   // all but the gray Q
   await expect(page.locator('#rankNote')).toHaveText('Ranked over all answers by a built-in order; the answer list didn’t load.');
   await expect(letter(page, 'E')).not.toHaveAttribute('title', /is in/);
+  await letter(page, 'E').click({ button: 'right' });
+  await expect(page.locator('#letterPop')).toHaveText('The answer list hasn’t loaded, so there is no share to show.');
 });
 
 test('reference tables start closed, open and close, remember the choice, and outline the vowel case the clues match', async ({ page }) => {

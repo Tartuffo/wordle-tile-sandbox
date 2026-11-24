@@ -503,7 +503,24 @@
     .mini span.y { background: var(--yellow); border-color: var(--yellow); color: #fff; }
     .mini span.x { background: var(--gray); border-color: var(--gray); color: #fff; }
 
-    .letters { margin-top: 14px; }
+    .letters { margin-top: 14px; position: relative; }
+
+    /* What a held letter says: a bubble above its key. */
+    .letter-pop {
+      position: absolute;
+      z-index: 5;
+      max-width: 240px;
+      padding: 8px 11px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: var(--on-accent);
+      font-size: 14px;
+      line-height: 1.3;
+      box-shadow: 0 8px 22px var(--shadow);
+      pointer-events: none;
+    }
+
+    .letter-pop[hidden] { display: none; }
 
     .letters-head {
       display: flex;
@@ -1335,6 +1352,7 @@
             </span>
           </div>
           <div id="lettersBody"></div>
+          <div id="letterPop" class="letter-pop" role="status" hidden></div>
           <p id="rankNote" class="hint rank-note"></p>
         </div>
       </div>
@@ -1511,7 +1529,8 @@
     <div class="help-body">
       <p><b>The board</b> shows one legal arrangement of your yellow tiles, with green letters fixed. <b>Drag</b> a yellow tile to another slot to move it, or onto another yellow tile to swap them. It won’t go to a slot where it was yellow, marked by the yellow letters above: the slot shows red as you drag over it and the tile stays where it was. The yellow letters over a slot are the ones that were yellow there: the word has them, but not in that slot. Above the board, ‹ Arrangement 3 of 12 › says which of the listed arrangements is showing, and ‹ › cycle through them in the list’s order, round and round. Putting another arrangement on the board, from there or from the list, clears the letters you had tried. Dragging a tile keeps them, except one it is dropped on, which it replaces.</p>
       <p><b>Available letters</b>, under the board, are the ones that could still be in the word; green and yellow keys are from your clues. <b><span class="tap">Tap</span> a letter</b> to try it on the board: in the empty slot you chose (<span class="tap">tap</span> one first), or else in the first blank slot that allows it. A tried letter can be dragged too: onto an empty slot to move it, onto another tried letter to take its place, or onto a yellow tile to trade places with it. Its × removes it (on a touch screen, holding it works as well).</p>
-      <p>Gray letters don’t go on the board: Keyboard and Rank keep them in place, dimmed, and V/C leaves them out.</p>
+      <p>Gray letters don’t go on the board: Keyboard keeps them in place, dimmed, and V/C and Rank leave them out.</p>
+      <p><b>Hold</b> a letter (or right-click it) to see what share of the answers that still fit your clues contain it. With a mouse, hovering over it says the same.</p>
       <p>Fill the board to see whether the word is in the word list and whether it has been a Wordle answer.</p>
       <dl>
         <dt>Keyboard</dt>
@@ -1519,7 +1538,7 @@
         <dt>V/C</dt>
         <dd>Vowels, then Y (in five-letter words it mostly acts as one), then consonants.</dd>
         <dt>Rank</dt>
-        <dd>Letters by how many of the answers that fit all your clues contain them, most common first: green and yellow letters lead, gray ones trail, and a line under the keys says how many answers that is. On a computer, hover over a letter to see its share. When no answer fits your clues, it is the order over all answers, the table under Reference tables.</dd>
+        <dd>Letters by how many of the answers that fit all your clues contain them, most common first: green and yellow letters lead, gray ones are left out, and a line under the keys says how many answers that is. When no answer fits your clues, it is the order over all answers, the table under Reference tables.</dd>
       </dl>
     </div>
     <form method="dialog"><button>Close</button></form>
@@ -2508,6 +2527,28 @@
       renderBoard();
     }
 
+    // The bubble a held letter shows, above its key. It goes at the next press anywhere, when
+    // the letters are drawn again, or after a few seconds.
+    let letterPopTimer = null;
+
+    function showLetterPop(keyEl, text) {
+      const pop = $('letterPop');
+      pop.textContent = text;
+      pop.hidden = false;
+      const host = pop.offsetParent.getBoundingClientRect();
+      const key = keyEl.getBoundingClientRect();
+      const left = key.left - host.left + key.width / 2 - pop.offsetWidth / 2;
+      pop.style.left = `${Math.max(0, Math.min(host.width - pop.offsetWidth, left))}px`;
+      pop.style.top = `${key.top - host.top - pop.offsetHeight - 8}px`;
+      clearTimeout(letterPopTimer);
+      letterPopTimer = setTimeout(hideLetterPop, 5000);
+    }
+
+    function hideLetterPop() {
+      clearTimeout(letterPopTimer);
+      $('letterPop').hidden = true;
+    }
+
     function renderLetters() {
       const ruledOut = grayLetters();
       document.querySelectorAll('#lettersSeg button').forEach(btn => {
@@ -2515,8 +2556,11 @@
       });
       $('lettersTitle').innerHTML = ruledOut.size ? `<b>${26 - ruledOut.size}</b> available letters` : 'Available letters';
 
-      const rank = lettersView === 'rank' ? clueRanking() : null;
-      $('rankNote').textContent = rank?.note || '';
+      // The shares are worked out in every view: Rank orders by them, and holding a letter
+      // (or hovering, with a mouse) says its share in any of them.
+      const rank = clueRanking();
+      $('rankNote').textContent = lettersView === 'rank' ? rank.note : '';
+      hideLetterPop();
       const body = $('lettersBody');
       body.innerHTML = '';
 
@@ -2530,14 +2574,19 @@
           // Not disabled, so that a press still gets an answer: it shakes.
           btn.setAttribute('aria-disabled', 'true');
           btn.title = `${letter} is gray`;
-          btn.addEventListener('click', () => shake(btn));
+          btn.addEventListener('click', () => { if (!btn.dataset.held) shake(btn); });
         } else {
           btn.title = `Try ${letter} in the chosen slot, or the first blank one that allows it`;
-          btn.addEventListener('click', () => addTrial(letter, btn));
+          btn.addEventListener('click', () => { if (!btn.dataset.held) addTrial(letter, btn); });
         }
-        const share = rank?.ranking.find(r => r.letter === letter);
-        if (share?.p != null) btn.title = `${status === 'out' ? btn.title : `Click to try ${letter} in the chosen slot, or the first blank one that allows it`}. ` +
+        const share = rank.ranking.find(r => r.letter === letter);
+        if (share?.p != null && status !== 'out') btn.title = `Click to try ${letter} in the chosen slot, or the first blank one that allows it. ` +
           `${letter} is in ${pct(share.p)} of ${rank.count ? 'the answers that fit your clues' : 'all Wordle answers'}.`;
+        // Held (or right-clicked), a letter says its share in a bubble; the release is not a tap.
+        addHold(btn, () => showLetterPop(btn, status === 'out' ? `${letter} is gray: it isn’t in the word.`
+          : share?.p == null ? 'The answer list hasn’t loaded, so there is no share to show.'
+          : rank.count ? `${letter} is in ${pct(share.p)} of the ${rank.count} answer${rank.count === 1 ? '' : 's'} that fit your clues.`
+          : `No answer fits your clues. ${letter} is in ${pct(share.p)} of all Wordle answers.`));
         return btn;
       };
       const group = (label, letters, extra = '') => {
@@ -2564,9 +2613,9 @@
           body.appendChild(rowEl);
         }
       } else if (lettersView === 'rank') {
-        // Every letter stays, grays disabled in place at the end.
+        // Gray letters are dropped here too, so this ranks exactly what is left.
         body.className = 'vc';
-        const order = rank.ranking.map(r => r.letter).join('');
+        const order = rank.ranking.map(r => r.letter).filter(l => !ruledOut.has(l)).join('');
         group('Top 12', order.slice(0, 6));
         group('', order.slice(6, 12));
         group('Then', order.slice(12));
@@ -2621,7 +2670,7 @@
 
     // The Rank view's order: every letter by its share of the answers that fit all the clues
     // (green, yellow and gray, positions and counts included), most common first, so known
-    // letters lead and gray ones trail. When no answer fits, or before the answer list
+    // letters lead; the view then leaves the gray ones out. When no answer fits, or before the answer list
     // loads, it falls back to the order over all answers, and the note says so.
     function clueRanking() {
       if (!Array.isArray(answerWords)) {
@@ -2819,7 +2868,17 @@
         timer = setTimeout(() => {
           timer = null;
           btn.dataset.held = '1';
-          document.addEventListener('pointerup', () => setTimeout(() => delete btn.dataset.held), { once: true });
+          document.addEventListener('pointerup', () => {
+            setTimeout(() => delete btn.dataset.held);
+            // On a touch screen the click from this release can come a moment after it, past
+            // that mark: the first click on the button in the next instant is taken out.
+            const swallow = e => {
+              e.stopImmediatePropagation();
+              e.preventDefault();
+            };
+            btn.addEventListener('click', swallow, { capture: true, once: true });
+            setTimeout(() => btn.removeEventListener('click', swallow, { capture: true }), 120);
+          }, { once: true });
           navigator.vibrate?.(15);
           action();
         }, HOLD_MS);
@@ -4052,6 +4111,7 @@
       });
     });
 
+    document.addEventListener('pointerdown', hideLetterPop, true);
     document.querySelectorAll('#lettersSeg button').forEach(btn => {
       btn.addEventListener('click', () => {
         lettersView = btn.dataset.view;
