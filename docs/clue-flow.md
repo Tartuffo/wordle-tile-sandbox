@@ -1,6 +1,6 @@
 # Clue flow redesign
 
-Status: design agreed in outline, not built. Baseline is `v0.2` (`0bade8c`).
+Status: design agreed, not built. Baseline is `v0.2` (`0bade8c`).
 
 ## Goal
 
@@ -8,14 +8,13 @@ One thing on screen at a time until the clues are in. The user picks how to give
 
 ## The clue card
 
-One card, always in the same place, whose body is in one of four states. The states replace each other; nothing stacks.
+One card, always in the same place, whose body is in one of three states. The states replace each other; nothing stacks.
 
 | State | Body | Leaves to |
 |---|---|---|
-| Chooser | Paste screenshot (primary), Choose image, Type clues, Practice puzzle | Editor, Practice review, or Summary |
+| Chooser | Paste screenshot (primary), Choose image, Type clues, Practice puzzle | Editor or Summary |
 | Guess editor | Guess rows, Use these clues, Cancel | Summary, or back where it came from |
-| Practice review | The made-up guesses, Use these clues, New puzzle, Cancel | Summary, or Chooser |
-| Summary | Guess words, In, Out, Edit, Start over, copy link | Editor, or Chooser |
+| Summary | Guess words, In, Out, Edit or New puzzle, Start over, copy link | Editor, or Chooser |
 
 Before the summary, the card is the only panel on the page. The board, the arrangements and the reference tables are absent, with no greyed headers. On a phone the chooser's buttons stack as rows.
 
@@ -25,7 +24,7 @@ Before the summary, the card is the only panel on the page. The board, the arran
   - Exception: if the reader flagged any letter as unsure, the guess editor opens instead, filled with what was read, the unsure tiles marked, and a line saying how many letters to check. It is the ordinary editor, not a separate mode.
   - A failure (no image on the clipboard, unreadable image) shows a message in the chooser and stays there.
 - **Type clues** opens the guess editor, empty.
-- **Practice puzzle** opens the practice review.
+- **Practice puzzle** makes up a puzzle and goes straight to the summary, with no review.
 
 ### Guess editor
 
@@ -39,25 +38,23 @@ Replaces today's green / yellow / gray form, which is retired from the UI.
 
 The same editor serves Edit from the summary, for clues from any source that has guesses.
 
-### Practice review
-
-- Heading: "Practice puzzle. Your guess: SOLAR." The rows are shown, not editable.
-- **New puzzle** draws another. **Cancel** returns to the chooser.
-
 ### Summary
 
 - **Guesses:** the guess words in order. Tapping a word shows the clues as of that guess; the words up to it are highlighted. This replaces the `‹ Guess 2/3 ›` control.
 - **In:** the existing mini stack, a column per slot with the green letter or the letters that were yellow there.
 - **Out:** the gray letters.
 - **Edit:** reopens the guess editor with the current guesses.
+- **Practice puzzles:** a line says "Practice puzzle. The answer is hidden." and **New puzzle** takes the place of Edit, since edited colours would disagree with the hidden answer. New puzzle draws another in place.
 - **Start over:** returns to the chooser and hides the other panels. The chooser shows "Clues cleared. Undo" until new clues are used or the page is left; Undo restores the clues, the selected guess, the pins and the letters tried on the board. No confirmation dialog and no timer.
 - Copy link and help stay in the card's top right corner.
 
 Clues that arrive without guesses (a link made before this change) show In and Out only: no guess words and no Edit.
 
+Below the summary, the board and the arrangements panels appear as they are today, without their numbers.
+
 ## Navigation
 
-- The phone's Back gesture and the browser's Back button do what Cancel does in the editor and the practice review. From the summary, Back does not start over.
+- The phone's Back gesture and the browser's Back button do what Cancel does in the editor. From the summary, Back does not start over.
 - A shared link, and a same-day reload, open directly on the summary.
 
 ## Data model
@@ -75,16 +72,15 @@ Today the guesses live only in memory (`importHistory`) and are dropped on reloa
 - **The double-letter count override.** Counts are derived from the guesses.
 - **Step numbers** on the panels.
 
-## Decided without asking
+## Smaller decisions
 
 - The editor does not check guesses against a word list; any five letters are accepted.
 - The board and arrangements panels keep their fold toggles and lose their numbers.
 - The first-time tips are rewritten for the new flow; the chooser carries the one-line introduction.
 
-## Open questions
+## Deferred
 
-1. **Practice puzzles.** Editing one would make its colours disagree with the hidden answer, so the summary shows New puzzle in place of Edit. Given that, should Practice puzzle skip its review and go straight to the summary, as Paste does? That removes a state and makes each further puzzle one tap.
-2. **Two phone previews.** `?view=mobile` and the Dev panel's Phone width overlap. Out of scope here; worth settling before more is built on either.
+- **Two phone previews.** `?view=mobile` and the Dev panel's Phone width overlap. Not part of this redesign; to be settled before more is built on either.
 
 ## Build order
 
@@ -92,7 +88,7 @@ Today the guesses live only in memory (`importHistory`) and are dropped on reloa
 2. Card states and visibility: chooser, summary, hidden panels, no step numbers.
 3. Guess editor, wired to Type clues and Edit.
 4. Summary: tappable guess words, Start over with Undo.
-5. Paste and Choose image straight to the summary; practice review.
+5. Paste, Choose image and Practice puzzle straight to the summary; unsure reads open the editor.
 6. Back handling, first-time tips, help dialogs, README, tests.
 
 Each stage leaves the app working and the tests passing.
