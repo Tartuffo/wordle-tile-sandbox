@@ -33,7 +33,7 @@ The page is three numbered steps: **1 Enter your clues**, **2 Try letters on the
   - A collapsed table, **every case of one yellow and one gray vowel**: the two likeliest other vowels and the chance of none, with the case your clues match outlined.
 - **Help**: each step has a **?** that explains it, and the first visit gets four short tips. Instructions say "click" on a device with a mouse or trackpad and "tap" on a touch screen.
 - **Light and dark themes**: follows your device's light or dark setting; the sun/moon switch by the title overrides it, and that choice is remembered in the browser.
-- **Copy link**, the link icon at the top right of the clues, shares the current clues. Your clues are also saved in the browser and come back if you reopen the app the same day.
+- **Copy link**, the link icon at the top right of the clues, shares the current clues. Your clues are also saved in the browser and come back if you reopen the app the same day. The guesses behind them, from a screenshot or Random, are saved and shared along with them, so ‹ Guess 2/3 › still steps through them after a reload or from a link.
 
 The tool is intentionally visual: it helps you reason about the puzzle by moving tiles around on the board. It uses a word list to flag arrangements no word fits, and the answer list for letter and vowel odds and to say when a word on the board was an answer. Matching words stay hidden unless you hold an arrangement and choose Show words.
 

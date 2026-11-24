@@ -1579,7 +1579,7 @@
         <dt>Double letters</dt>
         <dd>A yellow letter is one tile on the board, or none if it’s already green. When a letter could be in the word twice (yellow in two slots, or green in one and yellow in another), this row appears: press + to add a tile for the second copy, and − to take it away again.</dd>
       </dl>
-      <p>After a screenshot, Random or a shared link, this step folds to a summary of the clues: a stack with a column per slot, each showing its green letter or else the letters that were yellow there, then the gray letters; Edit clues or the step’s heading opens it again. Start over clears everything, board included. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day.</p>
+      <p>After a screenshot, Random or a shared link, this step folds to a summary of the clues: a stack with a column per slot, each showing its green letter or else the letters that were yellow there, then the gray letters; Edit clues or the step’s heading opens it again. Start over clears everything, board included. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day. The guesses from a screenshot or Random are kept and shared with them, so the guess stepping still works after a reload or from a link.</p>
       <p><button type="button" id="tipsAgainBtn" class="link">Show the first-time tips again</button></p>
     </div>
     <form method="dialog"><button>Close</button></form>
@@ -3270,7 +3270,8 @@
     };
     let glyphTemplates = null;
     let importRows = [];           // [[{ letter, color, unsure }]] under review
-    let importHistory = null;      // { rows, step } after "Use these clues": guesses to step through
+    let guesses = null;            // { rows, step, random }: the guesses the clues come from, and how many are
+                                   // applied. Null when the clues were typed or came from a link without guesses.
 
     function tileColorAt(r, g, b) {
       let best = null;
@@ -3530,21 +3531,49 @@
     }
 
     function applyImportedGuesses() {
-      importHistory = { rows: importRows.map(row => row.map(t => ({ ...t }))), step: importRows.length };
+      guesses = { rows: importRows.map(row => row.map(t => ({ ...t }))), step: importRows.length };
       cluesCollapsed = true;
       countOnce('import');
       closeImport();
       showGuessStep();
     }
 
-    // Rebuilds the clues from the first `step` imported guesses.
+    // Rebuilds the clues from the first `step` guesses.
     function showGuessStep() {
-      setCluesFromGuesses(importHistory.rows.slice(0, importHistory.step));
+      setCluesFromGuesses(guesses.rows.slice(0, guesses.step));
       pins.clear();
       listExpanded = false;
       renderClueInputs();
       update();
       renderGuessNav();
+    }
+
+    // Guesses as text, for links and the saved state: each is its word and then a digit per
+    // tile (0 gray, 1 yellow, 2 green), joined by dots: CRANE01001.BEEFY22002.
+    const GUESS_COLORS = ['gray', 'yellow', 'green'];
+    const MAX_GUESSES = 6;
+
+    function encodeGuesses(rows) {
+      return rows.map(row => row.map(t => t.letter).join('') + row.map(t => GUESS_COLORS.indexOf(t.color)).join('')).join('.');
+    }
+
+    // The rows, or null unless the text is one to six whole guesses.
+    function decodeGuesses(text) {
+      const parts = String(text ?? '').toUpperCase().split('.');
+      const shape = new RegExp(`^[A-Z]{${len}}[012]{${len}}$`);
+      if (parts.length > MAX_GUESSES || !parts.every(part => shape.test(part))) return null;
+      return parts.map(part => [...part.slice(0, len)].map((letter, i) => ({ letter, color: GUESS_COLORS[part[len + i]] })));
+    }
+
+    // Takes guesses from a link or the saved state and derives the clues from them. False,
+    // changing nothing, when they don't parse. step is how many guesses are applied.
+    function restoreGuesses(text, step, random) {
+      const rows = decodeGuesses(text);
+      if (!rows) return false;
+      const n = Number(step);
+      guesses = { rows, step: Number.isInteger(n) && n >= 1 && n <= rows.length ? n : rows.length, random: !!random };
+      setCluesFromGuesses(rows.slice(0, guesses.step));
+      return true;
     }
 
     // Guesses -> per-slot clues. Greens and yellows map directly. The guesses also give
@@ -3578,12 +3607,12 @@
     }
 
     function renderGuessNav() {
-      $('guessNav').hidden = !importHistory;
-      if (!importHistory) {
+      $('guessNav').hidden = !guesses;
+      if (!guesses) {
         $('clueNote').textContent = '';
         return;
       }
-      const { step, rows, random } = importHistory;
+      const { step, rows, random } = guesses;
       $('guessStep').textContent = `Guess ${step}/${rows.length}`;
       $('guessStep').title = `Clues after guess ${step} of ${rows.length}`;
       $('guessPrevBtn').disabled = step <= 1;
@@ -3596,16 +3625,16 @@
     }
 
     function stepGuess(delta) {
-      const next = importHistory.step + delta;
-      if (next < 1 || next > importHistory.rows.length) return;
-      importHistory.step = next;
+      const next = guesses.step + delta;
+      if (next < 1 || next > guesses.rows.length) return;
+      guesses.step = next;
       showGuessStep();
     }
 
-    // Any change made by hand ends the import history, so stepping never overwrites it.
+    // Any change made by hand drops the guesses, so stepping never overwrites it.
     function userEdit() {
-      if (importHistory) {
-        importHistory = null;
+      if (guesses) {
+        guesses = null;
         renderGuessNav();
       }
       update();
@@ -3677,7 +3706,7 @@
         const fitting = arrangements.length - findNonWords().size;
         if (fitting < lo || fitting > hi) continue;
 
-        importHistory = { rows, step: rows.length, random: true };
+        guesses = { rows, step: rows.length, random: true };
         cluesCollapsed = true;
         trials = Array(len).fill('');
         selectedPos = null;
@@ -3729,7 +3758,7 @@
       $('cluesToggle').setAttribute('aria-expanded', String(!folded));
       $('cluesPanel').classList.toggle('done', clues);
       if (folded) renderClueChips();
-      $('newPuzzleBtn').hidden = !(folded && importHistory?.random);
+      $('newPuzzleBtn').hidden = !(folded && guesses?.random);
 
       const boardOpen = stepOverride.board ?? clues;
       $('boardBody').hidden = !boardOpen;
@@ -3884,9 +3913,13 @@
 
     // Saved clues are dated: Wordle changes daily, so yesterday's entries would only
     // need erasing. Storage can be unavailable (private mode), hence the try/catch.
+    // The guesses are saved when there are any, and on loading the clues are derived from
+    // them; the clues themselves are saved too, for clues that have no guesses behind them.
     function saveState() {
       try {
-        localStorage.setItem(STATE_KEY, JSON.stringify({ date: localDate(), greens, yellows, grays, countOverrides }));
+        const state = { date: localDate(), greens, yellows, grays, countOverrides };
+        if (guesses) Object.assign(state, { guesses: encodeGuesses(guesses.rows), step: guesses.step, practice: !!guesses.random });
+        localStorage.setItem(STATE_KEY, JSON.stringify(state));
       } catch {}
     }
 
@@ -3896,6 +3929,8 @@
         const s = JSON.parse(localStorage.getItem(STATE_KEY) || 'null');
         // len is from when 6 and 7 letters were offered; those clues don't fit Wordle.
         if (!s || s.date !== localDate() || (s.len ?? len) !== len) return false;
+        guesses = null;
+        if (s.guesses && restoreGuesses(s.guesses, s.step, s.practice)) return true;
         greens = (s.greens || []).map(g => normalizeLetters(g).slice(0, 1));
         yellows = (s.yellows || []).map(normalizeLetters);
         grays = normalizeLetters(s.grays);
@@ -3911,14 +3946,22 @@
     // intentionally shared this link. Parameter names are kept from the first version so
     // older links still open: green is the ?-pattern, ban<i> the yellows seen in slot i,
     // and yellow the movable tiles (it carries duplicate counts). Links from when 6 and 7
-    // letters were offered carry len; only 5-letter ones are opened.
+    // letters were offered carry len; only 5-letter ones are opened. Newer links also carry
+    // the guesses (with step when not all are applied, and practice for a made-up puzzle);
+    // when those parse, the clues are derived from them and the older parameters are ignored.
     function loadFromURL() {
       const params = new URLSearchParams(location.search);
-      if (!params.has('len') && !params.has('green')) return false;
+      if (!params.has('len') && !params.has('green') && !params.has('guesses')) return false;
       const keep = VIEW.param ? `${location.pathname}?view=${VIEW.param}` : location.pathname;
       if ((params.get('len') ?? String(len)) !== String(len)) {
         history.replaceState(null, '', keep);
         return false;
+      }
+
+      guesses = null;
+      if (restoreGuesses(params.get('guesses'), params.get('step'), params.has('practice'))) {
+        history.replaceState(null, '', keep);
+        return true;
       }
 
       const green = (params.get('green') || '').toUpperCase();
@@ -3947,6 +3990,11 @@
       yellows.forEach((letters, i) => {
         if (letters) params.set(`ban${i}`, letters);
       });
+      if (guesses) {
+        params.set('guesses', encodeGuesses(guesses.rows));
+        if (guesses.step < guesses.rows.length) params.set('step', guesses.step);
+        if (guesses.random) params.set('practice', '1');
+      }
       return `${location.origin}${location.pathname}?${params.toString()}`;
     }
 
@@ -4284,9 +4332,12 @@
     });
     window.addEventListener('storage', e => {
       if (e.key !== STATE_KEY || !(IN_FRAME || phoneWidth())) return;
+      const had = !!guesses;
       if (!loadSavedState()) return;
+      if (guesses && !had) cluesCollapsed = true;   // guesses arrived whole, as from an import
       renderClueInputs();
       update();
+      renderGuessNav();
     });
     document.querySelectorAll('#devTouchSeg button').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -4319,8 +4370,8 @@
     if (loadFromURL()) {
       cluesCollapsed = true;
       saveState();
-    } else {
-      loadSavedState();
+    } else if (loadSavedState() && guesses) {
+      cluesCollapsed = true;
     }
     try {
       const saved = localStorage.getItem(WORD_MODE_KEY);
@@ -4337,6 +4388,7 @@
     loadWords();
     loadAnswers();
     update();
+    renderGuessNav();
   </script>
 </body>
 </html>

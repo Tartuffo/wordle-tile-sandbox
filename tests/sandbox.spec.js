@@ -344,6 +344,66 @@ test('PNG import reads colors/letters, omits solved row, steps guesses and ends 
   await expect(page.locator('#clueNote')).toHaveText('');
 });
 
+test('guesses survive a reload and travel in the link, with the step and the practice mark; a bad guesses parameter falls back', async ({ page, context }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: async text => { window.copiedLink = text; } } });
+  });
+  await open(page);
+  await importImage(page, 'guesses.png');
+  await page.getByRole('button', { name: 'Use these clues' }).click();
+  await page.getByRole('button', { name: 'Previous guess' }).click();
+  await expect(page.locator('#guessStep')).toHaveText('Guess 1/2');
+
+  // A reload keeps the guesses and the step, and opens on the folded summary.
+  await page.reload();
+  await expect(page.locator('#guessStep')).toHaveText('Guess 1/2');
+  await expect(page.locator('#clueNote')).toHaveText('From your screenshot. Your guess: CRANE (after guess 1 of 2).');
+  await expect(page.locator('#cluesBody')).toBeHidden();
+  await expect(yellow(page, 2)).toHaveValue('R');
+  await expect(green(page, 1)).toHaveValue('');
+
+  // The link carries the older parameters, then the guesses and the step.
+  await page.getByRole('button', { name: 'Copy link', exact: true }).click();
+  await expect(page.locator('#clueLinkNote')).toHaveText('Copied');
+  const shared = new URL(await page.evaluate(() => window.copiedLink));
+  expect(shared.searchParams.get('green')).toBe('?????');
+  expect(shared.searchParams.get('ban1')).toBe('R');
+  expect(shared.searchParams.get('guesses')).toBe('CRANE01001.BEEFY22002');
+  expect(shared.searchParams.get('step')).toBe('1');
+  expect(shared.searchParams.has('practice')).toBe(false);
+
+  const fresh = await context.browser().newContext();
+  const recipient = await fresh.newPage();
+  await recipient.goto(shared.href);
+  await expect(recipient.locator('#guessStep')).toHaveText('Guess 1/2');
+  await recipient.getByRole('button', { name: 'Next guess' }).click();
+  await expect(green(recipient, 1)).toHaveValue('B');
+  await expect(recipient.locator('#grayInput')).toHaveValue('ACEFN');
+  expect(new URL(recipient.url()).search).toBe('');
+
+  // With every guess applied the link has no step; guesses alone are enough to open one.
+  await recipient.goto(`${shared.origin}/?guesses=crane01001.beefy22002&practice=1`);
+  await expect(recipient.locator('#guessStep')).toHaveText('Guess 2/2');
+  await expect(green(recipient, 5)).toHaveValue('Y');
+  await expect(recipient.locator('#clueNote')).toHaveText('Practice puzzle. Your guesses: CRANE, BEEFY. The answer is hidden.');
+  await expect(recipient.getByRole('button', { name: 'New puzzle', exact: true })).toBeVisible();
+
+  // Guesses that don't parse are ignored and the older parameters are read instead.
+  await recipient.goto(`${shared.origin}/?green=B%3F%3F%3F%3F&gray=FX&guesses=CRANE0100`);
+  await expect(green(recipient, 1)).toHaveValue('B');
+  await expect(recipient.locator('#grayInput')).toHaveValue('FX');
+  await expect(recipient.locator('#guessNav')).toBeHidden();
+  await fresh.close();
+
+  // A change by hand drops the guesses, and the reload after it has none.
+  await editClues(page);
+  await yellow(page, 3).fill('R');
+  await expect(page.locator('#guessNav')).toBeHidden();
+  await page.reload();
+  await expect(page.locator('#guessNav')).toBeHidden();
+  await expect(yellow(page, 3)).toHaveValue('R');
+});
+
 test('import cancel preserves clues and invalid images can be retried', async ({ page }) => {
   await open(page);
   await green(page, 1).fill('A');
@@ -409,7 +469,7 @@ test('Random makes up one or two guesses against an answer, with a few to a few 
   for (let n = 0; n < 12; n++) {
     await next();
     const { rows, total, fitting, tiles } = await page.evaluate(() => ({
-      rows: importHistory.rows.map(r => ({ word: r.map(t => t.letter).join(''), colors: r.map(t => t.color).join() })),
+      rows: guesses.rows.map(r => ({ word: r.map(t => t.letter).join(''), colors: r.map(t => t.color).join() })),
       total: arrangements.length, fitting: arrangements.length - noWord.size, tiles: movable.length,
     }));
     expect([1, 2]).toContain(rows.length);
@@ -426,7 +486,7 @@ test('Random makes up one or two guesses against an answer, with a few to a few 
     if (rows.length === 2) expect(colors(rows[0].word, rows[1].word)).toBe(rows[0].colors);
   }
   // A two-guess puzzle steps back to its first guess.
-  for (let n = 0; n < 100 && await page.evaluate(() => importHistory.rows.length) < 2; n++) await next();
+  for (let n = 0; n < 100 && await page.evaluate(() => guesses.rows.length) < 2; n++) await next();
   await page.getByRole('button', { name: 'Previous guess' }).click();
   await expect(page.locator('#guessStep')).toHaveText('Guess 1/2');
 });
