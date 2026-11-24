@@ -716,7 +716,8 @@
     .tile-x:hover { color: var(--bad); border-color: var(--bad); }
 
     /* The board has the panel's width to itself, centered like the keys under it. Above it,
-       in red over each slot, the letters that were yellow there and so can't go in it. */
+       in yellow over each slot, the letters that were yellow there: the word has them, but
+       not in that slot. */
     .board-grid {
       display: grid;
       grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
@@ -731,7 +732,7 @@
     .board-bans span {
       min-height: 18px;
       text-align: center;
-      color: var(--danger-text);
+      color: var(--yellow-ink);
       font-family: var(--mono);
       font-size: 14px;
       font-weight: 800;
@@ -1314,7 +1315,7 @@
           <span id="arrIndex" role="status"></span>
           <button type="button" id="arrNextBtn" aria-label="Next arrangement" title="Put the next arrangement on the board"></button>
         </div>
-        <div id="boardBans" class="board-grid board-bans" aria-label="Letters that can’t go in each slot" hidden></div>
+        <div id="boardBans" class="board-grid board-bans" aria-label="Letters that were yellow in each slot" hidden></div>
         <div id="board" class="board-grid" aria-label="Tile board"></div>
         <p id="boardNote" class="board-note">
           <span id="boardNoteText" role="status"></span>
@@ -1508,7 +1509,7 @@
   <dialog id="lettersHelp" class="words-dialog help-dialog" aria-labelledby="lettersHelpTitle">
     <h2 id="lettersHelpTitle">The board and the letters</h2>
     <div class="help-body">
-      <p><b>The board</b> shows one legal arrangement of your yellow tiles, with green letters fixed. <b>Drag</b> a yellow tile to another slot to move or swap it; a tile in a slot where it was yellow is flagged. The red letters over a slot are the ones that were yellow there, so they can’t go in it. Above the board, ‹ Arrangement 3 of 12 › says which of the listed arrangements is showing, and ‹ › cycle through them in the list’s order, round and round.</p>
+      <p><b>The board</b> shows one legal arrangement of your yellow tiles, with green letters fixed. <b>Drag</b> a yellow tile to another slot to move or swap it; a tile in a slot where it was yellow is flagged. The yellow letters over a slot are the ones that were yellow there: the word has them, but not in that slot. Above the board, ‹ Arrangement 3 of 12 › says which of the listed arrangements is showing, and ‹ › cycle through them in the list’s order, round and round.</p>
       <p><b>Available letters</b>, under the board, are the ones that could still be in the word; green and yellow keys are from your clues. <b><span class="tap">Tap</span> a letter</b> to try it on the board: in the empty slot you chose (<span class="tap">tap</span> one first), or else in the first blank slot that allows it. A tried letter can be dragged too, and its × removes it (on a touch screen, holding it works as well).</p>
       <p>Gray letters don’t go on the board: Keyboard and Rank keep them in place, dimmed, and V/C leaves them out.</p>
       <p>Fill the board to see whether the word is in the word list and whether it has been a Wordle answer.</p>
@@ -2122,7 +2123,7 @@
       // The chosen slot must still be one a letter can go in.
       if (selectedPos !== null && (greens[selectedPos] || board[selectedPos] !== '?')) selectedPos = null;
 
-      // Over each slot still open, the letters that were yellow there: they can't go in it.
+      // Over each slot still open, the letters that were yellow there: not the slot's letter.
       const bans = $('boardBans');
       bans.innerHTML = '';
       for (let pos = 0; pos < len; pos++) {
@@ -2130,7 +2131,7 @@
         const letters = greens[pos] ? '' : yellows[pos];
         cell.textContent = letters;
         if (letters) {
-          cell.title = `${[...letters].join(', ')} ${letters.length === 1 ? 'was' : 'were'} yellow in slot ${pos + 1}, so can’t go here`;
+          cell.title = `${[...letters].join(', ')} ${letters.length === 1 ? 'was' : 'were'} yellow in slot ${pos + 1}, so ${letters.length === 1 ? 'it isn’t' : 'they aren’t'} the letter here`;
           cell.setAttribute('aria-label', `Slot ${pos + 1}: not ${[...letters].join(', ')}`);
         }
         bans.appendChild(cell);

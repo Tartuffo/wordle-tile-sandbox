@@ -1239,8 +1239,8 @@ test('first-time tips show one at a time, in order, and are remembered; help can
 
 test('board: a chosen slot takes the next letter, × removes a tried one, and the note says which arrangement is showing', async ({ page }) => {
   await open(page, '?green=B%3F%3F%3F%3F&ban1=E&ban2=R&yellow=ER');
-  // Above the board: which arrangement it shows, then in red over each open slot the letters
-  // that were yellow there. The board itself is just its five slots, with the note under it.
+  // Above the board: which arrangement it shows, then in yellow over each open slot the
+  // letters that were yellow there. The board itself is just its five slots, with the note under it.
   await expect(page.locator('#arrIndex')).toHaveText('Arrangement 1 of 7');
   await expect(page.locator('#boardNote')).toHaveText('Click an empty slot, then a letter below, to fill it.');
   await expect(page.locator('#boardBans span')).toHaveText(['', 'E', 'R', '', '']);
