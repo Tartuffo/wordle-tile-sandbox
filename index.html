@@ -317,132 +317,66 @@
       white-space: nowrap;
     }
 
-    .slot-nums div:not(.row-label) {
-      text-align: center;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 700;
+    /* The guess editor: rows of tiles like Wordle's. Typing goes through one unseen input,
+       so a phone shows its keyboard; a tap on a filled tile changes its color. */
+    .guess-rows { display: grid; gap: var(--gap); margin-top: 12px; }
+
+    .guess-row {
+      display: grid;
+      grid-template-columns: repeat(var(--cols), minmax(0, 52px)) 32px;
+      gap: var(--gap);
+      align-items: center;
     }
 
-    .cell {
+    .guess-tile {
+      aspect-ratio: 1 / 1;
       width: 100%;
       min-width: 0;
-      background: var(--panel-2);
-      color: var(--text);
-      border: 2px solid var(--border);
-      border-radius: 8px;
-      text-align: center;
-      text-transform: uppercase;
-      outline: none;
       padding: 0;
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel-2);
+      color: #fff;
+      font-size: 22px;
+      font-weight: 900;
+      -webkit-tap-highlight-color: transparent;
     }
 
-    .cell:focus {
+    .guess-tile.gray { background: var(--gray); border-color: var(--gray); }
+    .guess-tile.yellow { background: var(--yellow); border-color: var(--yellow); }
+    .guess-tile.green { background: var(--green); border-color: var(--green); }
+    /* Where the next letter goes. */
+    .guess-tile.next {
       border-color: var(--accent);
       box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
     }
 
-    .green-cell {
-      aspect-ratio: 1 / 1;
-      font-size: clamp(18px, 6cqi, 28px);
-      font-weight: 900;
-    }
-
-    .green-cell.filled {
-      background: var(--green);
-      border-color: var(--green);
-      color: #fff;
-    }
-
-    .yellow-cell {
-      height: 40px;
-      font-family: var(--mono);
-      font-size: 16px;
-      font-weight: 800;
-      letter-spacing: .04em;
-    }
-
-    .yellow-cell.filled {
-      background: color-mix(in srgb, var(--yellow) 28%, var(--panel-2));
-      border-color: color-mix(in srgb, var(--yellow) 75%, var(--border));
-    }
-
-    .yellow-cell.bad {
-      border-color: var(--bad);
-      background: color-mix(in srgb, var(--bad-soft) 60%, var(--panel-2));
-    }
-
-    .gray-cell {
-      grid-column: 2 / -1;
-      height: 40px;
-      padding: 0 12px;
-      text-align: left;
-      font-family: var(--mono);
-      font-size: 16px;
-      font-weight: 800;
-      letter-spacing: .12em;
-    }
-
-    .gray-cell.filled {
-      background: color-mix(in srgb, var(--gray) 30%, var(--panel-2));
-      border-color: color-mix(in srgb, var(--gray) 80%, var(--border));
-    }
-
-    .tile-chips {
-      grid-column: 2 / -1;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      align-items: center;
-      min-height: 30px;
-    }
-
-    .tile-chip {
-      min-width: 30px;
-      height: 30px;
-      padding: 0 7px;
-      border-radius: 7px;
-      border: 1px solid transparent;
-      background: var(--yellow);
-      color: #fff;
-      font-weight: 900;
-      cursor: default;
-    }
-
-    .tile-chip .count { font-size: 12px; margin-left: 1px; }
-
-    .tile-chip-group { display: inline-flex; align-items: center; gap: 2px; }
-
-    .chip-btn {
-      width: 26px;
-      height: 30px;
+    .guess-x {
+      width: 32px;
+      height: 32px;
       padding: 0;
-      border-radius: 7px;
-      font-size: 16px;
+      border: 0;
+      border-radius: 50%;
+      background: none;
+      color: var(--muted);
+      font-size: 20px;
       line-height: 1;
     }
 
-    .chip-btn:disabled { opacity: .35; cursor: default; }
-    .tile-chips .hint { flex-basis: 100%; }
-
-    /* A yellow letter that is already green somewhere: assumed placed, zero movable tiles. */
-    .tile-chip.placed {
-      background: transparent;
-      border: 1px dashed var(--yellow);
-      color: var(--yellow-ink);
-      opacity: .75;
+    .guess-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      border: 0;
+      opacity: 0;
+      font-size: 16px;   /* below this, iOS zooms the page on focus */
+      pointer-events: none;
     }
 
     .hint {
       color: var(--muted);
       font-size: 13px;
-    }
-
-    .toolbar-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
     }
 
     /* The ways to give the clues. Practice puzzle is set apart: it isn't your game. */
@@ -459,9 +393,8 @@
     .chooser .clue-intro { margin: 12px 0 10px; }
     .edit-actions { margin-top: 14px; }
     .import-msg { margin: 10px 0 0; }
-    .import-msg:empty { display: none; }
 
-    /* The clues card shows one thing at a time: the ways to give the clues, the form to type
+    /* The clues card shows one thing at a time: the ways to give the clues, the editor to type
        them in, or their summary. The board and arrangements panels have a header that folds
        the body. */
     .step-head {
@@ -528,7 +461,6 @@
     .step-foot .guess-nav[hidden] + #clearBtn { margin-left: auto; }
     .step-foot button.link[hidden] { display: none; }
     .clue-intro { margin: 0 0 8px; }
-    .clue-intro + .toolbar-row { margin-bottom: 12px; }
     .clue-note { margin: 8px 0 0; font-size: 14px; }
     .clue-note:empty { display: none; }
 
@@ -1368,25 +1300,16 @@
           <button id="pasteBtn" title="Read your clues from a screenshot on the clipboard">Paste screenshot</button>
           <button id="importBtn" title="Read your clues from a saved Wordle screenshot">Choose image</button>
           <input id="importFile" type="file" accept="image/*" hidden>
-          <button id="typeBtn" title="Enter the green, yellow and gray letters by hand">Type clues</button>
+          <button id="typeBtn" title="Type your guesses and color their letters">Type clues</button>
           <button id="randomBtn" class="apart" title="Make up a puzzle: one or two guesses against a past Wordle answer" disabled>Practice puzzle</button>
         </div>
       </div>
       <div id="cluesBody" class="step-body" hidden>
-        <p id="typeIntro" class="hint clue-intro">Copy your colors by hand: each green and yellow letter in its slot, then the grays.</p>
-        <div id="slotNums" class="row-grid slot-nums"></div>
-        <div id="greenRow" class="row-grid"></div>
-        <div id="yellowRow" class="row-grid"></div>
-        <div class="row-grid">
-          <div class="row-label">Gray<small>ruled out</small></div>
-          <input id="grayInput" type="text" class="cell gray-cell" autocomplete="off" spellcheck="false"
-                 autocapitalize="characters" autocorrect="off" enterkeyhint="done" aria-label="Gray letters: not in the word">
-        </div>
-        <div id="doublesRow" class="row-grid" hidden>
-          <div class="row-label">Double<small>letters</small></div>
-          <div id="tileChips" class="tile-chips"></div>
-        </div>
-        <div id="clueStatus" class="status" role="status"></div>
+        <p id="typeIntro" class="hint clue-intro">Type each guess you played. Then <span class="tap">tap</span> its letters until they match Wordle’s colors: once for yellow, twice for green.</p>
+        <div id="guessRows" class="guess-rows" aria-label="Your guesses"></div>
+        <input id="guessInput" class="guess-input" type="text" autocomplete="off" autocapitalize="characters" autocorrect="off"
+               spellcheck="false" enterkeyhint="done" aria-label="Type a guess">
+        <div id="guessStatus" class="status" role="status"></div>
         <div class="import-actions edit-actions">
           <button id="useCluesBtn" class="primary" disabled>Use these clues</button>
           <button id="cancelEditBtn">Cancel</button>
@@ -1394,6 +1317,7 @@
       </div>
       <div id="cluesDone" hidden>
       <p id="clueNote" class="hint clue-note" role="status"></p>
+      <div id="clueStatus" class="status" role="status"></div>
       <div class="clue-bottom">
         <div id="cluesSummary" class="clue-summary">
           <span id="clueChips" class="clue-chips" aria-label="Your clues"></span>
@@ -1569,19 +1493,10 @@
       <p>The card first offers four ways to give your clues; once they are in, it shows a summary of them and the board and the arrangements appear below.</p>
       <p><b>From a screenshot:</b> Paste screenshot reads one you’ve copied, and Choose image opens a saved one; on a computer, Ctrl/⌘+V also works. Check the letters, fix any that were misread, then choose Use these clues. If the puzzle was solved, the all-green row is left out, so the clues are as they stood just before the answer.</p>
       <p><b>Practice puzzle</b> makes up a puzzle to practice on: one or two guesses against a past Wordle answer, which stays hidden. It’s chosen so that from a few to a few dozen arrangements fit a word. A line under the heading says which guesses were made up, and New puzzle, in place of Edit clues, draws another.</p>
-      <p><b>‹ Guess 2/3 ›</b> appears after a screenshot or a practice puzzle: the clues as they stood after each guess, here after the second of three. ‹ and › step back and forth, say to see how much one guess narrowed things down. Editing a clue by hand ends the stepping and keeps the clues shown.</p>
-      <p><b>Type clues</b> opens a form to copy the colors Wordle gave your letters. Use these clues takes them, once there is a clue and nothing contradicts; Cancel leaves the clues as they were.</p>
-      <dl>
-        <dt>Green (right spot)</dt>
-        <dd>The letter in each slot you’ve solved. Typing moves to the next slot; space skips one.</dd>
-        <dt>Yellow (wrong spot)</dt>
-        <dd>Under each slot, every letter that turned yellow there, across all your guesses. Each becomes a tile on the board.</dd>
-        <dt>Gray (ruled out)</dt>
-        <dd>Letters that aren’t in the word. If a letter turned gray in one place but green or yellow in another, enter it here too: the word then has no more copies of it than your green and yellow ones.</dd>
-        <dt>Double letters</dt>
-        <dd>A yellow letter is one tile on the board, or none if it’s already green. When a letter could be in the word twice (yellow in two slots, or green in one and yellow in another), this row appears: press + to add a tile for the second copy, and − to take it away again.</dd>
-      </dl>
-      <p>The summary is a stack with a column per slot, each showing its green letter or else the letters that were yellow there, then the gray letters. Edit clues opens the form on them. Start over clears everything, board included, and goes back to the four ways in. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day. The guesses from a screenshot or a practice puzzle are kept and shared with them, so the guess stepping still works after a reload or from a link.</p>
+      <p><b>Type clues</b> opens rows of tiles like Wordle’s. Type each guess you played; a full row opens the next, up to six. Then <span class="tap">tap</span> a letter to give it the color Wordle did: once for yellow, twice for green, a third time for gray again. Backspace takes back the last letter, and × empties a guess so you can retype it in the same place. Use these clues takes the guesses once each started one is finished and none contradicts another; if they do, a line under the rows says how. Cancel leaves the clues as they were.</p>
+      <p>Double letters need no extra step: two yellow copies of a letter in one guess are two tiles on the board, and a gray copy beside a green or yellow one says the word has no more of that letter.</p>
+      <p><b>‹ Guess 2/3 ›</b> appears when there is more than one guess to step through: the clues as they stood after each guess, here after the second of three. ‹ and › step back and forth, say to see how much one guess narrowed things down.</p>
+      <p>The summary is a stack with a column per slot, each showing its green letter or else the letters that were yellow there, then the gray letters. Edit clues opens your guesses again, from a screenshot too, to change or add to them; clues from a link that carries no guesses can only be started over. Start over clears everything, board included, and goes back to the four ways in. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day. Your guesses are kept and shared with them, so the guess stepping still works after a reload or from a link.</p>
       <p><button type="button" id="tipsAgainBtn" class="link">Show the first-time tips again</button></p>
     </div>
     <form method="dialog"><button>Close</button></form>
@@ -1636,7 +1551,7 @@
     <div class="help-body">
       <p><b>The board</b> shows one legal arrangement of your yellow tiles, with green letters fixed. <b>Drag</b> a yellow tile to another slot to move or swap it; a tile in a slot where it was yellow is flagged. ‹ Arrangement 3 of 12 › says which of the listed arrangements is showing, and ‹ › cycle through them in the list’s order, round and round.</p>
       <p><b>Available letters</b>, under the board, are the ones that could still be in the word; green and yellow keys are from your clues. <b><span class="tap">Tap</span> a letter</b> to try it on the board: in the empty slot you chose (<span class="tap">tap</span> one first), or else in the first blank slot that allows it. A tried letter can be dragged too, and its × removes it (on a touch screen, holding it works as well).</p>
-      <p><b>Hold</b> a letter (or right-click it) to mark it gray without going back to the clues; hold a gray one to let it back in. Gray letters don’t go on the board: Keyboard and Rank keep them in place, dimmed, and V/C leaves them out.</p>
+      <p>Gray letters don’t go on the board: Keyboard and Rank keep them in place, dimmed, and V/C leaves them out.</p>
       <p>Fill the board to see whether the word is in the word list and whether it has been a Wordle answer.</p>
       <dl>
         <dt>Keyboard</dt>
@@ -1719,8 +1634,9 @@
     let letterRanking = null;     // [{ letter, p }] by share of answers containing the letter
     let gridFirst = false;        // the where-each-letter-can-go grid above the arrangement list
     let analysisOpen = false;     // the reference tables shown (closed by default)
-    let cardState = 'choose';     // the clues card: 'choose' a way to give them, 'edit' them by hand, or their 'summary'
-    let editBackup = null;        // the clues as they were when the form opened, for Cancel, with the state to return to
+    let cardState = 'choose';     // the clues card: 'choose' a way to give them, 'edit' the guesses, or their 'summary'
+    let editRows = [];            // the guess editor's rows while it is open: [[{ letter, color }]], up to len tiles each
+    let editFrom = 'choose';      // the card state the editor was opened from, for Cancel
     let stepOverride = { board: null, results: null };  // a step the user opened or closed by hand
     let selectedPos = null;       // board slot chosen for the next letter, or null for the first blank
     let shownOrder = [];          // the arrangements in the order the list shows them
@@ -2036,228 +1952,131 @@
       return wordMode === 'hide' ? arrangements.filter(a => !noWord.has(a)) : arrangements;
     }
 
-    // ── Rendering: clues ──────────────────────────────────────────────────────
+    // ── The guess editor ──────────────────────────────────────────────────────
 
-    function focusCell(row, pos) {
-      if (pos < 0 || pos >= len) return;
-      const el = document.querySelector(`.${row}-cell[data-pos="${pos}"]`);
-      el.focus();
-      el.select();
+    // Type clues and Edit clues open it. The guesses are typed as in Wordle, a row at a time,
+    // and each letter is given its color by tapping it. Nothing changes until Use these clues.
+    const GUESS_CYCLE = { gray: 'yellow', yellow: 'green', green: 'gray' };
+    const GUESS_SENTINEL = '.';   // kept in the unseen input so that Backspace has something to delete
+
+    // After any change: no empty rows at the end, and one empty row to type in when every
+    // row is full and there is room. An emptied row in the middle keeps its place.
+    function tidyGuessRows() {
+      while (editRows.length && !editRows.at(-1).length) editRows.pop();
+      if (editRows.length < MAX_GUESSES && editRows.every(row => row.length === len)) editRows.push([]);
     }
 
-    function makeCell(row, pos) {
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.className = `cell ${row}-cell`;
-      input.dataset.pos = String(pos);
-      input.autocomplete = 'off';
-      input.spellcheck = false;
-      input.setAttribute('autocapitalize', 'characters');
-      input.setAttribute('autocorrect', 'off');
-      input.setAttribute('enterkeyhint', 'done');
-      input.addEventListener('focus', () => input.select());
-      return input;
+    // Letters go to the first row with room.
+    function typeGuessLetter(letter) {
+      const row = editRows.find(r => r.length < len);
+      if (!row) return;
+      row.push({ letter, color: 'gray' });
+      tidyGuessRows();
     }
 
-    function renderClueInputs() {
-      $('grayInput').value = grays;
-      const nums = $('slotNums');
-      nums.innerHTML = '<div class="row-label"></div>';
-      for (let pos = 0; pos < len; pos++) {
-        const n = document.createElement('div');
-        n.textContent = String(pos + 1);
-        nums.appendChild(n);
+    // Backspace takes the last letter of the row being typed, or of the one before it.
+    function backspaceGuess() {
+      const at = editRows.findIndex(r => r.length < len);
+      for (let r = at < 0 ? editRows.length - 1 : at; r >= 0; r--) {
+        if (editRows[r].length) {
+          editRows[r].pop();
+          break;
+        }
       }
-
-      const greenRow = $('greenRow');
-      greenRow.innerHTML = '<div class="row-label">Green<small>right spot</small></div>';
-      for (let pos = 0; pos < len; pos++) {
-        const input = makeCell('green', pos);
-        input.value = greens[pos];
-        input.setAttribute('aria-label', `Green letter, slot ${pos + 1}`);
-        input.addEventListener('input', onGreenInput);
-        input.addEventListener('keydown', onGreenKeydown);
-        input.addEventListener('paste', onGreenPaste);
-        greenRow.appendChild(input);
-      }
-
-      const yellowRow = $('yellowRow');
-      yellowRow.innerHTML = '<div class="row-label">Yellow<small>wrong spot</small></div>';
-      for (let pos = 0; pos < len; pos++) {
-        const input = makeCell('yellow', pos);
-        input.value = yellows[pos];
-        input.setAttribute('aria-label', `Letters that were yellow in slot ${pos + 1}`);
-        input.addEventListener('input', onYellowInput);
-        input.addEventListener('keydown', onYellowKeydown);
-        yellowRow.appendChild(input);
-      }
+      tidyGuessRows();
     }
 
-    function syncCellClasses(errors) {
-      $('grayInput').classList.toggle('filled', !!grays);
-      document.querySelectorAll('.green-cell').forEach(el => {
-        el.classList.toggle('filled', !!greens[Number(el.dataset.pos)]);
-      });
-      document.querySelectorAll('.yellow-cell').forEach(el => {
-        const pos = Number(el.dataset.pos);
-        el.classList.toggle('filled', !!yellows[pos]);
-        el.classList.toggle('bad', !!greens[pos] && yellows[pos].includes(greens[pos]));
-      });
-      $('clueStatus').textContent = errors.join(' ');
+    // × empties a guess, keeping its place for a retyped one; on an empty row it removes the row.
+    function clearGuessRow(r) {
+      if (editRows[r].length) editRows[r] = [];
+      else editRows.splice(r, 1);
+      tidyGuessRows();
     }
 
-    // The tiles themselves are on the board; this row is only for their counts, so it shows
-    // just the letters whose count can change (yellow in two slots, or green elsewhere too).
-    function renderTileChips() {
-      const wrap = $('tileChips');
+    // What the guesses' colors can't all say at once. Each guess fixes, for each of its
+    // letters, how many the word has at least (its colored copies) and, when a copy is gray,
+    // at most.
+    function guessConflicts(rows) {
+      const errors = [];
+      const said = new Set();
+      for (let i = 0; i < len; i++) {
+        const green = [...new Set(rows.filter(r => r[i].color === 'green').map(r => r[i].letter))];
+        if (green.length > 1) errors.push(`Slot ${i + 1} is green for both ${green.join(' and ')}.`);
+        else if (green.length && rows.some(r => r[i].letter === green[0] && r[i].color !== 'green')) {
+          errors.push(`${green[0]} in slot ${i + 1} is green in one guess but not in another.`);
+          said.add(green[0]);   // its counts disagree for the same reason
+        }
+      }
+      const min = {}, max = {};
+      for (const row of rows) {
+        for (const letter of new Set(row.map(t => t.letter))) {
+          const copies = row.filter(t => t.letter === letter);
+          const colored = copies.filter(t => t.color !== 'gray').length;
+          min[letter] = Math.max(min[letter] || 0, colored);
+          if (colored < copies.length) max[letter] = Math.min(max[letter] ?? len, colored);
+        }
+      }
+      for (const letter of Object.keys(max).sort()) {
+        if (min[letter] <= max[letter] || said.has(letter)) continue;
+        errors.push(max[letter] === 0
+          ? `${letter} is gray in one guess but colored in another.`
+          : `One guess shows ${max[letter]} of ${letter}, another shows ${min[letter]}.`);
+      }
+      return errors;
+    }
+
+    function renderGuessRows() {
+      const wrap = $('guessRows');
       wrap.innerHTML = '';
-      const doubles = tileInfo.filter(t => t.max > t.min);
-      $('doublesRow').hidden = !doubles.length;
-      if (!doubles.length) return;
-
-      const stepBtn = (label, name, enabled, onClick) => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'chip-btn';
-        btn.textContent = label;
-        btn.setAttribute('aria-label', name);
-        btn.title = name;
-        btn.disabled = !enabled;
-        btn.addEventListener('click', onClick);
-        return btn;
-      };
-
-      const fits = movable.length < openSlots().length;
-      for (const t of doubles) {
-        const group = document.createElement('span');
-        group.className = 'tile-chip-group';
-        const chip = document.createElement('span');
-        chip.className = 'tile-chip';
-        chip.textContent = t.letter;
-        if (t.count === 0) {
-          chip.classList.add('placed');
-          chip.title = `${t.letter} is already green: no tile unless the word has another`;
-        } else {
-          chip.title = `${t.count} ${t.letter} tile${t.count === 1 ? '' : 's'} on the board`;
+      const target = editRows.findIndex(r => r.length < len);
+      editRows.forEach((row, r) => {
+        const rowEl = document.createElement('div');
+        rowEl.className = 'guess-row';
+        for (let i = 0; i < len; i++) {
+          const t = row[i];
+          const tile = document.createElement('button');
+          tile.type = 'button';
+          tile.className = `guess-tile ${t ? t.color : 'empty'}`;
+          if (r === target && i === row.length) tile.classList.add('next');
+          tile.textContent = t ? t.letter : '';
+          tile.setAttribute('aria-label', t ? `Guess ${r + 1}, slot ${i + 1}: ${t.letter}, ${t.color}` : `Guess ${r + 1}, slot ${i + 1}: empty`);
+          if (t) tile.title = `${TAP} to change the color`;
+          tile.addEventListener('click', () => {
+            if (t) t.color = GUESS_CYCLE[t.color];
+            renderGuessRows();
+            focusGuessInput();
+          });
+          rowEl.appendChild(tile);
         }
-        const c = document.createElement('span');
-        c.className = 'count';
-        c.textContent = `×${t.count}`;
-        chip.appendChild(c);
-        group.append(chip,
-          stepBtn('−', `Remove a ${t.letter} tile`, t.count > t.min, () => {
-            countOverrides[t.letter] = t.count - 1;
-            userEdit();
-          }),
-          stepBtn('+', `Add another ${t.letter} tile`, t.count < t.max && fits, () => {
-            countOverrides[t.letter] = t.count + 1;
-            userEdit();
-          }));
-        wrap.appendChild(group);
-      }
-
-      const hint = document.createElement('span');
-      hint.className = 'hint';
-      hint.textContent = doubles.some(t => t.green)
-        ? 'Use + if the word has another copy of a letter that is already green.'
-        : 'Use + when one guess showed the letter twice.';
-      wrap.appendChild(hint);
-    }
-
-    // ── Clue input handlers ───────────────────────────────────────────────────
-
-    // Green cells behave like Wordle's row: a letter fills the slot and advances;
-    // space, ? or . skips a slot; backspace on an empty slot clears the previous one.
-    function onGreenInput(e) {
-      const input = e.target;
-      const pos = Number(input.dataset.pos);
-      const data = e.inputType?.startsWith('insert') ? (e.data || '') : null;
-
-      if (data !== null && data && !/[A-Za-z]/.test(data)) {
-        input.value = greens[pos];
-        focusCell('green', pos + 1);
-        return;
-      }
-
-      greens[pos] = (data || input.value).toUpperCase().replace(/[^A-Z]/g, '').slice(-1);
-      input.value = greens[pos];
-      userEdit();
-      if (data && greens[pos]) focusCell('green', pos + 1);
-    }
-
-    function onGreenKeydown(e) {
-      const pos = Number(e.target.dataset.pos);
-      if (e.key === 'Backspace' && !e.target.value) {
-        e.preventDefault();
-        if (pos > 0) {
-          greens[pos - 1] = '';
-          document.querySelector(`.green-cell[data-pos="${pos - 1}"]`).value = '';
-          userEdit();
-          focusCell('green', pos - 1);
+        if (row.length || r < editRows.length - 1) {
+          const x = document.createElement('button');
+          x.type = 'button';
+          x.className = 'guess-x';
+          x.textContent = '×';
+          x.setAttribute('aria-label', row.length ? `Clear guess ${r + 1}` : `Remove the empty row ${r + 1}`);
+          x.title = row.length ? 'Clear this guess' : 'Remove this row';
+          x.addEventListener('click', () => {
+            clearGuessRow(r);
+            renderGuessRows();
+            focusGuessInput();
+          });
+          rowEl.appendChild(x);
         }
-      } else if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        focusCell('green', pos - 1);
-      } else if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        focusCell('green', pos + 1);
-      } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        focusCell('yellow', pos);
-      } else if (e.key === 'Enter') {
-        e.target.blur();
-      }
-    }
-
-    // Pasting a whole pattern such as "..A.E" or "??A?E" fills the row from this slot on.
-    function onGreenPaste(e) {
-      const text = (e.clipboardData?.getData('text') || '').toUpperCase().trim();
-      if (text.length < 2) return;
-      e.preventDefault();
-      const start = Number(e.target.dataset.pos);
-      [...text].slice(0, len - start).forEach((ch, i) => {
-        greens[start + i] = /[A-Z]/.test(ch) ? ch : '';
+        wrap.appendChild(rowEl);
       });
-      document.querySelectorAll('.green-cell').forEach(el => { el.value = greens[Number(el.dataset.pos)]; });
-      userEdit();
+
+      const started = editRows.filter(r => r.length);
+      const whole = started.length > 0 && started.every(r => r.length === len);
+      const errors = whole ? guessConflicts(started) : [];
+      $('guessStatus').textContent = errors.join(' ');
+      $('useCluesBtn').disabled = !whole || errors.length > 0;
     }
 
-    function onYellowInput(e) {
-      const input = e.target;
-      const pos = Number(input.dataset.pos);
-      const advance = e.inputType === 'insertText' && e.data === ' ';
-      const cursor = input.selectionStart;
-
-      yellows[pos] = normalizeLetters(input.value);
-      input.value = yellows[pos];
-      const newCursor = Math.min(cursor, input.value.length);
-      input.setSelectionRange(newCursor, newCursor);
-
-      userEdit();
-      if (advance) focusCell('yellow', pos + 1);
-    }
-
-    function onYellowKeydown(e) {
-      const input = e.target;
-      const pos = Number(input.dataset.pos);
-      const atStart = input.selectionStart === 0 && input.selectionEnd === 0;
-      const atEnd = input.selectionStart === input.value.length;
-
-      if (e.key === 'Backspace' && !input.value) {
-        e.preventDefault();
-        focusCell('yellow', pos - 1);
-      } else if (e.key === 'ArrowLeft' && atStart) {
-        e.preventDefault();
-        focusCell('yellow', pos - 1);
-      } else if (e.key === 'ArrowRight' && atEnd) {
-        e.preventDefault();
-        focusCell('yellow', pos + 1);
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        focusCell('green', pos);
-      } else if (e.key === 'Enter') {
-        input.blur();
-      }
+    function focusGuessInput() {
+      const input = $('guessInput');
+      input.value = GUESS_SENTINEL;
+      input.focus({ preventScroll: true });
+      input.setSelectionRange(input.value.length, input.value.length);
     }
 
     // ── Rendering: board ──────────────────────────────────────────────────────
@@ -2636,27 +2455,12 @@
       renderBoard();
     }
 
-    // Holding a key (or right-clicking it) marks the letter gray, or lets a gray one back in.
-    function toggleGray(letter, keyEl) {
-      if (greens.includes(letter) || yellows.some(cell => cell.includes(letter))) {
-        shake(keyEl);
-        return;
-      }
-      grays = grays.includes(letter) ? grays.replace(letter, '') : normalizeLetters(grays + letter);
-      $('grayInput').value = grays;
-      navigator.vibrate?.(15);
-      userEdit();
-    }
-
     function renderLetters() {
       const ruledOut = grayLetters();
       document.querySelectorAll('#lettersSeg button').forEach(btn => {
         btn.setAttribute('aria-pressed', String(btn.dataset.view === lettersView));
       });
-      const exclude = CLICK ? 'hold or right-click to exclude' : 'hold to exclude';
-      $('lettersTitle').innerHTML = ruledOut.size
-        ? `<b>${26 - ruledOut.size}</b> available letters <span class="hint">(${exclude})</span>`
-        : `Available letters <span class="hint">(${exclude})</span>`;
+      $('lettersTitle').innerHTML = ruledOut.size ? `<b>${26 - ruledOut.size}</b> available letters` : 'Available letters';
 
       const rank = lettersView === 'rank' ? clueRanking() : null;
       $('rankNote').textContent = rank?.note || '';
@@ -2670,15 +2474,14 @@
         btn.className = `key ${status}`;
         btn.textContent = letter;
         if (status === 'out') {
-          // Not disabled, so that a hold can let it back in; it just doesn't go on the board.
+          // Not disabled, so that a press still gets an answer: it shakes.
           btn.setAttribute('aria-disabled', 'true');
-          btn.title = `${letter} is gray; ${exclude.replace('to exclude', 'to let it back in')}`;
-          btn.addEventListener('click', () => { if (!btn.dataset.held) shake(btn); });
+          btn.title = `${letter} is gray`;
+          btn.addEventListener('click', () => shake(btn));
         } else {
           btn.title = `Try ${letter} in the chosen slot, or the first blank one that allows it`;
-          btn.addEventListener('click', () => { if (!btn.dataset.held) addTrial(letter, btn); });
+          btn.addEventListener('click', () => addTrial(letter, btn));
         }
-        addHold(btn, () => toggleGray(letter, btn));
         const share = rank?.ranking.find(r => r.letter === letter);
         if (share?.p != null) btn.title = `${status === 'out' ? btn.title : `Click to try ${letter} in the chosen slot, or the first blank one that allows it`}. ` +
           `${letter} is in ${pct(share.p)} of ${rank.count ? 'the answers that fit your clues' : 'all Wordle answers'}.`;
@@ -3196,7 +2999,7 @@
       } else if (hiddenAll) {
         title = 'None of the legal arrangements fits a known word.';
       } else if (!total) {
-        title = 'No legal arrangement fits these clues. Check the Green and Yellow rows.';
+        title = 'No legal arrangement fits these clues. Check the colors of your guesses.';
       } else if (pins.size) {
         title = `${filtered.length} of ${total} arrangement${total === 1 ? '' : 's'} match your pins`;
       } else {
@@ -3274,7 +3077,7 @@
     let glyphTemplates = null;
     let importRows = [];           // [[{ letter, color, unsure }]] under review
     let guesses = null;            // { rows, step, random }: the guesses the clues come from, and how many are
-                                   // applied. Null when the clues were typed or came from a link without guesses.
+                                   // applied. Null when the clues came from a link without guesses.
 
     function tileColorAt(r, g, b) {
       let best = null;
@@ -3540,7 +3343,6 @@
     function applyImportedGuesses() {
       guesses = { rows: importRows.map(row => row.map(t => ({ ...t }))), step: importRows.length };
       cardState = 'summary';
-      editBackup = null;
       countOnce('import');
       closeImport();
       showGuessStep();
@@ -3551,7 +3353,6 @@
       setCluesFromGuesses(guesses.rows.slice(0, guesses.step));
       pins.clear();
       listExpanded = false;
-      renderClueInputs();
       update();
       renderGuessNav();
     }
@@ -3587,7 +3388,7 @@
     // Guesses -> per-slot clues. Greens and yellows map directly. The guesses also give
     // exact double-letter counts: the most copies of a letter colored in any one guess is
     // the minimum in the word, less the copies already green. Every gray letter goes in
-    // the gray row, including a colored letter's gray copy, which caps its count.
+    // the grays, including a colored letter's gray copy, which caps its count.
     function setCluesFromGuesses(rows) {
       const n = rows[0].length;
       const newGreens = Array(n).fill('');
@@ -3629,7 +3430,7 @@
       const sofar = step < rows.length ? ` (after guess ${step} of ${rows.length})` : '';
       $('clueNote').textContent = random
         ? `Practice puzzle. Your guess${step === 1 ? '' : 'es'}: ${words}${sofar}. The answer is hidden.`
-        : `From your screenshot. Your guess${step === 1 ? '' : 'es'}: ${words}${sofar}.`;
+        : `Your guess${step === 1 ? '' : 'es'}: ${words}${sofar}.`;
     }
 
     function stepGuess(delta) {
@@ -3637,16 +3438,6 @@
       if (next < 1 || next > guesses.rows.length) return;
       guesses.step = next;
       showGuessStep();
-    }
-
-    // Any change made by hand drops the guesses, so stepping never overwrites it.
-    function userEdit() {
-      if (guesses) {
-        guesses = null;
-        renderGuessNav();
-      }
-      update();
-      if (hasClues()) countOnce('first-clue');
     }
 
     function closeImport() {
@@ -3718,8 +3509,7 @@
 
         guesses = { rows, step: rows.length, random: true };
         cardState = 'summary';
-        editBackup = null;
-        trials = Array(len).fill('');
+          trials = Array(len).fill('');
         selectedPos = null;
         countOnce('random');
         closeImport();
@@ -3738,8 +3528,7 @@
       arrangements = errors.length ? [] : enumerate();
       noWord = findNonWords();
       prunePins();
-      syncCellClasses(errors);
-      renderTileChips();
+      $('clueStatus').textContent = errors.join(' ');
       renderLetters();
       renderReference();
       refreshResults();
@@ -3756,7 +3545,7 @@
     }
 
     // The clues card is the only panel until the clues are in: first the ways to give them,
-    // then (for Type clues, or Edit clues later) the form, then their summary. The board, the
+    // then (for Type clues, or Edit clues later) the guess editor, then their summary. The board, the
     // arrangements and the reference tables appear with the summary. The board and the
     // arrangements fold by their headings; the arrangements start folded when there is no
     // yellow letter to arrange.
@@ -3769,11 +3558,12 @@
       $('chooser').hidden = cardState !== 'choose';
       $('cluesBody').hidden = cardState !== 'edit';
       $('cluesDone').hidden = !summary;
-      $('useCluesBtn').disabled = !hasClues() || findClueErrors().length > 0;
+      if (cardState === 'edit') renderGuessRows();
       if (summary) renderClueChips();
       // A practice puzzle's colors come from its hidden answer, so it is redrawn, not edited.
+      // Clues from a link without guesses have nothing for the editor to show.
       const practice = !!guesses?.random;
-      $('editCluesBtn').hidden = practice;
+      $('editCluesBtn').hidden = practice || !guesses;
       $('newPuzzleBtn').hidden = !practice;
 
       for (const id of ['boardPanel', 'resultsPanel', 'analysisPanel']) $(id).hidden = !summary;
@@ -3793,34 +3583,30 @@
       offerTips();
     }
 
-    // The clues with what hangs on them, to put back if the form is cancelled.
-    function snapshotClues() {
-      return { greens: [...greens], yellows: [...yellows], grays, countOverrides: { ...countOverrides },
-        guesses: guesses && { ...guesses }, trials: [...trials], pins: new Map(pins) };
-    }
-
+    // The editor opens on the guesses there are, all of them whatever the step, or empty.
     function openEditor() {
       showImportMessage();
-      editBackup = { ...snapshotClues(), from: cardState };
+      editRows = guesses && !guesses.random ? guesses.rows.map(row => row.map(t => ({ letter: t.letter, color: t.color }))) : [];
+      tidyGuessRows();
+      editFrom = cardState;
       cardState = 'edit';
       renderSteps();
-      focusCell('green', 0);
+      focusGuessInput();
     }
 
     function useEditedClues() {
+      const rows = editRows.filter(row => row.length);
+      editRows = [];
+      guesses = { rows, step: rows.length, random: false };
       cardState = 'summary';
-      editBackup = null;
-      renderSteps();
+      countOnce('first-clue');
+      showGuessStep();
     }
 
     function cancelEditor() {
-      if (!editBackup) return;
-      ({ greens, yellows, grays, countOverrides, guesses, trials, pins } = editBackup);
-      cardState = editBackup.from;
-      editBackup = null;
-      renderClueInputs();
-      update();
-      renderGuessNav();
+      editRows = [];
+      cardState = editFrom;
+      renderSteps();
     }
 
     // The clues in miniature, for the summary: a stack with a column per slot, the green
@@ -3870,14 +3656,12 @@
 
     // ── First-time tips ───────────────────────────────────────────────────────
 
-    // One speech bubble at a time, each shown once per browser: what the tool is for, how to
-    // enter clues, what the board is for, and what the list is. The next shows when the one
+    // One speech bubble at a time, each shown once per browser: what the tool is for, what
+    // the board is for, and what the list is. The next shows when the one
     // before is dismissed.
     const TIPS = {
       intro: () => 'Stuck on a Wordle? Enter your guesses and this sandbox shows every way your yellow letters ' +
         'can still fit, and lets you try words on a board before you spend a guess.',
-      clues: () => 'Copy your colors by hand: green letters in their slot, yellow letters under each slot where ' +
-        'they were yellow, gray letters in the gray row. Then choose Use these clues.',
       board: () => movable.length
         ? `This is one way your yellow letters could fit. Drag a yellow tile to another slot. ${TAP} an empty slot, then a letter below, to try one there. Cycle through the legal arrangements with the ‹ and › arrows below.`
         : `Your green letters are in place. ${TAP} an empty slot, then a letter below, to try one there.`,
@@ -3893,16 +3677,14 @@
 
     function offerTips() {
       if (openTip) {
-        // The clues tip is moot once there are clues; a tip whose anchor went away waits.
-        if (openTip.id === 'clues' && hasClues()) closeTip(true);
-        else if (!openTip.anchor.offsetParent) closeTip(false);
+        // A tip whose anchor went away waits.
+        if (!openTip.anchor.offsetParent) closeTip(false);
         if (openTip) return;
       }
       const clues = hasClues();
       const visible = el => !!el.offsetParent;
       let id = null, anchor = null;
       if (!tipsSeen.has('intro')) [id, anchor] = ['intro', $('subtitle')];
-      else if (!clues && visible($('typeIntro'))) [id, anchor] = ['clues', $('typeIntro')];
       else if (clues && visible($('board')) && !tipsSeen.has('board')) [id, anchor] = ['board', $('board')];
       else if (movable.length && visible($('list')) && $('list').querySelector('.arr') && !tipsSeen.has('list')) [id, anchor] = ['list', $('listCaption')];
       if (!id || tipsSeen.has(id)) return;
@@ -4174,15 +3956,30 @@
       listExpanded = false;
       guesses = null;
       cardState = 'choose';
-      editBackup = null;
       stepOverride = { board: null, results: null };
       selectedPos = null;
-      renderClueInputs();
       update();
       renderGuessNav();
     });
 
-    // Type clues and Edit clues open the form; it closes on Use these clues or Cancel.
+    // Type clues and Edit clues open the guess editor; it closes on Use these clues or Cancel.
+    // Its typing comes through the unseen input, which always holds the sentinel: an input
+    // event that leaves less was a Backspace, and anything more is the letters typed.
+    $('guessInput').addEventListener('input', e => {
+      const value = e.target.value;
+      if (value.length < GUESS_SENTINEL.length) backspaceGuess();
+      else for (const letter of value.toUpperCase().replace(/[^A-Z]/g, '')) typeGuessLetter(letter);
+      renderGuessRows();
+      e.target.value = GUESS_SENTINEL;
+      e.target.setSelectionRange(GUESS_SENTINEL.length, GUESS_SENTINEL.length);
+    });
+    $('guessInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') e.target.blur();
+    });
+    // A click on the editor that isn't on one of its buttons goes back to typing.
+    $('cluesBody').addEventListener('click', e => {
+      if (!e.target.closest('button')) focusGuessInput();
+    });
     $('typeBtn').addEventListener('click', openEditor);
     $('editCluesBtn').addEventListener('click', openEditor);
     $('useCluesBtn').addEventListener('click', useEditedClues);
@@ -4202,17 +3999,6 @@
       closeTip(false);
       $('cluesHelp').close();
       offerTips();
-    });
-
-    $('grayInput').addEventListener('input', e => {
-      const cursor = e.target.selectionStart;
-      grays = normalizeLetters(e.target.value);
-      e.target.value = grays;
-      e.target.setSelectionRange(Math.min(cursor, grays.length), Math.min(cursor, grays.length));
-      userEdit();
-    });
-    $('grayInput').addEventListener('keydown', e => {
-      if (e.key === 'Enter') e.target.blur();
     });
 
     document.querySelectorAll('#wordNote .seg button').forEach(btn => {
@@ -4375,7 +4161,6 @@
       if (e.key !== STATE_KEY || !(IN_FRAME || phoneWidth())) return;
       if (!loadSavedState()) return;
       if (cardState !== 'edit') cardState = hasClues() ? 'summary' : 'choose';
-      renderClueInputs();
       update();
       renderGuessNav();
     });
@@ -4421,7 +4206,6 @@
     } catch {}
     applyResultsOrder();
     renderAnalysisToggle();
-    renderClueInputs();
     loadWords();
     loadAnswers();
     update();
