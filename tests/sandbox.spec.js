@@ -943,10 +943,14 @@ test('arrangement list comes before the grid; the swap link reverses that and is
   const swap = page.locator('#swapResultsBtn');
   expect(await listFirst()).toBe(true);
   await expect(swap).toHaveText('Put grid first');
+  // The switch is the last thing in the panel, under the list and the grid whichever is first.
+  const swapLast = () => page.evaluate(() => $('resultsBody').lastElementChild === $('swapResultsBtn'));
+  expect(await swapLast()).toBe(true);
   await expect(page.locator('#listCaption')).toContainText('Click a number in the grid below');
 
   await swap.click();
   expect(await listFirst()).toBe(false);
+  expect(await swapLast()).toBe(true);
   await expect(swap).toHaveText('Put list first');
   await expect(page.locator('#listCaption')).toContainText('Click a number in the grid above');
 
@@ -1031,8 +1035,11 @@ test('the clues card shows one thing at a time: the ways in, the guess editor, t
   await page.reload();
   await expect(el('chooser')).toBeVisible();
 
-  // With no yellow letter there is nothing to arrange, and that panel says so.
+  // With no yellow letter there is nothing to arrange, and that panel says so; nor is there
+  // anything to rule out of a slot.
   await open(page, '?green=B%3F%3F%3F%3F&gray=ST');
+  await expect(el('boardBans')).toBeHidden();
+  await expect(el('arrNav')).toBeHidden();
   await expect(body('boardBody')).toBeVisible();
   await expect(el('resultsTitle')).toHaveText('Your clues have no yellow letters to arrange.');
   await expect(el('listWrap')).toBeHidden();
@@ -1227,12 +1234,23 @@ test('first-time tips show one at a time, in order, and are remembered; help can
   await open(page, '?green=B%3F%3F%3F%3F&ban1=E&yellow=E');
   await expect(tip).toHaveAttribute('data-tip', 'board');
   await expect(tip).toContainText('This is one way your yellow letters could fit');
-  await expect(tip).toContainText('Cycle through the legal arrangements with the ‹ and › arrows below.');
+  await expect(tip).toContainText('Cycle through the legal arrangements with the ‹ and › arrows above it.');
 });
 
 test('board: a chosen slot takes the next letter, × removes a tried one, and the note says which arrangement is showing', async ({ page }) => {
   await open(page, '?green=B%3F%3F%3F%3F&ban1=E&ban2=R&yellow=ER');
-  await expect(page.locator('#boardNote')).toHaveText('Arrangement 1 of 7 Click an empty slot, then a letter below, to fill it.');
+  // Above the board: which arrangement it shows, then in red over each open slot the letters
+  // that were yellow there. The board itself is just its five slots, with the note under it.
+  await expect(page.locator('#arrIndex')).toHaveText('Arrangement 1 of 7');
+  await expect(page.locator('#boardNote')).toHaveText('Click an empty slot, then a letter below, to fill it.');
+  await expect(page.locator('#boardBans span')).toHaveText(['', 'E', 'R', '', '']);
+  await expect(page.locator('#boardBans span').nth(1)).toHaveAttribute('aria-label', 'Slot 2: not E');
+  await expect(page.locator('#board > *')).toHaveCount(5);
+  expect(await page.evaluate(() => [$('arrNav'), $('boardBans'), $('board'), $('boardNote')]
+    .every((el, i, all) => !i || all[i - 1].compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
+  const slotBox = await boardSlot(page, 2).boundingBox();
+  const banBox = await page.locator('#boardBans span').nth(1).boundingBox();
+  expect(Math.abs((banBox.x + banBox.width / 2) - (slotBox.x + slotBox.width / 2))).toBeLessThan(1);
   // ‹ › cycle through the list in its order, wrapping at the ends, outlining the one on the board.
   const prev = page.getByRole('button', { name: 'Previous arrangement', exact: true });
   const next = page.getByRole('button', { name: 'Next arrangement', exact: true });

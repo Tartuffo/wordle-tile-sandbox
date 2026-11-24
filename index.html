@@ -715,20 +715,43 @@
     .tile-x::before { content: '×'; }
     .tile-x:hover { color: var(--bad); border-color: var(--bad); }
 
+    /* The board has the panel's width to itself, centered like the keys under it. Above it,
+       in red over each slot, the letters that were yellow there and so can't go in it. */
+    .board-grid {
+      display: grid;
+      grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+      gap: var(--gap);
+      max-width: calc(var(--cols) * (76px + var(--gap)));
+      margin: 0 auto;
+    }
+
+    .board-bans { margin-bottom: 4px; }
+    .board-bans[hidden] { display: none; }
+
+    .board-bans span {
+      min-height: 18px;
+      text-align: center;
+      color: var(--danger-text);
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: .1em;
+      line-height: 18px;
+    }
+
     .board-note {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 4px 8px;
       margin: 8px 0 0;
       color: var(--muted);
       font-size: 14px;
+      text-align: center;
     }
+
+    .board-word, #boardStatus { text-align: center; }
 
     .board-note.empty { display: none; }
 
     /* ‹ Arrangement 3 of 12 ›: steps through the list in the order it is shown. */
-    .arr-nav { display: inline-flex; align-items: center; gap: 4px; }
+    .arr-nav { display: flex; align-items: center; justify-content: center; gap: 4px; margin-bottom: 8px; color: var(--muted); font-size: 14px; }
     .arr-nav[hidden] { display: none; }
     .arr-nav button { padding: 0 8px 3px; font-size: 20px; line-height: 1.2; }
     #arrPrevBtn::before { content: '‹'; }
@@ -747,6 +770,8 @@
     }
 
     .results-head .help-btn { margin-left: auto; align-self: center; }
+    .results-swap { display: block; margin-top: 14px; }
+    .results-swap[hidden] { display: none; }
     .results-title.muted ~ .help-btn { display: none; }   /* nothing to arrange, nothing to explain */
 
     .results-title {
@@ -1284,13 +1309,14 @@
         <h2 class="step-title">Try letters on the board</h2>
       </div>
       <div id="boardBody" class="step-body">
-        <div id="board" class="row-grid" aria-label="Tile board"></div>
+        <div id="arrNav" class="arr-nav" hidden>
+          <button type="button" id="arrPrevBtn" aria-label="Previous arrangement" title="Put the previous arrangement on the board"></button>
+          <span id="arrIndex" role="status"></span>
+          <button type="button" id="arrNextBtn" aria-label="Next arrangement" title="Put the next arrangement on the board"></button>
+        </div>
+        <div id="boardBans" class="board-grid board-bans" aria-label="Letters that can’t go in each slot" hidden></div>
+        <div id="board" class="board-grid" aria-label="Tile board"></div>
         <p id="boardNote" class="board-note">
-          <span id="arrNav" class="arr-nav" hidden>
-            <button type="button" id="arrPrevBtn" aria-label="Previous arrangement" title="Put the previous arrangement on the board"></button>
-            <span id="arrIndex" role="status"></span>
-            <button type="button" id="arrNextBtn" aria-label="Next arrangement" title="Put the next arrangement on the board"></button>
-          </span>
           <span id="boardNoteText" role="status"></span>
         </p>
         <p id="boardWord" class="board-word" role="status"></p>
@@ -1316,7 +1342,6 @@
       <div id="resultsBody">
         <div class="results-head">
           <p id="resultsTitle" class="results-title"></p>
-          <button id="swapResultsBtn" class="link" hidden></button>
           <button id="clearPinsBtn" class="link" hidden>Clear pins</button>
           <button type="button" class="help-btn" data-help="arrangementsHelp" aria-label="About the arrangements" title="About the arrangements">?</button>
         </div>
@@ -1349,6 +1374,7 @@
             <span><span class="sum-cell swatch pinned" style="background: color-mix(in srgb, var(--yellow) 35%, var(--panel-2))">3</span> Pinned</span>
           </div>
         </div>
+        <button id="swapResultsBtn" class="link results-swap" hidden></button>
       </div>
       </div>
     </section>
@@ -1442,7 +1468,7 @@
       <p><span class="tap">Tap</span> an arrangement to put it on the board. Hold it (or right-click it) to see the dictionary words that match it; since that can give the answer away, you’re asked first, once per tab.</p>
       <p>A line such as “E must go in slot 4” means every arrangement agrees. Longer lists are sorted into groups by where one letter goes; <span class="tap">tap</span> a group heading to pin that letter there. Lists of more than 24 stay folded until you narrow them with pins or choose Show all.</p>
       <p>Arrangements that no word in the word list fits, given your clues, are left out by default. When there are some, Dim, Hide and Show choose whether they are shown dimmed and struck through, left out, or shown like the rest.</p>
-      <p>Put grid first moves the grid of where each letter can go above the list.</p>
+      <p>Put grid first, at the bottom of the panel, moves the grid of where each letter can go above the list.</p>
     </div>
     <form method="dialog"><button>Close</button></form>
   </dialog>
@@ -1482,7 +1508,7 @@
   <dialog id="lettersHelp" class="words-dialog help-dialog" aria-labelledby="lettersHelpTitle">
     <h2 id="lettersHelpTitle">The board and the letters</h2>
     <div class="help-body">
-      <p><b>The board</b> shows one legal arrangement of your yellow tiles, with green letters fixed. <b>Drag</b> a yellow tile to another slot to move or swap it; a tile in a slot where it was yellow is flagged. ‹ Arrangement 3 of 12 › says which of the listed arrangements is showing, and ‹ › cycle through them in the list’s order, round and round.</p>
+      <p><b>The board</b> shows one legal arrangement of your yellow tiles, with green letters fixed. <b>Drag</b> a yellow tile to another slot to move or swap it; a tile in a slot where it was yellow is flagged. The red letters over a slot are the ones that were yellow there, so they can’t go in it. Above the board, ‹ Arrangement 3 of 12 › says which of the listed arrangements is showing, and ‹ › cycle through them in the list’s order, round and round.</p>
       <p><b>Available letters</b>, under the board, are the ones that could still be in the word; green and yellow keys are from your clues. <b><span class="tap">Tap</span> a letter</b> to try it on the board: in the empty slot you chose (<span class="tap">tap</span> one first), or else in the first blank slot that allows it. A tried letter can be dragged too, and its × removes it (on a touch screen, holding it works as well).</p>
       <p>Gray letters don’t go on the board: Keyboard and Rank keep them in place, dimmed, and V/C leaves them out.</p>
       <p>Fill the board to see whether the word is in the word list and whether it has been a Wordle answer.</p>
@@ -2096,8 +2122,23 @@
       // The chosen slot must still be one a letter can go in.
       if (selectedPos !== null && (greens[selectedPos] || board[selectedPos] !== '?')) selectedPos = null;
 
+      // Over each slot still open, the letters that were yellow there: they can't go in it.
+      const bans = $('boardBans');
+      bans.innerHTML = '';
+      for (let pos = 0; pos < len; pos++) {
+        const cell = document.createElement('span');
+        const letters = greens[pos] ? '' : yellows[pos];
+        cell.textContent = letters;
+        if (letters) {
+          cell.title = `${[...letters].join(', ')} ${letters.length === 1 ? 'was' : 'were'} yellow in slot ${pos + 1}, so can’t go here`;
+          cell.setAttribute('aria-label', `Slot ${pos + 1}: not ${[...letters].join(', ')}`);
+        }
+        bans.appendChild(cell);
+      }
+      bans.hidden = !greens.some((g, pos) => !g && yellows[pos]);
+
       const el = $('board');
-      el.innerHTML = '<div class="row-label">Board<small>try here</small></div>';
+      el.innerHTML = '';
       const conflicts = boardConflicts();
       const landed = justMoved;
       justMoved = [];
@@ -2204,9 +2245,9 @@
       renderBoard();
     }
 
-    // What the board is showing, so a change there is seen to do something: which of the
-    // listed arrangements it is (with ‹ › to step through them), why it isn't one, or that
-    // the blanks are still to fill. A conflict is reported separately, in red.
+    // What the board is showing, so a change there is seen to do something: above it, which
+    // of the listed arrangements it is (with ‹ › to step through them); under it, why it
+    // isn't one, or that the blanks are still to fill. A conflict is reported separately, in red.
     function renderBoardNote() {
       const letters = Array.from({ length: len }, (_, pos) => slotLetter(pos));
       const full = letters.every(Boolean);
@@ -2225,7 +2266,7 @@
       $('arrNav').hidden = !nav;
       if (nav) $('arrIndex').textContent = i >= 0 ? `Arrangement ${i + 1} of ${shownOrder.length}` : `${shownOrder.length} arrangements`;
       $('boardNoteText').textContent = note;
-      $('boardNote').classList.toggle('empty', !nav && !note);
+      $('boardNote').classList.toggle('empty', !note);
     }
 
     // ‹ and › put the previous or next listed arrangement on the board, wrapping at the ends
@@ -3622,7 +3663,7 @@
       intro: () => 'Stuck on a Wordle? Enter your guesses and this sandbox shows every way your yellow letters ' +
         'can still fit, and lets you try words on a board before you spend a guess. New here? Practice puzzle shows how it works.',
       board: () => movable.length
-        ? `This is one way your yellow letters could fit. Drag a yellow tile to another slot. ${TAP} an empty slot, then a letter below, to try one there. Cycle through the legal arrangements with the ‹ and › arrows below.`
+        ? `This is one way your yellow letters could fit. Drag a yellow tile to another slot. ${TAP} an empty slot, then a letter below, to try one there. Cycle through the legal arrangements with the ‹ and › arrows above it.`
         : `Your green letters are in place. ${TAP} an empty slot, then a letter below, to try one there.`,
       list: () => `Every legal way the yellow letters can go. ${TAP} one to put it on the board. Struck-through ones match no real word.`,
     };
