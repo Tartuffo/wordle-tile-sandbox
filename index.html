@@ -404,26 +404,11 @@
     .import-msg { margin: 10px 0 0; }
 
     /* The clues card shows one thing at a time: the ways to give the clues, the editor to type
-       them in, or their summary. The board and arrangements panels have a header that folds
-       the body. */
+       them in, or their summary. */
     .step-head {
       display: flex;
       align-items: center;
       gap: 8px;
-    }
-
-    .step-toggle {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 0;
-      border: 0;
-      background: none;
-      color: inherit;
-      text-align: left;
-      -webkit-tap-highlight-color: transparent;
     }
 
     .step-title {
@@ -432,30 +417,10 @@
       letter-spacing: -0.01em;
     }
 
-    .step-chev::before {
-      content: '';
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      border: solid var(--muted);
-      border-width: 0 2px 2px 0;
-      transform: rotate(45deg);
-      margin: 0 2px 4px;
-      transition: transform .15s;
-    }
-
-    .step-toggle[aria-expanded="false"] .step-chev::before { transform: rotate(-45deg); margin-bottom: 0; }
     .step-head .help-btn { margin-left: auto; }
     .step-head .help-btn ~ .help-btn, .step-head .clue-link-btn ~ .help-btn { margin-left: 0; }
     .step-body { margin-top: 14px; }
-    .step-body[hidden], .step-placeholder[hidden] { display: none; }
-
-    .step-placeholder {
-      margin: 10px 0 0;
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.4;
-    }
+    .step-body[hidden] { display: none; }
 
     .step-foot {
       display: flex;
@@ -1309,10 +1274,7 @@
 
     <section id="boardPanel" class="panel step" aria-label="Board" hidden>
       <div class="step-head">
-        <button id="boardToggle" type="button" class="step-toggle" aria-expanded="true" aria-controls="boardBody">
-          <h2 class="step-title">Try letters on the board</h2>
-          <span class="step-chev" aria-hidden="true"></span>
-        </button>
+        <h2 class="step-title">Try letters on the board</h2>
       </div>
       <div id="boardBody" class="step-body">
         <div id="board" class="row-grid" aria-label="Tile board"></div>
@@ -1346,13 +1308,9 @@
 
     <section id="resultsPanel" class="panel step" aria-label="Arrangements" hidden>
       <div class="step-head">
-        <button id="resultsToggle" type="button" class="step-toggle" aria-expanded="true" aria-controls="resultsBody">
-          <h2 class="step-title">Browse every legal arrangement</h2>
-          <span class="step-chev" aria-hidden="true"></span>
-        </button>
+        <h2 class="step-title">Browse every legal arrangement</h2>
         <button type="button" class="help-btn" data-help="arrangementsHelp" aria-label="About the arrangements" title="About the arrangements">?</button>
       </div>
-      <p id="resultsPlaceholder" class="step-placeholder" hidden></p>
       <div id="resultsBody" class="step-body">
         <div class="results-head">
           <p id="resultsTitle" class="results-title"></p>
@@ -1609,7 +1567,6 @@
     let editRows = [];            // the guess editor's rows while it is open: [[{ letter, color }]], len tiles each, '' for a gap
     let editFrom = 'choose';      // the card state the editor was opened from, for Cancel
     let undo = null;              // what Start over cleared, for Undo, until other clues are used
-    let stepOverride = { board: null, results: null };  // a panel the user folded or unfolded by hand
     let selectedPos = null;       // board slot chosen for the next letter, or null for the first blank
     let shownOrder = [];          // the arrangements in the order the list shows them
     let justMoved = [];           // slots whose tile just moved, for the landing animation
@@ -3497,14 +3454,10 @@
 
     // The clues card is the only panel until the clues are in: first the ways to give them,
     // then (for Type clues, or Edit clues later) the guess editor, then their summary. The board, the
-    // arrangements and the reference tables appear with the summary. The board and the
-    // arrangements fold by their headings; the arrangements start folded when there is no
-    // yellow letter to arrange.
+    // arrangements and the reference tables appear with the summary.
     function renderSteps() {
       if (cardState === 'summary' && !hasClues()) cardState = 'choose';
       const summary = cardState === 'summary';
-      const results = movable.length > 0;
-
       $('cluesTitle').textContent = summary ? 'Your clues' : 'Enter your clues';
       $('chooser').hidden = cardState !== 'choose';
       $('cluesBody').hidden = cardState !== 'edit';
@@ -3520,18 +3473,6 @@
       $('newPuzzleBtn').hidden = !practice;
 
       for (const id of ['boardPanel', 'resultsPanel', 'analysisPanel']) $(id).hidden = !summary;
-
-      const boardOpen = stepOverride.board ?? true;
-      $('boardBody').hidden = !boardOpen;
-      $('boardToggle').setAttribute('aria-expanded', String(boardOpen));
-
-      const resultsOpen = stepOverride.results ?? results;
-      $('resultsBody').hidden = !resultsOpen;
-      $('resultsPlaceholder').hidden = resultsOpen;
-      $('resultsPlaceholder').textContent = results
-        ? ''
-        : 'Your clues have no yellow letter, so there is nothing to arrange.';
-      $('resultsToggle').setAttribute('aria-expanded', String(resultsOpen));
 
       offerTips();
     }
@@ -3966,7 +3907,7 @@
     // clues and their guesses, the pins, the letters tried on the board. Nothing is mutated
     // in place here, since the kept copies are the very same objects.
     $('clearBtn').addEventListener('click', () => {
-      undo = { greens, yellows, grays, countOverrides, guesses, trials, pins, board, selectedPos, stepOverride, listExpanded, groupLetter };
+      undo = { greens, yellows, grays, countOverrides, guesses, trials, pins, board, selectedPos, listExpanded, groupLetter };
       greens = Array(len).fill('');
       yellows = Array(len).fill('');
       grays = '';
@@ -3977,13 +3918,12 @@
       groupLetter = null;
       guesses = null;
       cardState = 'choose';
-      stepOverride = { board: null, results: null };
       selectedPos = null;
       update();
     });
     $('undoBtn').addEventListener('click', () => {
       if (!undo) return;
-      ({ greens, yellows, grays, countOverrides, guesses, trials, pins, board, selectedPos, stepOverride, listExpanded, groupLetter } = undo);
+      ({ greens, yellows, grays, countOverrides, guesses, trials, pins, board, selectedPos, listExpanded, groupLetter } = undo);
       undo = null;
       cardState = 'summary';
       update();
@@ -4020,15 +3960,6 @@
       // Back, with the editor open: its step is already gone from the history.
       editorInHistory = false;
       cancelEditor();
-    });
-    // The board's and the arrangements' headings fold and unfold them.
-    $('boardToggle').addEventListener('click', () => {
-      stepOverride.board = $('boardBody').hidden;
-      renderSteps();
-    });
-    $('resultsToggle').addEventListener('click', () => {
-      stepOverride.results = $('resultsBody').hidden;
-      renderSteps();
     });
     $('tipsAgainBtn').addEventListener('click', () => {
       tipsSeen.clear();

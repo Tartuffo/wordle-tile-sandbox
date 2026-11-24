@@ -997,15 +997,10 @@ test('the clues card shows one thing at a time: the ways in, the guess editor, t
   await expect(body('resultsBody')).toBeVisible();
   await expect(arrangements(page)).toHaveCount(3);
 
-  // A heading folds its panel by hand and unfolds it again.
-  await toggle('Browse every legal arrangement').click();
-  await expect(body('resultsBody')).toBeHidden();
-  await toggle('Browse every legal arrangement').click();
-  await expect(body('resultsBody')).toBeVisible();
-  await toggle('Try letters on the board').click();
-  await expect(body('boardBody')).toBeHidden();
-  await toggle('Try letters on the board').click();
-  await expect(body('boardBody')).toBeVisible();
+  // The headings are only headings: the panels don't fold.
+  await expect(page.getByRole('heading', { name: 'Try letters on the board', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Browse every legal arrangement', exact: true })).toBeVisible();
+  await expect(page.locator('#boardPanel button[aria-expanded], #resultsPanel button[aria-expanded]')).toHaveCount(0);
 
   // Edit clues reopens the editor on the guesses. Cancel drops the changes and returns to the summary.
   await editClues(page);
@@ -1035,11 +1030,12 @@ test('the clues card shows one thing at a time: the ways in, the guess editor, t
   await page.reload();
   await expect(el('chooser')).toBeVisible();
 
-  // With no yellow letter there is nothing to arrange: that panel starts folded and says so.
+  // With no yellow letter there is nothing to arrange, and that panel says so.
   await open(page, '?green=B%3F%3F%3F%3F&gray=ST');
   await expect(body('boardBody')).toBeVisible();
-  await expect(body('resultsBody')).toBeHidden();
-  await expect(el('resultsPlaceholder')).toHaveText('Your clues have no yellow letter, so there is nothing to arrange.');
+  await expect(el('resultsTitle')).toHaveText('Your clues have no yellow letters to arrange.');
+  await expect(el('listWrap')).toBeHidden();
+  await expect(el('summaryWrap')).toBeHidden();
 
   // A practice puzzle is redrawn, not edited; other guesses can be edited; clues from a
   // link with no guesses can only be started over.
