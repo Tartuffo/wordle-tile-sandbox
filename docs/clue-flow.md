@@ -43,7 +43,8 @@ The same editor serves Edit from the summary, for clues from any source that has
 
 - **Guesses:** the guess words in order. Tapping a word shows the clues as of that guess; the words up to it are highlighted. This replaces the `‹ Guess 2/3 ›` control.
 - **In:** the existing mini stack, a column per slot with the green letter or the letters that were yellow there.
-- **Out:** the gray letters.
+- **Out:** the letters not in the word. A letter with one gray copy and one colored copy is in the word, so it isn't listed here.
+- A line above says when an earlier guess is the one shown: "Showing the clues after guess 1 of 3."
 - **Edit:** reopens the guess editor with the current guesses.
 - **Practice puzzles:** a line says "Practice puzzle. The answer is hidden." and **New puzzle** takes the place of Edit, since edited colours would disagree with the hidden answer. New puzzle draws another in place.
 - **Start over:** returns to the chooser and hides the other panels. The chooser shows "Clues cleared. Undo" until new clues are used or the page is left; Undo restores the clues, the selected guess, the pins and the letters tried on the board. No confirmation dialog and no timer.

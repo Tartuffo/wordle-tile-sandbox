@@ -14,6 +14,12 @@ const NO_CLUES = { green: '?????', yellow: '- - - - -', gray: '' };
 const guessTile = (page, row, slot) => page.locator('#guessRows .guess-row').nth(row - 1).locator('.guess-tile').nth(slot - 1);
 const guessWords = page => page.locator('#guessRows .guess-row').evaluateAll(rows =>
   rows.map(row => [...row.querySelectorAll('.guess-tile')].map(t => t.textContent || '·').join('')));
+// The summary's guess words: all of them in order, and how many count toward the clues shown.
+async function expectGuesses(page, words, step = words.length) {
+  await expect(page.locator('#guessWords .guess-word')).toHaveText(words);
+  await expect(page.locator('#guessWords .guess-word:not(.later)')).toHaveCount(step);
+}
+const guessWord = (page, word) => page.locator('#guessWords').getByRole('button', { name: word, exact: true });
 async function typeGuess(page, row, word, colors = '00000') {
   await page.keyboard.type(word);
   for (let i = 0; i < 5; i++) for (let n = 0; n < Number(colors[i]); n++) await guessTile(page, row, i + 1).click();
@@ -138,8 +144,8 @@ test('typing guesses: letters fill a row at a time, a tap colors a letter, Backs
   await expectClues(page, NO_CLUES);
   await use.click();
   await expectClues(page, { green: 'BE??Y', yellow: '- R - - E', gray: 'ACEFN' });
-  await expect(page.locator('#clueNote')).toHaveText('Your guesses: BEEFY, CRANE.');
-  await expect(page.locator('#guessStep')).toHaveText('Guess 2/2');
+  await expectGuesses(page, ['BEEFY', 'CRANE']);
+  await expect(page.locator('#clueNote')).toHaveText('');
   await expect(page.getByRole('button', { name: 'Copy link', exact: true })).toBeVisible();
 
   // Six guesses fill the editor: no seventh row, and more letters go nowhere.
@@ -261,7 +267,8 @@ test('double letters come from the guesses: two yellows in one guess are two til
   await useClues(page);
   await expect(page.locator('#board .tile.yellow')).toHaveCount(2);
   await expect(arrangements(page)).toHaveCount(3);
-  await expect(page.locator('#clueChips > .mini').nth(0).locator('span')).toHaveText(['E×2']);
+  await expect(page.locator('#clueIn > .mini').locator('span')).toHaveText(['E×2']);
+  await expect(page.locator('#clueOut .mini span')).toHaveText(['I', 'R']);   // not E: its gray copy only caps the count
   // One yellow and a gray copy: a single tile, and no more E than that.
   await editClues(page);
   await guessTile(page, 1, 2).click();
@@ -461,7 +468,7 @@ test('a full board says when the word was last a Wordle answer', async ({ page }
   await expect(note).toHaveText(`Not a Wordle answer through ${date(through)}.`);
 });
 
-test('PNG import reads colors/letters, omits solved row, steps guesses, and Edit clues opens them in the editor', async ({ page }) => {
+test('PNG import reads colors/letters, omits solved row; a guess word shows the clues after it; Edit clues opens the guesses in the editor', async ({ page }) => {
   await open(page);
   await importImage(page, 'guesses.png');
   expect(await values(page.locator('#importRows input'))).toEqual([...'CRANEBEEFY']);
@@ -469,13 +476,20 @@ test('PNG import reads colors/letters, omits solved row, steps guesses, and Edit
   await expect(page.locator('#importRows .yellow')).toHaveCount(2);
   await expect(page.locator('#importNote')).toContainText('The solved row was left out');
   await page.getByRole('button', { name: 'Use these clues' }).click();
-  await expect(page.locator('#guessStep')).toHaveText('Guess 2/2');
-  // BEEFY's second E was gray: kept, since it caps the E count at the green one.
+  await expectGuesses(page, ['CRANE', 'BEEFY']);
+  await expect(page.locator('#clueNote')).toHaveText('');
+  // BEEFY's second E was gray: kept, since it caps the E count at the green one, but E is
+  // in the word, so the summary doesn't list it as out.
   await expectClues(page, { green: 'BE??Y', gray: 'ACEFN' });
-  await expect(page.getByRole('button', { name: 'Next guess' })).toBeDisabled();
-  await page.getByRole('button', { name: 'Previous guess' }).click();
-  await expect(page.locator('#guessStep')).toHaveText('Guess 1/2');
-  await expect(page.getByRole('button', { name: 'Previous guess' })).toBeDisabled();
+  await expect(page.locator('#clueOut .mini span')).toHaveText(['A', 'C', 'F', 'N']);
+  // A guess word shows the clues as they stood after it; the later ones go faint.
+  await expect(guessWord(page, 'BEEFY')).toHaveClass(/shown/);
+  await guessWord(page, 'CRANE').click();
+  await expectGuesses(page, ['CRANE', 'BEEFY'], 1);
+  await expect(guessWord(page, 'CRANE')).toHaveClass(/shown/);
+  await expect(guessWord(page, 'CRANE')).toHaveAttribute('aria-pressed', 'true');
+  await expect(guessWord(page, 'BEEFY')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#clueNote')).toHaveText('Showing the clues after guess 1 of 2.');
   await expectClues(page, { green: '?????', yellow: '- R - - E' });
   // Edit clues opens every guess, whatever the step; a changed color is used with all of them.
   await editClues(page);
@@ -483,14 +497,14 @@ test('PNG import reads colors/letters, omits solved row, steps guesses, and Edit
   await expect(guessTile(page, 2, 5)).toHaveClass(/green/);
   await guessTile(page, 1, 1).click();
   await cancel(page);
-  await expect(page.locator('#guessStep')).toHaveText('Guess 1/2');
+  await expectGuesses(page, ['CRANE', 'BEEFY'], 1);
   await expectClues(page, { yellow: '- R - - E' });
   await editClues(page);
   await guessTile(page, 1, 3).click();
   await useClues(page);
-  await expect(page.locator('#guessStep')).toHaveText('Guess 2/2');
+  await expectGuesses(page, ['CRANE', 'BEEFY']);
   await expectClues(page, { green: 'BE??Y', yellow: '- R A - E', gray: 'CEFN' });
-  await expect(page.locator('#clueNote')).toHaveText('Your guesses: CRANE, BEEFY.');
+  await expect(page.locator('#clueNote')).toHaveText('');
 });
 
 test('guesses survive a reload and travel in the link, with the step and the practice mark; a bad guesses parameter falls back', async ({ page, context }) => {
@@ -500,13 +514,13 @@ test('guesses survive a reload and travel in the link, with the step and the pra
   await open(page);
   await importImage(page, 'guesses.png');
   await page.getByRole('button', { name: 'Use these clues' }).click();
-  await page.getByRole('button', { name: 'Previous guess' }).click();
-  await expect(page.locator('#guessStep')).toHaveText('Guess 1/2');
+  await guessWord(page, 'CRANE').click();
+  await expectGuesses(page, ['CRANE', 'BEEFY'], 1);
 
-  // A reload keeps the guesses and the step, and opens on the folded summary.
+  // A reload keeps the guesses and the step, and opens on the summary.
   await page.reload();
-  await expect(page.locator('#guessStep')).toHaveText('Guess 1/2');
-  await expect(page.locator('#clueNote')).toHaveText('Your guess: CRANE (after guess 1 of 2).');
+  await expectGuesses(page, ['CRANE', 'BEEFY'], 1);
+  await expect(page.locator('#clueNote')).toHaveText('Showing the clues after guess 1 of 2.');
   await expect(page.locator('#cluesSummary')).toBeVisible();
   await expectClues(page, { green: '?????', yellow: '- R - - E' });
 
@@ -523,22 +537,23 @@ test('guesses survive a reload and travel in the link, with the step and the pra
   const fresh = await context.browser().newContext();
   const recipient = await fresh.newPage();
   await recipient.goto(shared.href);
-  await expect(recipient.locator('#guessStep')).toHaveText('Guess 1/2');
-  await recipient.getByRole('button', { name: 'Next guess' }).click();
+  await expectGuesses(recipient, ['CRANE', 'BEEFY'], 1);
+  await guessWord(recipient, 'BEEFY').click();
   await expectClues(recipient, { green: 'BE??Y', gray: 'ACEFN' });
   expect(new URL(recipient.url()).search).toBe('');
 
   // With every guess applied the link has no step; guesses alone are enough to open one.
   await recipient.goto(`${shared.origin}/?guesses=crane01001.beefy22002&practice=1`);
-  await expect(recipient.locator('#guessStep')).toHaveText('Guess 2/2');
+  await expectGuesses(recipient, ['CRANE', 'BEEFY']);
   await expectClues(recipient, { green: 'BE??Y' });
-  await expect(recipient.locator('#clueNote')).toHaveText('Practice puzzle. Your guesses: CRANE, BEEFY. The answer is hidden.');
+  await expect(recipient.locator('#clueNote')).toHaveText('Practice puzzle. The answer is hidden.');
   await expect(recipient.getByRole('button', { name: 'New puzzle', exact: true })).toBeVisible();
 
   // Guesses that don't parse are ignored and the older parameters are read instead.
   await recipient.goto(`${shared.origin}/?green=B%3F%3F%3F%3F&gray=FX&guesses=CRANE0100`);
   await expectClues(recipient, { green: 'B????', gray: 'FX' });
-  await expect(recipient.locator('#guessNav')).toBeHidden();
+  await expect(recipient.locator('#guessLine')).toBeHidden();
+  await expect(recipient.locator('#clueInLine')).toBeVisible();
   // Clues with no guesses behind them have nothing for the editor: no Edit clues.
   await expect(recipient.getByRole('button', { name: 'Start over', exact: true })).toBeVisible();
   await expect(recipient.getByRole('button', { name: 'Edit clues', exact: true })).toBeHidden();
@@ -548,9 +563,9 @@ test('guesses survive a reload and travel in the link, with the step and the pra
   await editClues(page);
   await typeGuess(page, 3, 'berry', '22022');
   await useClues(page);
-  await expect(page.locator('#guessStep')).toHaveText('Guess 3/3');
+  await expectGuesses(page, ['CRANE', 'BEEFY', 'BERRY']);
   await page.reload();
-  await expect(page.locator('#guessStep')).toHaveText('Guess 3/3');
+  await expectGuesses(page, ['CRANE', 'BEEFY', 'BERRY']);
   await expectClues(page, { green: 'BE?RY' });
 });
 
@@ -628,9 +643,8 @@ test('Random makes up one or two guesses against an answer, with a few to a few 
       total: arrangements.length, fitting: arrangements.length - noWord.size, tiles: movable.length,
     }));
     expect([1, 2]).toContain(rows.length);
-    await expect(page.locator('#guessStep')).toHaveText(`Guess ${rows.length}/${rows.length}`);
-    await expect(page.locator('#clueNote')).toHaveText(
-      `Practice puzzle. Your guess${rows.length === 1 ? '' : 'es'}: ${rows.map(r => r.word).join(', ')}. The answer is hidden.`);
+    await expectGuesses(page, rows.map(r => r.word));
+    await expect(page.locator('#clueNote')).toHaveText('Practice puzzle. The answer is hidden.');
     await expect(page.locator('#resultsTitle')).toHaveText(`${total} legal arrangements of your yellow tiles`);
     expect(total).toBeLessThanOrEqual(80);
     expect(fitting).toBeGreaterThanOrEqual(3);
@@ -642,8 +656,9 @@ test('Random makes up one or two guesses against an answer, with a few to a few 
   }
   // A two-guess puzzle steps back to its first guess.
   for (let n = 0; n < 100 && await page.evaluate(() => guesses.rows.length) < 2; n++) await next();
-  await page.getByRole('button', { name: 'Previous guess' }).click();
-  await expect(page.locator('#guessStep')).toHaveText('Guess 1/2');
+  await page.locator('#guessWords .guess-word').first().click();
+  await expect(page.locator('#guessWords .guess-word:not(.later)')).toHaveCount(1);
+  await expect(page.locator('#clueNote')).toHaveText('Practice puzzle. The answer is hidden. Showing the clues after guess 1 of 2.');
 });
 
 test('theme follows the system until the switch is used', async ({ page }) => {
@@ -954,7 +969,7 @@ test('the clues card shows one thing at a time: the ways in, the guess editor, t
   await typeGuess(page, 2, 'stone', '00001');
   await useClues(page);
   await expectClues(page, { green: 'B????', yellow: '- E - - E', gray: 'ILNOSTZ' });
-  await expect(page.locator('#clueChips > .mini').last().locator('span')).toHaveText([...'ILNOSTZ']);
+  await expect(page.locator('#clueOut .mini span')).toHaveText([...'ILNOSTZ']);
   await expect(arrangements(page)).toHaveCount(2);
 
   // Start over goes back to the ways in and takes the other panels away.
@@ -988,10 +1003,11 @@ test('the clues card shows one thing at a time: the ways in, the guess editor, t
   // Opened from a link, the clues came in whole: the card is their summary.
   await open(page, '?green=B%3F%3F%3F%3F&ban1=E&ban2=R&yellow=ER&gray=STLN');
   await expect(body('cluesBody')).toBeHidden();
-  // The summary is a stack: a column per slot with its green letter, else the letters that
-  // were yellow there piled up, else a dot. Then the gray letters, in alphabetical order.
-  const column = i => page.locator('#clueChips .clue-stack .mini').nth(i).locator('span');
-  await expect(page.locator('#clueChips .clue-stack .mini')).toHaveCount(5);
+  // In is a stack: a column per slot with its green letter, else the letters that were
+  // yellow there piled up, else a dot. Out is the gray letters, in alphabetical order.
+  await expect(page.locator('#cluesSummary .row-label:visible')).toHaveText(['In', 'Out']);
+  const column = i => page.locator('#clueIn .clue-stack .mini').nth(i).locator('span');
+  await expect(page.locator('#clueIn .clue-stack .mini')).toHaveCount(5);
   await expect(column(0)).toHaveText(['B']);
   await expect(column(1)).toHaveText(['E']);
   await expect(column(2)).toHaveText(['R']);
@@ -1000,25 +1016,75 @@ test('the clues card shows one thing at a time: the ways in, the guess editor, t
   await expect(column(0).first()).toHaveClass('g');
   await expect(column(1).first()).toHaveClass('y');
   await expect(column(1).first()).toHaveAttribute('title', 'E was yellow in slot 2');
-  await expect(page.locator('#clueChips > .mini').last().locator('span')).toHaveText(['L', 'N', 'S', 'T']);
+  await expect(page.locator('#clueOut .mini span')).toHaveText(['L', 'N', 'S', 'T']);
   // A green slot shows only its green, whatever was yellow there before; a letter yellow in
   // two slots is in both columns and, counted twice, gets a ×2 chip.
   await open(page, '?green=%3F%3F%3FS%3F&ban1=E&ban3=ED&ban4=E&yellow=ED&gray=TLN');
-  await expect(page.locator('#clueChips .clue-stack .mini')).toHaveCount(5);
+  await expect(page.locator('#clueIn .clue-stack .mini')).toHaveCount(5);
   await expect(column(1)).toHaveText(['E']);
   await expect(column(3)).toHaveText(['S']);
   await expect(column(3).first()).toHaveClass('g');
   await expect(column(4)).toHaveText(['E']);
-  await expect(page.locator('#clueChips > .mini')).toHaveCount(1);
+  await expect(page.locator('#clueIn > .mini')).toHaveCount(0);
   await open(page, '?green=%3F%3F%3FS%3F&ban1=E&ban3=ED&ban4=E&yellow=EED&gray=TLN');
-  await expect(page.locator('#clueChips > .mini')).toHaveCount(2);
-  await expect(page.locator('#clueChips > .mini').first().locator('span')).toHaveText(['E×2']);
+  await expect(page.locator('#clueIn > .mini')).toHaveCount(1);
+  await expect(page.locator('#clueIn > .mini').locator('span')).toHaveText(['E×2']);
   // With no green letter, the yellows alone make the stack.
   await open(page, '?green=%3F%3F%3F%3F%3F&ban1=E&yellow=E&gray=ST');
   await expect(column(1)).toHaveText(['E']);
   await expect(column(0)).toHaveText(['·']);
   await expect(body('boardBody')).toBeVisible();
   await expect(body('resultsBody')).toBeVisible();
+});
+
+test('Start over can be undone from the ways in, until other clues are used or the page is left', async ({ page }) => {
+  await open(page, '?guesses=CRANE01001.BEEFY22002.SLATE00000');
+  const undoLine = page.locator('#undoLine');
+  const undo = page.getByRole('button', { name: 'Undo', exact: true });
+  // Something of each kind to get back: an earlier guess shown, the second arrangement on the board, a tried letter.
+  await guessWord(page, 'BEEFY').click();
+  await page.getByRole('button', { name: 'Next arrangement', exact: true }).click();
+  await expect(page.locator('#arrIndex')).toHaveText('Arrangement 2 of 2');
+  await letter(page, 'O').click();
+  await expect(page.locator('#board .trial')).toHaveText(['O']);
+  const before = await page.evaluate(() => $('board').textContent);
+
+  await startOver(page);
+  await expect(page.locator('#chooser')).toBeVisible();
+  await expect(undoLine).toHaveText('Clues cleared. Undo');
+  await expectClues(page, NO_CLUES);
+  // Looking at the editor and backing out doesn't take the offer away.
+  await typeClues(page);
+  await expect(undoLine).toBeHidden();
+  await cancel(page);
+  await expect(undoLine).toBeVisible();
+
+  await undo.click();
+  await expect(page.locator('#cluesSummary')).toBeVisible();
+  await expect(undoLine).toBeHidden();
+  await expectGuesses(page, ['CRANE', 'BEEFY', 'SLATE'], 2);
+  await expect(page.locator('#arrIndex')).toHaveText('Arrangement 2 of 2');
+  await expect(page.locator('#board .trial')).toHaveText(['O']);
+  expect(await page.evaluate(() => $('board').textContent)).toBe(before);
+  // It is saved again, too.
+  await page.reload();
+  await expectGuesses(page, ['CRANE', 'BEEFY', 'SLATE'], 2);
+
+  // Other clues used after a Start over leave nothing to undo but themselves.
+  await startOver(page);
+  await typeClues(page);
+  await typeGuess(page, 1, 'bodil', '20000');
+  await useClues(page);
+  await startOver(page);
+  await undo.click();
+  await expectGuesses(page, ['BODIL']);
+  await expectClues(page, { green: 'B????' });
+  // The offer doesn't outlast the page.
+  await startOver(page);
+  await expect(undoLine).toBeVisible();
+  await page.reload();
+  await expect(page.locator('#chooser')).toBeVisible();
+  await expect(undoLine).toBeHidden();
 });
 
 test('first-time tips show one at a time, in order, and are remembered; help can bring them back', async ({ page }) => {
@@ -1200,7 +1266,7 @@ test('dev panel: ?dev=1 turns it on and is remembered, Phone width previews the 
   expect(await frame.evaluate(el => el.clientWidth)).toBe(390);
   expect(await inner.locator('#cluesToolbar').evaluate(el => getComputedStyle(el).flexDirection)).toBe('column');   // the narrow layout
   await expect(inner.locator('#devPanel')).toBeHidden();            // no panel within the preview
-  const innerColumn = i => inner.locator('#clueChips .clue-stack .mini').nth(i - 1).locator('span');
+  const innerColumn = i => inner.locator('#clueIn .clue-stack .mini').nth(i - 1).locator('span');
   await expect(innerColumn(1)).toHaveText(['B']);   // the preview opened on a clue link, so on the summary
   await editClues(page);
   await typeGuess(page, 2, 'femur', '01000');

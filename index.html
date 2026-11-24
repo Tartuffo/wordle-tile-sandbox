@@ -456,31 +456,44 @@
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      justify-content: flex-end;
       gap: 8px;
       margin-top: 14px;
     }
 
-    .step-foot .guess-nav { margin-right: auto; }
-    .step-foot .guess-nav[hidden] + #clearBtn { margin-left: auto; }
+    .step-foot #clearBtn { margin-left: auto; }
     .step-foot button.link[hidden] { display: none; }
+    .undo-line { margin: 12px 0 0; font-size: 14px; }
+    .undo-line[hidden] { display: none; }
     .clue-intro { margin: 0 0 8px; }
     .clue-note { margin: 8px 0 0; font-size: 14px; }
     .clue-note:empty { display: none; }
 
-    /* The summary: the clues in miniature, then the foot (Edit clues, ‹ Guess › and Start
-       over) on the same row when it fits, bottom-aligned with the clue box; on a phone the
-       foot wraps to a row of its own, so Edit clues and Start over always share a line. */
-    .clue-bottom {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: flex-end;
-      gap: 8px 14px;
-      margin-top: 10px;
+    /* The summary: a labeled line each for the guesses, the letters in the word and the
+       letters out of it, then the foot (Edit clues or New puzzle, and Start over). */
+    .clue-lines { display: grid; gap: 8px; margin-top: 12px; }
+
+    .clue-line {
+      display: grid;
+      grid-template-columns: var(--label-w) minmax(0, 1fr);
+      gap: var(--gap);
+      align-items: center;
     }
 
-    .clue-bottom .step-foot { flex: 1 1 auto; margin: 0; }
-    .clue-summary { margin: 0; }
+    .clue-line[hidden] { display: none; }
+    .guess-words { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    /* A guess: solid while its clues are counted, faint when a guess before it is the one shown. */
+    .guess-word {
+      padding: 4px 9px;
+      border-radius: 8px;
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: .06em;
+    }
+
+    .guess-word.later { opacity: .5; border-style: dashed; font-weight: 600; }
+    .guess-word.shown { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent); }
 
     .clue-chips { display: inline-flex; flex-wrap: wrap; align-items: flex-end; gap: 4px 10px; }
     .clue-chips:empty { display: none; }
@@ -499,7 +512,8 @@
     }
     .clue-stack .mini { flex-direction: column; }
     /* Chips beside the box sit level with its bottom row: the box's padding and border, 5px. */
-    .clue-chips > .mini { padding: 5px 0; }
+    #clueIn > .mini { padding: 5px 0; }
+    #clueOut > .mini { flex-wrap: wrap; }
 
     .mini span {
       min-width: 22px;
@@ -518,26 +532,6 @@
     .mini span.g { background: var(--green); border-color: var(--green); color: #fff; }
     .mini span.y { background: var(--yellow); border-color: var(--yellow); color: #fff; }
     .mini span.x { background: var(--gray); border-color: var(--gray); color: #fff; }
-
-    .guess-nav {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .guess-nav[hidden] { display: none; }
-
-    .guess-nav button {
-      padding: 2px 8px 5px;
-      font-size: 20px;
-      line-height: 1.2;
-    }
-
-    #guessStep {
-      color: var(--muted);
-      font-size: 14px;
-      font-variant-numeric: tabular-nums;
-    }
 
     .letters { margin-top: 14px; }
 
@@ -1299,6 +1293,7 @@
       </div>
       <p id="importMsg" class="status import-msg" role="status"></p>
       <div id="chooser" class="chooser">
+        <p id="undoLine" class="hint undo-line" role="status" hidden>Clues cleared. <button type="button" id="undoBtn" class="link">Undo</button></p>
         <p class="hint clue-intro">Start from a screenshot of your Wordle game, type your clues in, or practice on a made-up puzzle.</p>
         <div id="cluesToolbar" class="chooser-row">
           <button id="pasteBtn" title="Read your clues from a screenshot on the clipboard">Paste screenshot</button>
@@ -1322,20 +1317,24 @@
       <div id="cluesDone" hidden>
       <p id="clueNote" class="hint clue-note" role="status"></p>
       <div id="clueStatus" class="status" role="status"></div>
-      <div class="clue-bottom">
-        <div id="cluesSummary" class="clue-summary">
-          <span id="clueChips" class="clue-chips" aria-label="Your clues"></span>
+      <div id="cluesSummary" class="clue-lines" aria-label="Your clues">
+        <div id="guessLine" class="clue-line">
+          <span class="row-label">Guesses</span>
+          <span id="guessWords" class="guess-words" role="group" aria-label="Your guesses"></span>
         </div>
-        <div class="step-foot">
-          <button id="editCluesBtn" type="button" class="link" hidden>Edit clues</button>
-          <button id="newPuzzleBtn" type="button" class="link" hidden>New puzzle</button>
-          <span id="guessNav" class="guess-nav" hidden>
-            <button id="guessPrevBtn" aria-label="Previous guess" title="Show the clues one guess earlier">‹</button>
-            <span id="guessStep"></span>
-            <button id="guessNextBtn" aria-label="Next guess" title="Show the clues one guess later">›</button>
-          </span>
-          <button id="clearBtn" title="Clear every clue and the board">Start over</button>
+        <div id="clueInLine" class="clue-line">
+          <span class="row-label" title="In the word: a green letter in its slot, or the letters that were yellow in that slot">In</span>
+          <span id="clueIn" class="clue-chips"></span>
         </div>
+        <div id="clueOutLine" class="clue-line">
+          <span class="row-label" title="Not in the word">Out</span>
+          <span id="clueOut" class="clue-chips"></span>
+        </div>
+      </div>
+      <div class="step-foot">
+        <button id="editCluesBtn" type="button" class="link" hidden>Edit clues</button>
+        <button id="newPuzzleBtn" type="button" class="link" hidden>New puzzle</button>
+        <button id="clearBtn" title="Clear every clue and the board">Start over</button>
       </div>
       </div>
     </section>
@@ -1499,8 +1498,8 @@
       <p><b>Practice puzzle</b> makes up a puzzle to practice on: one or two guesses against a past Wordle answer, which stays hidden. It’s chosen so that from a few to a few dozen arrangements fit a word. A line under the heading says which guesses were made up, and New puzzle, in place of Edit clues, draws another.</p>
       <p><b>Type clues</b> opens rows of tiles like Wordle’s. Type each guess you played; a full row opens the next, up to six. Then <span class="tap">tap</span> a letter to give it the color Wordle did: once for yellow, twice for green, a third time for gray again. To fix one letter, hold it (or right-click it): it is cleared, the rest of the guess stays, and the next letter you type goes there, in the color the slot had. Backspace takes back the letter before the marked tile, and × empties a guess so you can retype it in the same place. Use these clues takes the guesses once each started one is finished and none contradicts another; if they do, a line under the rows says how. Cancel leaves the clues as they were.</p>
       <p>Double letters need no extra step: two yellow copies of a letter in one guess are two tiles on the board, and a gray copy beside a green or yellow one says the word has no more of that letter.</p>
-      <p><b>‹ Guess 2/3 ›</b> appears when there is more than one guess to step through: the clues as they stood after each guess, here after the second of three. ‹ and › step back and forth, say to see how much one guess narrowed things down.</p>
-      <p>The summary is a stack with a column per slot, each showing its green letter or else the letters that were yellow there, then the gray letters. Edit clues opens your guesses again, from a screenshot too, to change or add to them; clues from a link that carries no guesses can only be started over. Start over clears everything, board included, and goes back to the four ways in. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day. Your guesses are kept and shared with them, so the guess stepping still works after a reload or from a link.</p>
+      <p><b>Guesses</b> lists the words you played. <span class="tap">Tap</span> one to see the clues as they stood after it, say to see how much a guess narrowed things down: the later guesses go faint and a line says which guess is shown. <span class="tap">Tap</span> the last one to count them all again.</p>
+      <p><b>In</b> is a stack with a column per slot, each showing its green letter or else the letters that were yellow there, with any letter the word has twice beside it. <b>Out</b> is the letters that aren’t in the word. Edit clues opens your guesses again, from a screenshot too, to change or add to them; clues from a link that carries no guesses can only be started over. Start over clears everything, board included, and goes back to the four ways in; Undo there puts it all back, until you use other clues or leave the page. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day. Your guesses are kept and shared with them, along with which one is shown.</p>
       <p><button type="button" id="tipsAgainBtn" class="link">Show the first-time tips again</button></p>
     </div>
     <form method="dialog"><button>Close</button></form>
@@ -1641,6 +1640,7 @@
     let cardState = 'choose';     // the clues card: 'choose' a way to give them, 'edit' the guesses, or their 'summary'
     let editRows = [];            // the guess editor's rows while it is open: [[{ letter, color }]], len tiles each, '' for a gap
     let editFrom = 'choose';      // the card state the editor was opened from, for Cancel
+    let undo = null;              // what Start over cleared, for Undo, until other clues are used
     let stepOverride = { board: null, results: null };  // a step the user opened or closed by hand
     let selectedPos = null;       // board slot chosen for the next letter, or null for the first blank
     let shownOrder = [];          // the arrangements in the order the list shows them
@@ -3393,8 +3393,8 @@
       setCluesFromGuesses(guesses.rows.slice(0, guesses.step));
       pins.clear();
       listExpanded = false;
+      undo = null;
       update();
-      renderGuessNav();
     }
 
     // Guesses as text, for links and the saved state: each is its word and then a digit per
@@ -3455,28 +3455,10 @@
       fitSlots();
     }
 
-    function renderGuessNav() {
-      $('guessNav').hidden = !guesses;
-      if (!guesses) {
-        $('clueNote').textContent = '';
-        return;
-      }
-      const { step, rows, random } = guesses;
-      $('guessStep').textContent = `Guess ${step}/${rows.length}`;
-      $('guessStep').title = `Clues after guess ${step} of ${rows.length}`;
-      $('guessPrevBtn').disabled = step <= 1;
-      $('guessNextBtn').disabled = step >= rows.length;
-      const words = rows.slice(0, step).map(r => r.map(t => t.letter).join('')).join(', ');
-      const sofar = step < rows.length ? ` (after guess ${step} of ${rows.length})` : '';
-      $('clueNote').textContent = random
-        ? `Practice puzzle. Your guess${step === 1 ? '' : 'es'}: ${words}${sofar}. The answer is hidden.`
-        : `Your guess${step === 1 ? '' : 'es'}: ${words}${sofar}.`;
-    }
-
-    function stepGuess(delta) {
-      const next = guesses.step + delta;
-      if (next < 1 || next > guesses.rows.length) return;
-      guesses.step = next;
+    // Shows the clues as they stood after the first n guesses.
+    function setGuessStep(n) {
+      if (!guesses || n === guesses.step || n < 1 || n > guesses.rows.length) return;
+      guesses.step = n;
       showGuessStep();
     }
 
@@ -3599,7 +3581,8 @@
       $('cluesBody').hidden = cardState !== 'edit';
       $('cluesDone').hidden = !summary;
       if (cardState === 'edit') renderGuessRows();
-      if (summary) renderClueChips();
+      if (summary) renderClueSummary();
+      $('undoLine').hidden = !undo;
       // A practice puzzle's colors come from its hidden answer, so it is redrawn, not edited.
       // Clues from a link without guesses have nothing for the editor to show.
       const practice = !!guesses?.random;
@@ -3649,12 +3632,40 @@
       renderSteps();
     }
 
-    // The clues in miniature, for the summary: a stack with a column per slot, the green
-    // letter if there is one, else the letters that were yellow there piled up, else a dot;
-    // then any letter counted twice, then the gray letters in alphabetical order.
-    function renderClueChips() {
-      const wrap = $('clueChips');
+    // The summary. The guesses, when the clues have any, are buttons: one shows the clues
+    // as they stood after it, with the later guesses faint. Then the clues in miniature:
+    // In is a stack with a column per slot, the green letter if there is one, else the
+    // letters that were yellow there piled up, else a dot, and beside it any letter counted
+    // twice; Out is the letters not in the word, in alphabetical order.
+    function renderClueSummary() {
+      const total = guesses ? guesses.rows.length : 0;
+      $('clueNote').textContent = [
+        guesses?.random ? 'Practice puzzle. The answer is hidden.' : '',
+        guesses && guesses.step < total ? `Showing the clues after guess ${guesses.step} of ${total}.` : '',
+      ].filter(Boolean).join(' ');
+
+      $('guessLine').hidden = !guesses;
+      const words = $('guessWords');
+      words.innerHTML = '';
+      (guesses ? guesses.rows : []).forEach((row, k) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'guess-word';
+        btn.textContent = row.map(t => t.letter).join('');
+        btn.classList.toggle('later', k >= guesses.step);
+        btn.classList.toggle('shown', total > 1 && k === guesses.step - 1);
+        btn.setAttribute('aria-pressed', String(k < guesses.step));
+        btn.title = k === guesses.step - 1
+          ? (total > 1 ? `The clues shown are as they stood after this guess, ${k + 1} of ${total}` : 'Your guess')
+          : `Show the clues as they stood after guess ${k + 1} of ${total}`;
+        btn.addEventListener('click', () => setGuessStep(k + 1));
+        words.appendChild(btn);
+      });
+
+      const wrap = $('clueIn');
+      const out = $('clueOut');
       wrap.innerHTML = '';
+      out.innerHTML = '';
       const mini = (parent, items) => {
         const el = document.createElement('span');
         el.className = 'mini';
@@ -3687,11 +3698,14 @@
         mini(wrap, doubles.map(t => ({ text: `${t.letter}×${t.count}`, kind: 'y', title: `${t.count} ${t.letter} tiles on the board` })))
           .setAttribute('aria-label', `Double letters: ${doubles.map(t => `${t.letter} ×${t.count}`).join(', ')}`);
       }
-      if (grays) {
-        const sorted = [...grays].sort();
-        mini(wrap, sorted.map(g => ({ text: g, kind: 'x', title: `${g} is gray` })))
+      // A letter with a gray copy and a colored one is in the word, so it isn't listed as out.
+      const sorted = [...grayLetters()].sort();
+      if (sorted.length) {
+        mini(out, sorted.map(g => ({ text: g, kind: 'x', title: `${g} is gray` })))
           .setAttribute('aria-label', `Gray: ${sorted.join('')}`);
       }
+      $('clueInLine').hidden = !wrap.children.length;
+      $('clueOutLine').hidden = !sorted.length;
     }
 
     // ── First-time tips ───────────────────────────────────────────────────────
@@ -3986,20 +4000,31 @@
       });
     });
 
+    // Start over keeps what it clears, so that Undo in the ways in can put it all back: the
+    // clues and their guesses, the pins, the letters tried on the board. Nothing is mutated
+    // in place here, since the kept copies are the very same objects.
     $('clearBtn').addEventListener('click', () => {
+      undo = { greens, yellows, grays, countOverrides, guesses, trials, pins, board, selectedPos, stepOverride, listExpanded, groupLetter };
       greens = Array(len).fill('');
       yellows = Array(len).fill('');
       grays = '';
       trials = Array(len).fill('');
       countOverrides = {};
-      pins.clear();
+      pins = new Map();
       listExpanded = false;
+      groupLetter = null;
       guesses = null;
       cardState = 'choose';
       stepOverride = { board: null, results: null };
       selectedPos = null;
       update();
-      renderGuessNav();
+    });
+    $('undoBtn').addEventListener('click', () => {
+      if (!undo) return;
+      ({ greens, yellows, grays, countOverrides, guesses, trials, pins, board, selectedPos, stepOverride, listExpanded, groupLetter } = undo);
+      undo = null;
+      cardState = 'summary';
+      update();
     });
 
     // Type clues and Edit clues open the guess editor; it closes on Use these clues or Cancel.
@@ -4103,8 +4128,6 @@
     $('importFile').addEventListener('change', e => importScreenshot(e.target.files[0]));
     $('importUseBtn').addEventListener('click', applyImportedGuesses);
     $('importCancelBtn').addEventListener('click', closeImport);
-    $('guessPrevBtn').addEventListener('click', () => stepGuess(-1));
-    $('guessNextBtn').addEventListener('click', () => stepGuess(1));
     $('arrPrevBtn').addEventListener('click', () => stepArrangement(-1));
     $('arrNextBtn').addEventListener('click', () => stepArrangement(1));
 
@@ -4202,8 +4225,8 @@
       if (e.key !== STATE_KEY || !(IN_FRAME || phoneWidth())) return;
       if (!loadSavedState()) return;
       if (cardState !== 'edit') cardState = hasClues() ? 'summary' : 'choose';
+      if (hasClues()) undo = null;
       update();
-      renderGuessNav();
     });
     document.querySelectorAll('#devTouchSeg button').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -4250,7 +4273,6 @@
     loadWords();
     loadAnswers();
     update();
-    renderGuessNav();
   </script>
 </body>
 </html>
