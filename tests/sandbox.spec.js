@@ -412,7 +412,7 @@ test('letters-left taps fill legal blanks; a mouse press keeps a trial, × remov
   await context.close();
 });
 
-test('a tried letter dragged onto another takes its place; onto a yellow tile they trade; greens stay fixed and banned destinations are flagged', async ({ page }) => {
+test('a tried letter dragged onto another takes its place; onto a yellow tile they trade; greens stay fixed; a yellow tile is refused where it was yellow', async ({ page }) => {
   await open(page, '?len=5&green=B%3F%3F%3F%3F&ban1=E&yellow=E');
   await letter(page, 'A').click();
   await expect(boardSlot(page, 2)).toHaveText('A');
@@ -431,12 +431,29 @@ test('a tried letter dragged onto another takes its place; onto a yellow tile th
   await boardSlot(page, 2).locator('.trial').dragTo(boardSlot(page, 1));
   await expect(boardSlot(page, 1)).toHaveText('B');
   await expect(boardSlot(page, 2)).toHaveText('A');
-  // Onto the yellow tile they trade places, which puts E where it was yellow: flagged.
+  // Onto the yellow tile they trade places, but not from slot 2: E was yellow there, and
+  // the trade would send it back. Nothing moves.
   const eSlot = await slotOf('.yellow');
   await boardSlot(page, 2).locator('.trial').dragTo(boardSlot(page, eSlot));
+  await expect(boardSlot(page, 2).locator('.trial')).toHaveText('A');
+  await expect(boardSlot(page, eSlot).locator('.yellow')).toHaveText('E');
+  // From another slot the trade goes through.
+  await boardSlot(page, 2).locator('.trial').dragTo(boardSlot(page, oSlot));
+  await boardSlot(page, oSlot).locator('.trial').dragTo(boardSlot(page, eSlot));
   await expect(boardSlot(page, eSlot).locator('.trial')).toHaveText('A');
-  await expect(boardSlot(page, 2).locator('.conflict')).toHaveText('E');
-  await expect(page.locator('#boardStatus')).toContainText("E can't go in slot 2");
+  await expect(boardSlot(page, oSlot).locator('.yellow')).toHaveText('E');
+
+  // The yellow tile itself can't be dropped where it was yellow: it stays, and nothing is flagged.
+  await expect(page.locator('#boardBans span')).toHaveText(['', 'E', '', '', '']);
+  await page.locator('#board .yellow').dragTo(boardSlot(page, 2));
+  await expect(boardSlot(page, oSlot).locator('.yellow')).toHaveText('E');
+  await expect(boardSlot(page, 2)).toHaveText('');
+  await expect(page.locator('#board .conflict')).toHaveCount(0);
+  await expect(page.locator('#boardStatus')).toHaveText('');
+  // Any other open slot takes it.
+  const free = [2, 3, 4, 5].find(n => n !== 2 && n !== oSlot && n !== eSlot);
+  await page.locator('#board .yellow').dragTo(boardSlot(page, free));
+  await expect(boardSlot(page, free).locator('.yellow')).toHaveText('E');
 });
 
 test('full board checks the real word list; another arrangement clears the tried letters, a dragged tile replaces the one it lands on', async ({ page }) => {
