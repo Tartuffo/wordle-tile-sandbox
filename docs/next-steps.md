@@ -4,8 +4,8 @@ Where the work stands and what is still open. Update this file as items are done
 
 ## State
 
-- `main` is at `0bade8c`, the version to be tagged `v0.2`.
-- The clue flow redesign and what followed it are on the branch `claude/wizardly-gates-d3eas4`, not merged. `docs/clue-flow.md` is the design for the first six stages.
+- `main` has the clue flow redesign and what followed it, merged as pull request #22 (`2953831`). `0bade8c` is the commit before that work, to be tagged `v0.2`.
+- `docs/clue-flow.md` is the design for the first six stages of the redesign.
 - Changes made after those six stages, which `docs/clue-flow.md` does not describe (the README and the help dialogs do):
   - No Edit clues after a clean screenshot import; guesses that went through the editor count as typed.
   - The board's and the arrangements' headings don't fold, and the arrangements are the lower part of the board's panel.
@@ -25,7 +25,7 @@ Where the work stands and what is still open. Update this file as items are done
    git push origin v0.1 v0.2
    ```
 
-2. **Merge the branch into `main`**, directly or through a pull request, once it has been tried enough on a phone. Consider a `v0.3` tag at that point.
+2. **Consider a `v0.3` tag** for the redesign as merged (`2953831` or later), once it has been tried enough on a phone.
 
 3. **Choose one phone preview.** `?view=mobile` (with its ruler) and the Dev panel's Phone width do nearly the same job, and with both on the frame covers the ruler.
 
