@@ -468,7 +468,7 @@ test('a full board says when the word was last a Wordle answer', async ({ page }
   await expect(note).toHaveText(`Not a Wordle answer through ${date(through)}.`);
 });
 
-test('PNG import reads colors/letters, omits solved row; a guess word shows the clues after it; Edit clues opens the guesses in the editor', async ({ page }) => {
+test('PNG import reads colors/letters, omits solved row; a guess word shows the clues after it; Edit clues is for typed guesses and opens them in the editor', async ({ page }) => {
   await open(page);
   await importImage(page, 'guesses.png');
   expect(await values(page.locator('#importRows input'))).toEqual([...'CRANEBEEFY']);
@@ -491,7 +491,14 @@ test('PNG import reads colors/letters, omits solved row; a guess word shows the 
   await expect(guessWord(page, 'BEEFY')).toHaveAttribute('aria-pressed', 'false');
   await expect(page.locator('#clueNote')).toHaveText('Showing the clues after guess 1 of 2.');
   await expectClues(page, { green: '?????', yellow: '- R - - E' });
-  // Edit clues opens every guess, whatever the step; a changed color is used with all of them.
+  // A screenshot was read whole: there is no Edit clues for it, only Start over.
+  await expect(page.getByRole('button', { name: 'Edit clues', exact: true })).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Start over', exact: true })).toBeVisible();
+
+  // Typed guesses, here from a link, have it. It opens every guess, whatever the step; a
+  // changed color is used with all of them.
+  await open(page, '?guesses=CRANE01001.BEEFY22002&step=1');
+  await expectGuesses(page, ['CRANE', 'BEEFY'], 1);
   await editClues(page);
   expect(await guessWords(page)).toEqual(['CRANE', 'BEEFY', '·····']);
   await expect(guessTile(page, 2, 5)).toHaveClass(/green/);
@@ -533,11 +540,14 @@ test('guesses survive a reload and travel in the link, with the step and the pra
   expect(shared.searchParams.get('guesses')).toBe('CRANE01001.BEEFY22002');
   expect(shared.searchParams.get('step')).toBe('1');
   expect(shared.searchParams.has('practice')).toBe(false);
+  expect(shared.searchParams.get('shot')).toBe('1');   // read from a screenshot, so not editable there either
+  await expect(page.getByRole('button', { name: 'Edit clues', exact: true })).toBeHidden();
 
   const fresh = await context.browser().newContext();
   const recipient = await fresh.newPage();
   await recipient.goto(shared.href);
   await expectGuesses(recipient, ['CRANE', 'BEEFY'], 1);
+  await expect(recipient.getByRole('button', { name: 'Edit clues', exact: true })).toBeHidden();
   await guessWord(recipient, 'BEEFY').click();
   await expectClues(recipient, { green: 'BE??Y', gray: 'ACEFN' });
   expect(new URL(recipient.url()).search).toBe('');
@@ -559,13 +569,15 @@ test('guesses survive a reload and travel in the link, with the step and the pra
   await expect(recipient.getByRole('button', { name: 'Edit clues', exact: true })).toBeHidden();
   await fresh.close();
 
-  // Guesses edited by hand are still guesses: they survive the reload too.
+  // Typed guesses survive a reload as typed ones: still with Edit clues.
+  await open(page, '?guesses=CRANE01001.BEEFY22002');
   await editClues(page);
   await typeGuess(page, 3, 'berry', '22022');
   await useClues(page);
   await expectGuesses(page, ['CRANE', 'BEEFY', 'BERRY']);
   await page.reload();
   await expectGuesses(page, ['CRANE', 'BEEFY', 'BERRY']);
+  await expect(page.getByRole('button', { name: 'Edit clues', exact: true })).toBeVisible();
   await expectClues(page, { green: 'BE?RY' });
 });
 

@@ -1499,7 +1499,7 @@
       <p><b>Type clues</b> opens rows of tiles like Wordle’s. Type each guess you played; a full row opens the next, up to six. Then <span class="tap">tap</span> a letter to give it the color Wordle did: once for yellow, twice for green, a third time for gray again. To fix one letter, hold it (or right-click it): it is cleared, the rest of the guess stays, and the next letter you type goes there, in the color the slot had. Backspace takes back the letter before the marked tile, and × empties a guess so you can retype it in the same place. Use these clues takes the guesses once each started one is finished and none contradicts another; if they do, a line under the rows says how. Cancel leaves the clues as they were.</p>
       <p>Double letters need no extra step: two yellow copies of a letter in one guess are two tiles on the board, and a gray copy beside a green or yellow one says the word has no more of that letter.</p>
       <p><b>Guesses</b> lists the words you played. <span class="tap">Tap</span> one to see the clues as they stood after it, say to see how much a guess narrowed things down: the later guesses go faint and a line says which guess is shown. <span class="tap">Tap</span> the last one to count them all again.</p>
-      <p><b>In</b> is a stack with a column per slot, each showing its green letter or else the letters that were yellow there, with any letter the word has twice beside it. <b>Out</b> is the letters that aren’t in the word. Edit clues opens your guesses again, from a screenshot too, to change or add to them; clues from a link that carries no guesses can only be started over. Start over clears everything, board included, and goes back to the four ways in; Undo there puts it all back, until you use other clues or leave the page. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day. Your guesses are kept and shared with them, along with which one is shown.</p>
+      <p><b>In</b> is a stack with a column per slot, each showing its green letter or else the letters that were yellow there, with any letter the word has twice beside it. <b>Out</b> is the letters that aren’t in the word. Edit clues opens the guesses you typed again, to change or add to them. Clues read from a screenshot have no Edit clues: start over and paste the newer screenshot. Nor do clues from a link that carries no guesses. Start over clears everything, board included, and goes back to the four ways in; Undo there puts it all back, until you use other clues or leave the page. Once you’ve entered a clue, the link icon copies a link to these clues, to share them or to open them on another device. Your clues also come back if you reopen the app the same day. Your guesses are kept and shared with them, along with which one is shown.</p>
       <p><button type="button" id="tipsAgainBtn" class="link">Show the first-time tips again</button></p>
     </div>
     <form method="dialog"><button>Close</button></form>
@@ -3116,7 +3116,7 @@
     };
     let glyphTemplates = null;
     let importRows = [];           // [[{ letter, color, unsure }]] under review
-    let guesses = null;            // { rows, step, random }: the guesses the clues come from, and how many are
+    let guesses = null;            // { rows, step, random, imported }: the guesses the clues come from, and how many are
                                    // applied. Null when the clues came from a link without guesses.
 
     function tileColorAt(r, g, b) {
@@ -3381,7 +3381,7 @@
     }
 
     function applyImportedGuesses() {
-      guesses = { rows: importRows.map(row => row.map(t => ({ ...t }))), step: importRows.length };
+      guesses = { rows: importRows.map(row => row.map(t => ({ ...t }))), step: importRows.length, imported: true };
       cardState = 'summary';
       countOnce('import');
       closeImport();
@@ -3415,12 +3415,13 @@
     }
 
     // Takes guesses from a link or the saved state and derives the clues from them. False,
-    // changing nothing, when they don't parse. step is how many guesses are applied.
-    function restoreGuesses(text, step, random) {
+    // changing nothing, when they don't parse. step is how many guesses are applied; random
+    // marks a practice puzzle and imported guesses read from a screenshot.
+    function restoreGuesses(text, step, random, imported) {
       const rows = decodeGuesses(text);
       if (!rows) return false;
       const n = Number(step);
-      guesses = { rows, step: Number.isInteger(n) && n >= 1 && n <= rows.length ? n : rows.length, random: !!random };
+      guesses = { rows, step: Number.isInteger(n) && n >= 1 && n <= rows.length ? n : rows.length, random: !!random, imported: !!imported };
       setCluesFromGuesses(rows.slice(0, guesses.step));
       return true;
     }
@@ -3583,10 +3584,11 @@
       if (cardState === 'edit') renderGuessRows();
       if (summary) renderClueSummary();
       $('undoLine').hidden = !undo;
-      // A practice puzzle's colors come from its hidden answer, so it is redrawn, not edited.
-      // Clues from a link without guesses have nothing for the editor to show.
+      // Edit clues is for guesses that were typed. A practice puzzle's colors come from its
+      // hidden answer, so it is redrawn; a screenshot was read whole, so another one replaces
+      // it; clues from a link without guesses have nothing for the editor to show.
       const practice = !!guesses?.random;
-      $('editCluesBtn').hidden = practice || !guesses;
+      $('editCluesBtn').hidden = practice || !guesses || guesses.imported;
       $('newPuzzleBtn').hidden = !practice;
 
       for (const id of ['boardPanel', 'resultsPanel', 'analysisPanel']) $(id).hidden = !summary;
@@ -3799,7 +3801,7 @@
     function saveState() {
       try {
         const state = { date: localDate(), greens, yellows, grays, countOverrides };
-        if (guesses) Object.assign(state, { guesses: encodeGuesses(guesses.rows), step: guesses.step, practice: !!guesses.random });
+        if (guesses) Object.assign(state, { guesses: encodeGuesses(guesses.rows), step: guesses.step, practice: !!guesses.random, imported: !!guesses.imported });
         localStorage.setItem(STATE_KEY, JSON.stringify(state));
       } catch {}
     }
@@ -3811,7 +3813,7 @@
         // len is from when 6 and 7 letters were offered; those clues don't fit Wordle.
         if (!s || s.date !== localDate() || (s.len ?? len) !== len) return false;
         guesses = null;
-        if (s.guesses && restoreGuesses(s.guesses, s.step, s.practice)) return true;
+        if (s.guesses && restoreGuesses(s.guesses, s.step, s.practice, s.imported)) return true;
         greens = (s.greens || []).map(g => normalizeLetters(g).slice(0, 1));
         yellows = (s.yellows || []).map(normalizeLetters);
         grays = normalizeLetters(s.grays);
@@ -3828,7 +3830,8 @@
     // older links still open: green is the ?-pattern, ban<i> the yellows seen in slot i,
     // and yellow the movable tiles (it carries duplicate counts). Links from when 6 and 7
     // letters were offered carry len; only 5-letter ones are opened. Newer links also carry
-    // the guesses (with step when not all are applied, and practice for a made-up puzzle);
+    // the guesses (with step when not all are applied, practice for a made-up puzzle, and
+    // shot for ones read from a screenshot);
     // when those parse, the clues are derived from them and the older parameters are ignored.
     function loadFromURL() {
       const params = new URLSearchParams(location.search);
@@ -3840,7 +3843,7 @@
       }
 
       guesses = null;
-      if (restoreGuesses(params.get('guesses'), params.get('step'), params.has('practice'))) {
+      if (restoreGuesses(params.get('guesses'), params.get('step'), params.has('practice'), params.has('shot'))) {
         history.replaceState(null, '', keep);
         return true;
       }
@@ -3875,6 +3878,7 @@
         params.set('guesses', encodeGuesses(guesses.rows));
         if (guesses.step < guesses.rows.length) params.set('step', guesses.step);
         if (guesses.random) params.set('practice', '1');
+        if (guesses.imported) params.set('shot', '1');
       }
       return `${location.origin}${location.pathname}?${params.toString()}`;
     }
